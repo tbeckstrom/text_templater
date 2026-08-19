@@ -2,9 +2,10 @@ pub mod loader;
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FieldType {
+    #[default]
     Text,
     Textarea,
     Number,
@@ -14,7 +15,38 @@ pub enum FieldType {
     Date,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+/// One choice in a `dropdown`/`multiselect`. Written either as a bare string
+/// (`options = ["Cough", "Fever"]`) or as a table carrying the longer prose
+/// it stands for (`options = [{ label = "Irrigated", text = "Irrigated the
+/// surgical site with copious sterile saline" }]`). When any option in a
+/// field has `text`, the template also gets `<field_key>_text` holding the
+/// expansions of what's selected, in declared option order.
+#[derive(Debug, Clone)]
+pub struct OptionDef {
+    pub label: String,
+    pub text: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for OptionDef {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Raw {
+            Label(String),
+            Full {
+                label: String,
+                #[serde(default)]
+                text: Option<String>,
+            },
+        }
+        Ok(match Raw::deserialize(deserializer)? {
+            Raw::Label(label) => OptionDef { label, text: None },
+            Raw::Full { label, text } => OptionDef { label, text },
+        })
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FieldDef {
     pub key: String,
@@ -26,18 +58,45 @@ pub struct FieldDef {
     #[serde(default)]
     pub default: Option<toml::Value>,
     #[serde(default)]
-    pub options: Vec<String>,
+    pub options: Vec<OptionDef>,
     #[serde(default)]
     pub min: Option<f64>,
     #[serde(default)]
     pub max: Option<f64>,
+    /// Tera expression; the field is only shown (and only enforced as
+    /// `required`) while it evaluates truthy against the current form values.
+    #[serde(default)]
+    pub visible_if: Option<String>,
+}
+
+impl FieldDef {
+    /// The declared choices as plain labels — what the form shows and what
+    /// the field's value is made of.
+    pub fn option_labels(&self) -> impl Iterator<Item = &str> {
+        self.options.iter().map(|o| o.label.as_str())
+    }
+
+    /// Whether any choice carries expansion prose, i.e. whether this field
+    /// should also publish a `<key>_text` to the template.
+    pub fn has_option_text(&self) -> bool {
+        self.options.iter().any(|o| o.text.is_some())
+    }
+
+    /// The expansion for `label`, falling back to the label itself when that
+    /// choice has no `text` of its own.
+    pub fn text_for(&self, label: &str) -> Option<&str> {
+        self.options
+            .iter()
+            .find(|o| o.label == label)
+            .map(|o| o.text.as_deref().unwrap_or(o.label.as_str()))
+    }
 }
 
 /// A button that fills in several fields at once with a canned set of values,
 /// for frequently-used patterns (e.g. "Annual Visit" -> reason + history).
 /// Can also (or instead) append one or more pre-filled instances to a
 /// repeatable group — see `group` / `group_values`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SpeedButtonDef {
     pub label: String,
@@ -50,17 +109,46 @@ pub struct SpeedButtonDef {
     /// same shape as that group's fields' `default`s.
     #[serde(default)]
     pub group_values: Vec<toml::Table>,
+    /// Tera expression; the button is only shown while it evaluates truthy.
+    #[serde(default)]
+    pub visible_if: Option<String>,
 }
 
 /// A repeatable block of fields (e.g. one "Procedure Step" per tooth worked
 /// on) — rendered as an add/remove-able list in the form, and available in
 /// `body` as an array of objects: `{% for x in <key> %}{{ x.<field_key> }}`.
-#[derive(Debug, Clone, Deserialize)]
+///
+/// With `source` set, the list is instead driven by a multiselect field: one
+/// instance per selected choice, created and removed as the selection
+/// changes, with no manual add/remove.
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GroupDef {
     pub key: String,
     pub label: String,
     pub fields: Vec<FieldDef>,
+    /// Speed buttons scoped to one instance — they set that instance's own
+    /// fields, not the template's top-level ones.
+    #[serde(default)]
+    pub speed_buttons: Vec<SpeedButtonDef>,
+    /// Key of a `multiselect` field whose selection drives this group's
+    /// instances (one per selected choice, in declared option order).
+    #[serde(default)]
+    pub source: Option<String>,
+    /// Name the driving choice is exposed under inside each instance
+    /// (default `"item"`), e.g. `source_as = "tooth"` → `{{ p.tooth }}`.
+    #[serde(default)]
+    pub source_as: Option<String>,
+    /// Tera expression; the whole group is only shown while it is truthy.
+    #[serde(default)]
+    pub visible_if: Option<String>,
+}
+
+impl GroupDef {
+    /// What the driving choice is called inside each instance.
+    pub fn source_as_key(&self) -> &str {
+        self.source_as.as_deref().unwrap_or("item")
+    }
 }
 
 /// Shape of a template `.toml` file as written on disk.

@@ -6,6 +6,7 @@ mod history;
 mod render;
 mod storage;
 mod template;
+mod visibility;
 
 use app::NoteTemplaterApp;
 

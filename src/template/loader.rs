@@ -220,7 +220,7 @@ mod tests {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
         let result = load_templates(&dir);
         assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
-        assert_eq!(result.templates.len(), 3);
+        assert_eq!(result.templates.len(), 4);
         assert!(
             result.partials.iter().any(|(name, _)| name == "header"),
             "expected the bundled `partials/header.tera` to load"
@@ -247,6 +247,7 @@ mod tests {
             let rendered = crate::render::render_body(
                 &template.body,
                 &result.partials,
+                &template.fields,
                 &state,
                 &template.groups,
                 &groups_state,
@@ -257,12 +258,131 @@ mod tests {
                 template.id,
                 rendered
             );
-            assert!(
-                rendered.unwrap().contains("Patient:"),
-                "expected the included header partial's content in '{}'",
-                template.id
+            // Only the templates that actually pull in the shared header
+            // should be expected to show its content.
+            if template.body.contains(r#"{% include "header" %}"#) {
+                assert!(
+                    rendered.unwrap().contains("Patient:"),
+                    "expected the included header partial's content in '{}'",
+                    template.id
+                );
+            }
+        }
+    }
+
+    /// End-to-end guard for the OMS procedure note — the TextBlaze phrase this
+    /// app was built to replace. Exercises, in one render: a selection-driven
+    /// group (one diagnosis row per tooth picked), per-instance speed buttons
+    /// filling a procedure block, option `text` expansions in declared order,
+    /// the `[[each]]`/`[[s]]` singular-plural swap, whole-number formatting,
+    /// and "a, b and c" joining.
+    #[test]
+    fn oms_procedure_note_renders_a_realistic_case() {
+        use crate::field::*;
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let result = load_templates(&dir);
+        let t = result
+            .templates
+            .iter()
+            .find(|t| t.id == "oms_procedure_note")
+            .expect("oms_procedure_note.toml should be a bundled example");
+
+        let mut state = build_form_state(&t.fields);
+        for (k, v) in [
+            ("pt_age", FieldValue::Number(24.0)),
+            ("pt_sex", FieldValue::Text("female".into())),
+            ("pmh", FieldValue::Text("asthma\nanxiety".into())),
+            (
+                "diagnosis_teeth",
+                FieldValue::MultiSelect(vec!["1".into(), "17".into()]),
+            ),
+            ("ext", FieldValue::Bool(true)),
+            ("ext_teeth", FieldValue::Text("1, 17".into())),
+            ("ivga", FieldValue::Bool(true)),
+            ("ga_time", FieldValue::Number(45.0)),
+            (
+                "ga_meds",
+                FieldValue::MultiSelect(vec![
+                    "midazolam".into(),
+                    "ketamine".into(),
+                    "propofol".into(),
+                ]),
+            ),
+            ("lidocaine_carps", FieldValue::Number(2.0)),
+        ] {
+            state.insert(k.into(), v);
+        }
+
+        let mut groups_state = build_groups_state(&t.groups);
+        for g in &t.groups {
+            sync_source_group(g, &state, &mut groups_state);
+        }
+        for inst in groups_state.get_mut("tooth_diagnoses").unwrap() {
+            inst.values.insert(
+                "diagnosis".into(),
+                FieldValue::MultiSelect(vec!["symptomatic".into(), "PBI".into()]),
             );
         }
+
+        let blocks = t.groups.iter().find(|g| g.key == "blocks").unwrap();
+        for (header, button, multiple) in [
+            ("#1, #16", "Mx 3rd Molar", true),
+            ("#17", "Md 3rd Molar, vertical section", false),
+        ] {
+            add_group_instance(&mut groups_state, blocks);
+            let last = groups_state.get_mut("blocks").unwrap().last_mut().unwrap();
+            let sb = blocks
+                .speed_buttons
+                .iter()
+                .find(|s| s.label == button)
+                .unwrap();
+            apply_values(&blocks.fields, &sb.values, &mut last.values);
+            last.values
+                .insert("section_header".into(), FieldValue::Text(header.into()));
+            last.values
+                .insert("multiple_teeth".into(), FieldValue::Bool(multiple));
+        }
+
+        let note = crate::render::render_body(
+            &t.body,
+            &result.partials,
+            &t.fields,
+            &state,
+            &t.groups,
+            &groups_state,
+        )
+        .expect("the OMS note should render");
+
+        // One diagnosis line per tooth selected, and none for teeth that weren't.
+        assert!(note.contains("#1 - symptomatic, PBI"));
+        assert!(note.contains("#17 - symptomatic, PBI"));
+        assert!(!note.contains("#32 -"));
+
+        // Whole numbers read as counts, not floats.
+        assert!(note.contains("total anesthesia time = 45 minutes"));
+        assert!(note.contains("epinephrine x 2 carpules"));
+
+        // "a, b and c" joining.
+        assert!(note.contains("midazolam, ketamine and propofol"));
+
+        // A speed button filled its own block with prose in declared order,
+        // and the plural/singular swap tracked each block's `multiple_teeth`.
+        assert!(note.contains("Luxated and extracted each tooth in its entirety"));
+        assert!(note.contains("No tooth structure retained in sockets"));
+        assert!(note.contains("buccal trough was created adjacent to the tooth"));
+        assert!(note.contains("No tooth structure retained in socket."));
+        assert!(
+            !note.contains("[[each]]") && !note.contains("[[s]]"),
+            "placeholders must all be substituted"
+        );
+
+        // Sections gated on IVGA appear; the non-IVGA vitals line does not.
+        assert!(note.contains("See anesthesia record for details"));
+        assert!(!note.contains("BP: WNL"));
+        assert!(note.contains("Denies pregnancy."));
+
+        // Airway items read as prose, not as nested lists.
+        assert!(note.contains("throat screen and bite block for stabilization were used"));
     }
 
     /// Regression guard for the bundled `oral_surgery.toml` example, which
@@ -301,6 +421,7 @@ mod tests {
         let rendered = crate::render::render_body(
             &template.body,
             &result.partials,
+            &template.fields,
             &state,
             &template.groups,
             &groups_state,
@@ -330,6 +451,7 @@ mod tests {
         let rendered = crate::render::render_body(
             &template.body,
             &result.partials,
+            &template.fields,
             &state,
             &template.groups,
             &groups_state,

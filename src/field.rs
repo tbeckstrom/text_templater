@@ -46,7 +46,7 @@ impl FieldValue {
         field
             .default
             .as_ref()
-            .and_then(|v| FieldValue::from_toml_value(field.field_type, v))
+            .and_then(|v| FieldValue::from_toml_value(field, v))
             .unwrap_or_else(|| FieldValue::empty_for(field.field_type))
     }
 
@@ -68,8 +68,8 @@ impl FieldValue {
     /// a speed button's `values = { ... }`) as this field type's value.
     /// `None` if the TOML shape doesn't match (e.g. a string where a number
     /// was expected) rather than guessing.
-    fn from_toml_value(field_type: FieldType, value: &toml::Value) -> Option<Self> {
-        match field_type {
+    fn from_toml_value(field: &FieldDef, value: &toml::Value) -> Option<Self> {
+        match field.field_type {
             FieldType::Text | FieldType::Textarea | FieldType::Dropdown => {
                 value.as_str().map(|s| FieldValue::Text(s.to_owned()))
             }
@@ -86,11 +86,11 @@ impl FieldValue {
                 }
             }),
             FieldType::Multiselect => value.as_array().map(|arr| {
-                FieldValue::MultiSelect(
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(str::to_owned))
-                        .collect(),
-                )
+                let picked: Vec<String> = arr
+                    .iter()
+                    .filter_map(|v| v.as_str().map(str::to_owned))
+                    .collect();
+                FieldValue::MultiSelect(in_declared_order(field, picked))
             }),
         }
     }
@@ -109,11 +109,11 @@ impl FieldValue {
                 .as_str()
                 .map(|s| FieldValue::Date(DateInput::from_text(s.to_string()))),
             FieldType::Multiselect => value.as_array().map(|arr| {
-                FieldValue::MultiSelect(
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(str::to_string))
-                        .collect(),
-                )
+                let picked: Vec<String> = arr
+                    .iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect();
+                FieldValue::MultiSelect(in_declared_order(field, picked))
             }),
         }
     }
@@ -140,6 +140,42 @@ impl FieldValue {
     }
 }
 
+/// Reorders a multiselect's picked labels to match the field's declared
+/// option order, so output reads in the order the template author listed the
+/// choices rather than the order they happened to be clicked. Values not in
+/// the option list (e.g. left over from an edited template) keep their
+/// relative order at the end rather than being dropped.
+fn in_declared_order(field: &FieldDef, picked: Vec<String>) -> Vec<String> {
+    if field.options.is_empty() {
+        return picked;
+    }
+    let mut ordered: Vec<String> = field
+        .option_labels()
+        .filter(|label| picked.iter().any(|p| p == label))
+        .map(str::to_owned)
+        .collect();
+    ordered.extend(
+        picked
+            .into_iter()
+            .filter(|p| !field.option_labels().any(|label| label == p)),
+    );
+    ordered
+}
+
+/// Turns a multiselect choice on or off, keeping the stored selection in
+/// declared option order.
+pub fn toggle_multiselect(field: &FieldDef, selected: &mut Vec<String>, label: &str, on: bool) {
+    if on {
+        if !selected.iter().any(|s| s == label) {
+            selected.push(label.to_owned());
+        }
+    } else {
+        selected.retain(|s| s != label);
+    }
+    let picked = std::mem::take(selected);
+    *selected = in_declared_order(field, picked);
+}
+
 pub fn today() -> jiff::civil::Date {
     jiff::Zoned::now().date()
 }
@@ -160,6 +196,9 @@ pub fn build_form_state(fields: &[FieldDef]) -> FormState {
 pub struct GroupInstance {
     pub id: u64,
     pub values: FormState,
+    /// For a `source`-driven group, the choice this instance stands for (a
+    /// label from the driving multiselect). `None` for manually added ones.
+    pub source_item: Option<String>,
 }
 
 static NEXT_INSTANCE_ID: AtomicU64 = AtomicU64::new(1);
@@ -172,6 +211,7 @@ fn new_instance(fields: &[FieldDef]) -> GroupInstance {
     GroupInstance {
         id: next_instance_id(),
         values: build_form_state(fields),
+        source_item: None,
     }
 }
 
@@ -203,13 +243,7 @@ pub fn apply_speed_button(
     groups: &[GroupDef],
     groups_state: &mut GroupsState,
 ) {
-    for field in fields {
-        if let Some(value) = sb.values.get(&field.key)
-            && let Some(field_value) = FieldValue::from_toml_value(field.field_type, value)
-        {
-            state.insert(field.key.clone(), field_value);
-        }
-    }
+    apply_values(fields, &sb.values, state);
 
     let Some(group_key) = &sb.group else { return };
     let Some(group) = groups.iter().find(|g| &g.key == group_key) else {
@@ -218,15 +252,58 @@ pub fn apply_speed_button(
     let instances = groups_state.entry(group.key.clone()).or_default();
     for values in &sb.group_values {
         let mut instance = new_instance(&group.fields);
-        for field in &group.fields {
-            if let Some(value) = values.get(&field.key)
-                && let Some(field_value) = FieldValue::from_toml_value(field.field_type, value)
-            {
-                instance.values.insert(field.key.clone(), field_value);
-            }
-        }
+        apply_values(&group.fields, values, &mut instance.values);
         instances.push(instance);
     }
+}
+
+/// Overwrites whichever of `fields` are named in `values` (a speed button's
+/// `values` or `group_values` table). Unmatched keys (typos, a field that's
+/// since been removed) and type mismatches are silently skipped rather than
+/// treated as errors — a speed button always does what it can.
+pub fn apply_values(fields: &[FieldDef], values: &toml::Table, state: &mut FormState) {
+    for field in fields {
+        if let Some(value) = values.get(&field.key)
+            && let Some(field_value) = FieldValue::from_toml_value(field, value)
+        {
+            state.insert(field.key.clone(), field_value);
+        }
+    }
+}
+
+/// Reconciles a `source`-driven group's instances against the current
+/// selection of its driving multiselect: one instance per selected choice, in
+/// declared option order. Instances for still-selected choices keep whatever
+/// has already been typed into them; deselecting a choice drops its instance.
+pub fn sync_source_group(group: &GroupDef, state: &FormState, groups_state: &mut GroupsState) {
+    let Some(source_key) = &group.source else {
+        return;
+    };
+    let selection: Vec<String> = match state.get(source_key) {
+        Some(FieldValue::MultiSelect(v)) => v.clone(),
+        // A single-choice driver (dropdown) is treated as a one-item list.
+        Some(FieldValue::Text(s)) if !s.trim().is_empty() => vec![s.clone()],
+        _ => Vec::new(),
+    };
+
+    let existing = groups_state.entry(group.key.clone()).or_default();
+    let mut rebuilt = Vec::with_capacity(selection.len());
+    for item in selection {
+        // Reuse the existing instance for this choice so in-progress edits
+        // survive unrelated changes to the selection.
+        let found = existing
+            .iter()
+            .position(|inst| inst.source_item.as_deref() == Some(item.as_str()));
+        match found {
+            Some(idx) => rebuilt.push(existing.remove(idx)),
+            None => {
+                let mut instance = new_instance(&group.fields);
+                instance.source_item = Some(item);
+                rebuilt.push(instance);
+            }
+        }
+    }
+    *existing = rebuilt;
 }
 
 /// Serializes the fields' current values (in template field order) to a JSON
@@ -237,6 +314,58 @@ pub fn form_state_to_json(fields: &[FieldDef], state: &FormState) -> Value {
     for field in fields {
         if let Some(value) = state.get(&field.key) {
             map.insert(field.key.clone(), value.to_json());
+        }
+    }
+    Value::Object(map)
+}
+
+/// The value as the *template* should see it, which differs from the stored
+/// form in one place: a whole number renders as `2` rather than `2.0`, so
+/// counts read naturally in prose without needing `| int` everywhere.
+fn to_context_json(value: &FieldValue) -> Value {
+    match value {
+        FieldValue::Number(n) if n.fract() == 0.0 && n.is_finite() => Value::from(*n as i64),
+        other => other.to_json(),
+    }
+}
+
+/// Builds the object a template sees for one set of fields: every field's
+/// current value, plus `<key>_text` for any `dropdown`/`multiselect` whose
+/// options carry expansion prose. For a multiselect that's the list of
+/// expansions in declared option order; for a dropdown, the single expansion.
+pub fn form_state_to_context_json(fields: &[FieldDef], state: &FormState) -> Value {
+    let mut map = Map::new();
+    // Anything held in state but not backed by a declared field still reaches
+    // the template unchanged; the per-field pass below then overwrites these
+    // with properly typed values and adds the `_text` expansions.
+    for (key, value) in state {
+        map.insert(key.clone(), to_context_json(value));
+    }
+    for field in fields {
+        let Some(value) = state.get(&field.key) else {
+            continue;
+        };
+        map.insert(field.key.clone(), to_context_json(value));
+
+        if !field.has_option_text() {
+            continue;
+        }
+        let expansion = match value {
+            FieldValue::MultiSelect(picked) => Some(Value::Array(
+                field
+                    .option_labels()
+                    .filter(|label| picked.iter().any(|p| p == label))
+                    .filter_map(|label| field.text_for(label))
+                    .map(|text| Value::String(text.to_owned()))
+                    .collect(),
+            )),
+            FieldValue::Text(chosen) => Some(Value::String(
+                field.text_for(chosen).unwrap_or_default().to_owned(),
+            )),
+            _ => None,
+        };
+        if let Some(expansion) = expansion {
+            map.insert(format!("{}_text", field.key), expansion);
         }
     }
     Value::Object(map)
@@ -266,6 +395,10 @@ pub fn form_state_from_json(fields: &[FieldDef], json: &Value) -> FormState {
 /// fine (they just have no `__groups__`, i.e. no saved group instances).
 const GROUPS_JSON_KEY: &str = "__groups__";
 
+/// Reserved key recording which driving choice a `source`-backed group
+/// instance belongs to, so drafts/history restore them onto the right choice.
+const SOURCE_ITEM_JSON_KEY: &str = "__source__";
+
 /// Serializes a template's whole form (top-level fields + every repeatable
 /// group's instances) to one JSON value, for a history entry or draft.
 pub fn snapshot_to_json(
@@ -283,7 +416,16 @@ pub fn snapshot_to_json(
             let instances = groups_state.get(&group.key).map(Vec::as_slice).unwrap_or(&[]);
             let json_instances = instances
                 .iter()
-                .map(|inst| form_state_to_json(&group.fields, &inst.values))
+                .map(|inst| {
+                    let mut obj = form_state_to_json(&group.fields, &inst.values);
+                    // Keep which choice a source-driven instance stands for, so
+                    // restoring reattaches its values to that choice instead of
+                    // rebuilding blank instances from the selection.
+                    if let (Some(item), Value::Object(map)) = (&inst.source_item, &mut obj) {
+                        map.insert(SOURCE_ITEM_JSON_KEY.to_string(), Value::String(item.clone()));
+                    }
+                    obj
+                })
                 .collect();
             groups_json.insert(group.key.clone(), Value::Array(json_instances));
         }
@@ -314,6 +456,10 @@ pub fn snapshot_from_json(
                 .map(|inst_json| GroupInstance {
                     id: next_instance_id(),
                     values: form_state_from_json(&group.fields, inst_json),
+                    source_item: inst_json
+                        .get(SOURCE_ITEM_JSON_KEY)
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned),
                 })
                 .collect();
             groups_state.insert(group.key.clone(), instances);
@@ -358,7 +504,7 @@ mod tests {
             default: None,
             options: vec![],
             min: None,
-            max: None,
+            ..Default::default()
         }
     }
 
@@ -371,7 +517,7 @@ mod tests {
             default: None,
             options: vec![],
             min: None,
-            max: None,
+            ..Default::default()
         }
     }
 
@@ -382,9 +528,9 @@ mod tests {
             field_type: FieldType::Multiselect,
             required: false,
             default: None,
-            options: vec!["A".into(), "B".into()],
+            options: vec![opt("A"), opt("B")],
             min: None,
-            max: None,
+            ..Default::default()
         }
     }
 
@@ -492,7 +638,14 @@ mod tests {
             default: None,
             options: vec![],
             min: None,
-            max: None,
+            ..Default::default()
+        }
+    }
+
+    fn opt(label: &str) -> crate::template::OptionDef {
+        crate::template::OptionDef {
+            label: label.to_string(),
+            text: None,
         }
     }
 
@@ -507,8 +660,7 @@ mod tests {
         SpeedButtonDef {
             label: "Test".to_string(),
             values,
-            group: None,
-            group_values: vec![],
+            ..Default::default()
         }
     }
 
@@ -589,6 +741,7 @@ mod tests {
             key: "procedures".to_string(),
             label: "Procedure Step".to_string(),
             fields: vec![text_field("tooth", true), text_field("procedure_type", false)],
+            ..Default::default()
         }
     }
 
@@ -712,5 +865,283 @@ mod tests {
         let state = build_form_state(&fields);
         let json = snapshot_to_json(&fields, &state, &[], &GroupsState::new());
         assert!(json.as_object().unwrap().get(GROUPS_JSON_KEY).is_none());
+    }
+}
+
+#[cfg(test)]
+mod new_capability_tests {
+    use super::*;
+    use crate::template::{FieldType, GroupDef, OptionDef};
+
+    fn opt(label: &str, text: Option<&str>) -> OptionDef {
+        OptionDef {
+            label: label.to_string(),
+            text: text.map(str::to_string),
+        }
+    }
+
+    fn multiselect_with(key: &str, options: Vec<OptionDef>) -> FieldDef {
+        FieldDef {
+            key: key.to_string(),
+            label: key.to_string(),
+            field_type: FieldType::Multiselect,
+            options,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn multiselect_selection_is_kept_in_declared_order() {
+        let field = multiselect_with(
+            "socket",
+            vec![opt("No tooth structure", None), opt("Curretted", None), opt("Irrigated", None)],
+        );
+        let mut selected: Vec<String> = Vec::new();
+        // Clicked out of order.
+        toggle_multiselect(&field, &mut selected, "Irrigated", true);
+        toggle_multiselect(&field, &mut selected, "No tooth structure", true);
+        toggle_multiselect(&field, &mut selected, "Curretted", true);
+
+        assert_eq!(selected, vec!["No tooth structure", "Curretted", "Irrigated"]);
+
+        toggle_multiselect(&field, &mut selected, "Curretted", false);
+        assert_eq!(selected, vec!["No tooth structure", "Irrigated"]);
+    }
+
+    #[test]
+    fn option_text_is_published_as_field_text_in_declared_order() {
+        let field = multiselect_with(
+            "socket",
+            vec![
+                opt("No tooth structure", Some("No tooth structure retained")),
+                opt("Curretted", Some("Gently curetted the socket")),
+                opt("Irrigated", Some("Irrigated with sterile saline")),
+            ],
+        );
+        let mut state = build_form_state(std::slice::from_ref(&field));
+        state.insert(
+            "socket".into(),
+            FieldValue::MultiSelect(vec!["Irrigated".into(), "No tooth structure".into()]),
+        );
+
+        let json = form_state_to_context_json(std::slice::from_ref(&field), &state);
+        let obj = json.as_object().unwrap();
+        assert_eq!(
+            obj.get("socket_text").unwrap(),
+            &serde_json::json!(["No tooth structure retained", "Irrigated with sterile saline"]),
+            "expansions follow declared option order, not selection order"
+        );
+        // The raw labels are still available under the plain key.
+        assert_eq!(
+            obj.get("socket").unwrap(),
+            &serde_json::json!(["Irrigated", "No tooth structure"])
+        );
+    }
+
+    #[test]
+    fn options_without_text_publish_no_text_key() {
+        let field = multiselect_with("symptoms", vec![opt("Cough", None), opt("Fever", None)]);
+        let mut state = build_form_state(std::slice::from_ref(&field));
+        state.insert("symptoms".into(), FieldValue::MultiSelect(vec!["Cough".into()]));
+
+        let json = form_state_to_context_json(std::slice::from_ref(&field), &state);
+        assert!(json.as_object().unwrap().get("symptoms_text").is_none());
+    }
+
+    #[test]
+    fn dropdown_option_text_publishes_a_single_string() {
+        let field = FieldDef {
+            key: "anesthesia".to_string(),
+            label: "Anesthesia".to_string(),
+            field_type: FieldType::Dropdown,
+            options: vec![opt("Local", Some("local anesthesia only"))],
+            ..Default::default()
+        };
+        let mut state = build_form_state(std::slice::from_ref(&field));
+        state.insert("anesthesia".into(), FieldValue::Text("Local".into()));
+
+        let json = form_state_to_context_json(std::slice::from_ref(&field), &state);
+        assert_eq!(
+            json.as_object().unwrap().get("anesthesia_text").unwrap(),
+            &serde_json::json!("local anesthesia only")
+        );
+    }
+
+    #[test]
+    fn whole_numbers_reach_the_template_without_a_decimal_point() {
+        let field = FieldDef {
+            key: "carps".to_string(),
+            label: "Carpules".to_string(),
+            field_type: FieldType::Number,
+            ..Default::default()
+        };
+        let mut state = build_form_state(std::slice::from_ref(&field));
+        state.insert("carps".into(), FieldValue::Number(2.0));
+        let json = form_state_to_context_json(std::slice::from_ref(&field), &state);
+        assert_eq!(json.as_object().unwrap().get("carps").unwrap(), &serde_json::json!(2));
+
+        // A genuinely fractional value keeps its precision.
+        state.insert("carps".into(), FieldValue::Number(1.5));
+        let json = form_state_to_context_json(std::slice::from_ref(&field), &state);
+        assert_eq!(json.as_object().unwrap().get("carps").unwrap(), &serde_json::json!(1.5));
+    }
+
+    fn tooth_group() -> (FieldDef, GroupDef) {
+        let source = multiselect_with(
+            "teeth",
+            vec![opt("1", None), opt("16", None), opt("17", None), opt("32", None)],
+        );
+        let group = GroupDef {
+            key: "per_tooth".to_string(),
+            label: "Tooth".to_string(),
+            fields: vec![FieldDef {
+                key: "note".to_string(),
+                label: "Note".to_string(),
+                ..Default::default()
+            }],
+            source: Some("teeth".to_string()),
+            source_as: Some("tooth".to_string()),
+            ..Default::default()
+        };
+        (source, group)
+    }
+
+    #[test]
+    fn source_group_creates_one_instance_per_selected_choice() {
+        let (source, group) = tooth_group();
+        let mut state = build_form_state(std::slice::from_ref(&source));
+        state.insert(
+            "teeth".into(),
+            FieldValue::MultiSelect(vec!["1".into(), "17".into()]),
+        );
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+
+        sync_source_group(&group, &state, &mut groups_state);
+
+        let instances = groups_state.get("per_tooth").unwrap();
+        assert_eq!(instances.len(), 2);
+        assert_eq!(
+            instances.iter().map(|i| i.source_item.clone().unwrap()).collect::<Vec<_>>(),
+            vec!["1", "17"]
+        );
+    }
+
+    #[test]
+    fn source_group_keeps_edits_when_an_unrelated_choice_is_added() {
+        let (source, group) = tooth_group();
+        let mut state = build_form_state(std::slice::from_ref(&source));
+        state.insert("teeth".into(), FieldValue::MultiSelect(vec!["17".into()]));
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+        sync_source_group(&group, &state, &mut groups_state);
+
+        // Type something into tooth 17's block.
+        groups_state.get_mut("per_tooth").unwrap()[0]
+            .values
+            .insert("note".into(), FieldValue::Text("distoangular".into()));
+
+        // Now also select tooth 1 — 17's note must survive.
+        state.insert(
+            "teeth".into(),
+            FieldValue::MultiSelect(vec!["1".into(), "17".into()]),
+        );
+        sync_source_group(&group, &state, &mut groups_state);
+
+        let instances = groups_state.get("per_tooth").unwrap();
+        assert_eq!(instances.len(), 2);
+        let seventeen = instances
+            .iter()
+            .find(|i| i.source_item.as_deref() == Some("17"))
+            .unwrap();
+        match seventeen.values.get("note").unwrap() {
+            FieldValue::Text(s) => assert_eq!(s, "distoangular"),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn deselecting_a_choice_drops_only_its_instance() {
+        let (source, group) = tooth_group();
+        let mut state = build_form_state(std::slice::from_ref(&source));
+        state.insert(
+            "teeth".into(),
+            FieldValue::MultiSelect(vec!["1".into(), "17".into()]),
+        );
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+        sync_source_group(&group, &state, &mut groups_state);
+
+        state.insert("teeth".into(), FieldValue::MultiSelect(vec!["17".into()]));
+        sync_source_group(&group, &state, &mut groups_state);
+
+        let instances = groups_state.get("per_tooth").unwrap();
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances[0].source_item.as_deref(), Some("17"));
+    }
+
+    #[test]
+    fn source_driven_instances_survive_a_draft_round_trip() {
+        let (source, group) = tooth_group();
+        let fields = vec![source.clone()];
+        let mut state = build_form_state(&fields);
+        state.insert("teeth".into(), FieldValue::MultiSelect(vec!["17".into()]));
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+        sync_source_group(&group, &state, &mut groups_state);
+        groups_state.get_mut("per_tooth").unwrap()[0]
+            .values
+            .insert("note".into(), FieldValue::Text("mesioangular".into()));
+
+        let json = snapshot_to_json(&fields, &state, std::slice::from_ref(&group), &groups_state);
+        let (restored_state, mut restored_groups) =
+            snapshot_from_json(&fields, std::slice::from_ref(&group), &json);
+        // Syncing after a restore must reattach, not rebuild blank.
+        sync_source_group(&group, &restored_state, &mut restored_groups);
+
+        let instances = restored_groups.get("per_tooth").unwrap();
+        assert_eq!(instances.len(), 1);
+        assert_eq!(instances[0].source_item.as_deref(), Some("17"));
+        match instances[0].values.get("note").unwrap() {
+            FieldValue::Text(s) => assert_eq!(s, "mesioangular"),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn instance_speed_button_sets_only_that_instances_fields() {
+        let group = GroupDef {
+            key: "blocks".to_string(),
+            label: "Block".to_string(),
+            fields: vec![
+                multiselect_with("soft_tissue", vec![opt("Flap", None), opt("PDL", None)]),
+                FieldDef {
+                    key: "header".to_string(),
+                    label: "Header".to_string(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+        add_group_instance(&mut groups_state, &group);
+        add_group_instance(&mut groups_state, &group);
+
+        let values: toml::Table = [(
+            "soft_tissue".to_string(),
+            toml::Value::Array(vec![toml::Value::String("PDL".into())]),
+        )]
+        .into_iter()
+        .collect();
+
+        let instances = groups_state.get_mut("blocks").unwrap();
+        apply_values(&group.fields, &values, &mut instances[0].values);
+
+        match instances[0].values.get("soft_tissue").unwrap() {
+            FieldValue::MultiSelect(v) => assert_eq!(v, &vec!["PDL".to_string()]),
+            other => panic!("expected MultiSelect, got {other:?}"),
+        }
+        match instances[1].values.get("soft_tissue").unwrap() {
+            FieldValue::MultiSelect(v) => {
+                assert!(v.is_empty(), "the other block must be untouched")
+            }
+            other => panic!("expected MultiSelect, got {other:?}"),
+        }
     }
 }

@@ -2,15 +2,18 @@ use eframe::egui;
 
 use crate::drafts::DraftEntry;
 use crate::field::{
-    add_group_instance, apply_speed_button, build_form_state, build_groups_state, is_restorable,
-    snapshot_from_json, snapshot_to_json, FieldValue, FormState, GroupsState,
+    add_group_instance, apply_speed_button, apply_values, build_form_state, build_groups_state,
+    is_restorable, snapshot_from_json, snapshot_to_json, sync_source_group, toggle_multiselect,
+    FieldValue, FormState, GroupsState,
 };
 use crate::formatting::{self, FormattedRun};
 use crate::history::{append_history, load_history, now_timestamp, HistoryEntry};
-use crate::render::render_body;
+use crate::render::{build_context, instance_context_json, render_body_with_context};
 use crate::storage::Paths;
 use crate::template::loader::load_templates;
 use crate::template::{FieldDef, FieldType, GroupDef, TemplateDef};
+use crate::visibility::{context_with_overrides, ExprEvaluator, Scope, Visibility};
+use tera::Context;
 
 pub struct NoteTemplaterApp {
     paths: Paths,
@@ -26,6 +29,8 @@ pub struct NoteTemplaterApp {
     show_drafts: bool,
     drafts: Vec<DraftEntry>,
     status: Option<String>,
+    /// Caches compiled `visible_if` expressions across frames.
+    expr_eval: ExprEvaluator,
 }
 
 impl NoteTemplaterApp {
@@ -48,6 +53,7 @@ impl NoteTemplaterApp {
             show_drafts: false,
             drafts,
             status: None,
+            expr_eval: ExprEvaluator::default(),
         };
         if !app.templates.is_empty() {
             app.select_template(0);
@@ -173,17 +179,102 @@ impl NoteTemplaterApp {
         }
     }
 
-    fn form_is_valid(&self, template: &TemplateDef) -> bool {
-        fields_are_valid(&template.fields, &self.form_state)
+    fn form_is_valid(&self, template: &TemplateDef, visibility: &Visibility) -> bool {
+        fields_are_valid(&template.fields, &self.form_state, visibility, Scope::Form)
             && template.groups.iter().all(|group| {
+                if !visibility.is_visible(group.visible_if.as_ref(), Scope::Form) {
+                    return true;
+                }
                 self.groups_state
                     .get(&group.key)
                     .is_none_or(|instances| {
-                        instances
-                            .iter()
-                            .all(|inst| fields_are_valid(&group.fields, &inst.values))
+                        instances.iter().all(|inst| {
+                            fields_are_valid(
+                                &group.fields,
+                                &inst.values,
+                                visibility,
+                                Scope::Instance(inst.id),
+                            )
+                        })
                     })
             })
+    }
+
+    /// Works out, once per frame, which `visible_if`-guarded fields, groups
+    /// and speed buttons are currently showing. Conditions inside a
+    /// repeatable block are evaluated per instance, with that instance's own
+    /// values layered over the template's top-level ones.
+    fn compute_visibility(&mut self, template: &TemplateDef, ctx: &Context) -> Visibility {
+        let mut visibility = Visibility::default();
+        let eval = |visibility: &mut Visibility,
+                        evaluator: &mut ExprEvaluator,
+                        expr: &Option<String>,
+                        scope: Scope,
+                        ctx: &Context| {
+            if let Some(expr) = expr {
+                let shown = evaluator.truthy(expr, ctx);
+                visibility.record(expr, scope, shown);
+            }
+        };
+
+        for field in &template.fields {
+            eval(
+                &mut visibility,
+                &mut self.expr_eval,
+                &field.visible_if,
+                Scope::Form,
+                ctx,
+            );
+        }
+        for sb in &template.speed_buttons {
+            eval(
+                &mut visibility,
+                &mut self.expr_eval,
+                &sb.visible_if,
+                Scope::Form,
+                ctx,
+            );
+        }
+        for group in &template.groups {
+            eval(
+                &mut visibility,
+                &mut self.expr_eval,
+                &group.visible_if,
+                Scope::Form,
+                ctx,
+            );
+            let Some(instances) = self.groups_state.get(&group.key) else {
+                continue;
+            };
+            for inst in instances {
+                let needs_scope = group.fields.iter().any(|f| f.visible_if.is_some())
+                    || group.speed_buttons.iter().any(|sb| sb.visible_if.is_some());
+                if !needs_scope {
+                    continue;
+                }
+                let inst_ctx = context_with_overrides(ctx, &instance_context_json(group, inst));
+                let scope = Scope::Instance(inst.id);
+                for field in &group.fields {
+                    eval(
+                        &mut visibility,
+                        &mut self.expr_eval,
+                        &field.visible_if,
+                        scope,
+                        &inst_ctx,
+                    );
+                }
+                for sb in &group.speed_buttons {
+                    eval(
+                        &mut visibility,
+                        &mut self.expr_eval,
+                        &sb.visible_if,
+                        scope,
+                        &inst_ctx,
+                    );
+                }
+            }
+        }
+        visibility
     }
 }
 
@@ -191,8 +282,19 @@ impl NoteTemplaterApp {
 /// Copy go ahead: required fields aren't empty, and no date field (required
 /// or not) has typed-but-unparsable text sitting in it. Shared by the
 /// top-level form and, per-instance, by every repeatable group.
-fn fields_are_valid(fields: &[FieldDef], state: &FormState) -> bool {
+///
+/// A field hidden by `visible_if` is skipped entirely — something the form
+/// isn't showing must not be able to block the Copy button.
+fn fields_are_valid(
+    fields: &[FieldDef],
+    state: &FormState,
+    visibility: &Visibility,
+    scope: Scope,
+) -> bool {
     fields.iter().all(|f| {
+        if !visibility.is_visible(f.visible_if.as_ref(), scope) {
+            return true;
+        }
         let Some(value) = state.get(&f.key) else {
             return !f.required;
         };
@@ -359,6 +461,23 @@ impl eframe::App for NoteTemplaterApp {
             // while mutating `self.form_state` below.
             let template = self.templates[idx].clone();
 
+            // Bring any selection-driven groups in line with their driving
+            // field before drawing, so the form shows one block per choice.
+            for group in &template.groups {
+                sync_source_group(group, &self.form_state, &mut self.groups_state);
+            }
+            // Visibility is resolved once, against the values as they stand at
+            // the start of the frame, and then just looked up while drawing.
+            let visibility = {
+                let ctx = build_context(
+                    &template.fields,
+                    &self.form_state,
+                    &template.groups,
+                    &self.groups_state,
+                );
+                self.compute_visibility(&template, &ctx)
+            };
+
             // A resizable inner panel for the form, so the preview (drawn directly
             // into the remaining `ui` below) can be made bigger or smaller by
             // dragging the divider. The form panel is shown first so its widgets
@@ -379,6 +498,11 @@ impl eframe::App for NoteTemplaterApp {
                                 ui.add_space(4.0);
                                 ui.horizontal_wrapped(|ui| {
                                     for sb in &template.speed_buttons {
+                                        if !visibility
+                                            .is_visible(sb.visible_if.as_ref(), Scope::Form)
+                                        {
+                                            continue;
+                                        }
                                         if ui.button(&sb.label).clicked() {
                                             apply_speed_button(
                                                 sb,
@@ -393,22 +517,30 @@ impl eframe::App for NoteTemplaterApp {
                             }
                             ui.separator();
                             for field in &template.fields {
-                                render_field(ui, field, &mut self.form_state);
+                                render_field(
+                                    ui,
+                                    field,
+                                    &mut self.form_state,
+                                    &visibility,
+                                    Scope::Form,
+                                );
                             }
 
                             for group in &template.groups {
-                                render_group(ui, group, &mut self.groups_state);
+                                render_group(ui, group, &mut self.groups_state, &visibility);
                             }
                         });
                 });
 
-            let rendered = render_body(
-                &template.body,
-                &self.partials,
-                &self.form_state,
-                &template.groups,
-                &self.groups_state,
-            );
+            let rendered = {
+                let ctx = build_context(
+                    &template.fields,
+                    &self.form_state,
+                    &template.groups,
+                    &self.groups_state,
+                );
+                render_body_with_context(&template.body, &self.partials, &ctx)
+            };
             // `CentralPanel` (rather than `ui.vertical`) so this fills all remaining
             // width instead of shrink-wrapping to its content.
             egui::CentralPanel::default_margins().show(ui, |ui| {
@@ -434,7 +566,7 @@ impl eframe::App for NoteTemplaterApp {
 
                 ui.separator();
                 ui.horizontal(|ui| {
-                    let valid = self.form_is_valid(&template);
+                    let valid = self.form_is_valid(&template, &visibility);
                     let can_copy = valid && runs.is_some();
                     let mut copied: Option<String> = None;
 
@@ -513,7 +645,16 @@ impl eframe::App for NoteTemplaterApp {
     }
 }
 
-fn render_field(ui: &mut egui::Ui, field: &FieldDef, state: &mut FormState) {
+fn render_field(
+    ui: &mut egui::Ui,
+    field: &FieldDef,
+    state: &mut FormState,
+    visibility: &Visibility,
+    scope: Scope,
+) {
+    if !visibility.is_visible(field.visible_if.as_ref(), scope) {
+        return;
+    }
     ui.horizontal(|ui| {
         ui.label(&field.label);
         if field.required {
@@ -551,22 +692,20 @@ fn render_field(ui: &mut egui::Ui, field: &FieldDef, state: &mut FormState) {
                 egui::ComboBox::from_id_salt(&field.key)
                     .selected_text(current)
                     .show_ui(ui, |ui| {
-                        for opt in &field.options {
-                            ui.selectable_value(s, opt.clone(), opt);
+                        for label in field.option_labels() {
+                            ui.selectable_value(s, label.to_owned(), label);
                         }
                     });
             }
         }
         FieldType::Multiselect => {
             if let Some(FieldValue::MultiSelect(selected)) = state.get_mut(&field.key) {
-                for opt in &field.options {
-                    let mut checked = selected.contains(opt);
-                    if ui.checkbox(&mut checked, opt).changed() {
-                        if checked {
-                            selected.push(opt.clone());
-                        } else {
-                            selected.retain(|o| o != opt);
-                        }
+                for label in field.option_labels() {
+                    let mut checked = selected.iter().any(|s| s == label);
+                    if ui.checkbox(&mut checked, label).changed() {
+                        // Goes through the helper so the stored selection stays
+                        // in declared option order, not click order.
+                        toggle_multiselect(field, selected, label, checked);
                     }
                 }
             }
@@ -611,7 +750,19 @@ fn render_field(ui: &mut egui::Ui, field: &FieldDef, state: &mut FormState) {
 
 /// Renders one repeatable group as a list of add/remove-able instances, each
 /// a mini form using the same [`render_field`] as the top-level fields.
-fn render_group(ui: &mut egui::Ui, group: &GroupDef, groups_state: &mut GroupsState) {
+fn render_group(
+    ui: &mut egui::Ui,
+    group: &GroupDef,
+    groups_state: &mut GroupsState,
+    visibility: &Visibility,
+) {
+    if !visibility.is_visible(group.visible_if.as_ref(), Scope::Form) {
+        return;
+    }
+    // A selection-driven group has no manual add/remove — its blocks come and
+    // go with the field named by `source`.
+    let driven = group.source.is_some();
+
     ui.add_space(4.0);
     ui.separator();
     ui.strong(&group.label);
@@ -619,16 +770,34 @@ fn render_group(ui: &mut egui::Ui, group: &GroupDef, groups_state: &mut GroupsSt
     let instances = groups_state.entry(group.key.clone()).or_default();
     let mut remove_index = None;
     for (i, instance) in instances.iter_mut().enumerate() {
+        let scope = Scope::Instance(instance.id);
         ui.push_id(instance.id, |ui| {
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label(format!("{} {}", group.label, i + 1));
-                    if ui.small_button("Remove").clicked() {
+                    match &instance.source_item {
+                        Some(item) => ui.label(format!("{} — {item}", group.label)),
+                        None => ui.label(format!("{} {}", group.label, i + 1)),
+                    };
+                    if !driven && ui.small_button("Remove").clicked() {
                         remove_index = Some(i);
                     }
                 });
+                if !group.speed_buttons.is_empty() {
+                    ui.horizontal_wrapped(|ui| {
+                        for sb in &group.speed_buttons {
+                            if !visibility.is_visible(sb.visible_if.as_ref(), scope) {
+                                continue;
+                            }
+                            if ui.button(&sb.label).clicked() {
+                                // Scoped to this block: fills in this block's
+                                // own fields, leaving every other one alone.
+                                apply_values(&group.fields, &sb.values, &mut instance.values);
+                            }
+                        }
+                    });
+                }
                 for field in &group.fields {
-                    render_field(ui, field, &mut instance.values);
+                    render_field(ui, field, &mut instance.values, visibility, scope);
                 }
             });
         });
@@ -637,7 +806,7 @@ fn render_group(ui: &mut egui::Ui, group: &GroupDef, groups_state: &mut GroupsSt
         instances.remove(i);
     }
 
-    if ui.button(format!("+ Add {}", group.label)).clicked() {
+    if !driven && ui.button(format!("+ Add {}", group.label)).clicked() {
         add_group_instance(groups_state, group);
     }
     ui.add_space(4.0);
@@ -708,10 +877,7 @@ mod tests {
             label: key.to_string(),
             field_type: FieldType::Text,
             required,
-            default: None,
-            options: vec![],
-            min: None,
-            max: None,
+            ..Default::default()
         }
     }
 
@@ -733,6 +899,7 @@ mod tests {
             show_drafts: false,
             drafts: Vec::new(),
             status: None,
+            expr_eval: ExprEvaluator::default(),
         };
         (app, template)
     }
@@ -743,6 +910,7 @@ mod tests {
             key: "procedures".to_string(),
             label: "Procedure Step".to_string(),
             fields: vec![text_field("tooth", true)],
+            ..Default::default()
         };
         let template = TemplateDef {
             id: "t".to_string(),
@@ -756,13 +924,13 @@ mod tests {
         let (mut app, template) = app_with_template(template);
 
         assert!(
-            app.form_is_valid(&template),
+            app.form_is_valid(&template, &Visibility::default()),
             "no instances yet -> nothing to fail"
         );
 
         add_group_instance(&mut app.groups_state, &group);
         assert!(
-            !app.form_is_valid(&template),
+            !app.form_is_valid(&template, &Visibility::default()),
             "a fresh instance has its required 'tooth' field blank"
         );
 
@@ -770,11 +938,11 @@ mod tests {
         instances[0]
             .values
             .insert("tooth".to_string(), FieldValue::Text("14".to_string()));
-        assert!(app.form_is_valid(&template), "filled -> valid again");
+        assert!(app.form_is_valid(&template, &Visibility::default()), "filled -> valid again");
 
         add_group_instance(&mut app.groups_state, &group);
         assert!(
-            !app.form_is_valid(&template),
+            !app.form_is_valid(&template, &Visibility::default()),
             "one bad instance among several still blocks copy"
         );
     }
@@ -785,6 +953,7 @@ mod tests {
             key: "procedures".to_string(),
             label: "Procedure Step".to_string(),
             fields: vec![text_field("notes", false)],
+            ..Default::default()
         };
         let template = TemplateDef {
             id: "t".to_string(),
@@ -799,7 +968,7 @@ mod tests {
 
         add_group_instance(&mut app.groups_state, &group);
         assert!(
-            app.form_is_valid(&template),
+            app.form_is_valid(&template, &Visibility::default()),
             "optional field left blank shouldn't block copy"
         );
     }
