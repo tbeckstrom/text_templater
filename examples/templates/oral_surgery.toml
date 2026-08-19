@@ -1,0 +1,76 @@
+id = "oral_surgery"
+name = "Oral Surgery Procedure"
+description = "Procedure note with one repeatable step per tooth/site worked on"
+use_shared = ["patient_name", "dob", "visit_date"]
+
+# NOTE: `body` must come before any [[fields]] / [[groups]] / [[speed_buttons]]
+# blocks below — in TOML, keys written after an array-of-tables attach to the
+# last table entry, not the document root.
+body = """
+{% include "header" %}
+**Procedure Summary:** {{ procedure_summary }}
+{% if anesthesia %}Anesthesia: {{ anesthesia }}{% endif %}
+
+{% if procedures %}**Procedure Steps:**
+{% for p in procedures %}  {{ loop.index }}. Tooth {{ p.tooth }} — *{{ p.procedure_type }}*{% if p.notes %} ({{ p.notes }}){% endif %}
+{% endfor %}{% else %}No procedure steps recorded.
+{% endif %}
+"""
+
+# Speed buttons here don't just set fields — `group` + `group_values` append
+# one or more pre-filled instances to a [[groups]] below. A button can set
+# `values` (top-level fields), add to a `group`, or both at once.
+[[speed_buttons]]
+label = "+ Extraction"
+group = "procedures"
+group_values = [{ tooth = "", procedure_type = "Extraction" }]
+
+[[speed_buttons]]
+label = "+ Upper Right Quadrant (1-8)"
+group = "procedures"
+group_values = [
+  { tooth = "1", procedure_type = "Extraction" },
+  { tooth = "2", procedure_type = "Extraction" },
+  { tooth = "3", procedure_type = "Extraction" },
+  { tooth = "4", procedure_type = "Extraction" },
+  { tooth = "5", procedure_type = "Extraction" },
+  { tooth = "6", procedure_type = "Extraction" },
+  { tooth = "7", procedure_type = "Extraction" },
+  { tooth = "8", procedure_type = "Extraction" },
+]
+
+[[fields]]
+key = "procedure_summary"
+label = "Procedure Summary"
+type = "text"
+required = true
+
+[[fields]]
+key = "anesthesia"
+label = "Anesthesia"
+type = "dropdown"
+options = ["Local", "IV Sedation", "General"]
+
+# A repeatable group: each "Add Procedure Step" click appends one instance of
+# these fields, shown as its own mini form. In `body`, `procedures` is an
+# array of objects — `{% for p in procedures %}{{ p.tooth }}{% endfor %}`.
+[[groups]]
+key = "procedures"
+label = "Procedure Step"
+
+[[groups.fields]]
+key = "tooth"
+label = "Tooth #"
+type = "text"
+required = true
+
+[[groups.fields]]
+key = "procedure_type"
+label = "Procedure"
+type = "dropdown"
+options = ["Extraction", "Implant", "Bone Graft", "Filling", "Root Canal"]
+
+[[groups.fields]]
+key = "notes"
+label = "Notes"
+type = "text"

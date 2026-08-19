@@ -1,0 +1,69 @@
+id = "initial_consult"
+name = "Initial Consult"
+description = "New patient intake / initial consultation note"
+use_shared = ["patient_name", "dob", "visit_date"]
+
+# NOTE: `body` must come before any [[fields]] / [[speed_buttons]] blocks
+# below — in TOML, keys written after an array-of-tables attach to the last
+# table entry, not the document root.
+#
+# `{% include "header" %}` pulls in partials/header.tera, a body section
+# shared with follow_up_visit.toml — edit it once, both templates update.
+#
+# **bold**, *italic*, __underline__ work anywhere in the body.
+body = """
+**NEW PATIENT — INITIAL CONSULT**
+
+{% include "header" %}
+Referral Source: {{ referral }}
+
+**Reason for Visit:**
+{{ reason_for_visit }}
+{% if medical_history %}
+**Relevant Medical History:**
+{{ medical_history }}
+{% endif %}
+{% if allergies %}
+**Allergies:**
+{% for a in allergies %}  - {{ a }}
+{% endfor %}{% endif %}
+{% if requires_labs %}
+*Labs have been ordered.*
+{% endif %}
+"""
+
+# Speed buttons fill in several fields at once for a frequently-used pattern.
+# `values` uses the same TOML shape as a field's `default`.
+[[speed_buttons]]
+label = "Routine Intake"
+values = { reason_for_visit = "Routine new-patient intake, no acute concerns", medical_history = "none", allergies = [], requires_labs = false }
+
+[[fields]]
+key = "reason_for_visit"
+label = "Reason for Visit"
+type = "textarea"
+required = true
+
+[[fields]]
+key = "medical_history"
+label = "Relevant Medical History"
+type = "textarea"
+
+[[fields]]
+key = "allergies"
+label = "Known Allergies"
+type = "multiselect"
+options = ["Penicillin", "Sulfa", "Latex", "NSAIDs", "None known"]
+
+[[fields]]
+key = "referral"
+label = "Referral Source"
+type = "dropdown"
+options = ["Self", "Physician Referral", "Insurance", "Other"]
+default = "Self"
+
+[[fields]]
+key = "requires_labs"
+label = "Labs ordered?"
+type = "checkbox"
+default = false

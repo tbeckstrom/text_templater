@@ -1,0 +1,19 @@
+# Fields defined here can be pulled into any template via `use_shared = ["key", ...]`
+# instead of redefining them in every template file.
+
+[[fields]]
+key = "patient_name"
+label = "Patient Name"
+type = "text"
+required = true
+
+[[fields]]
+key = "dob"
+label = "Date of Birth"
+type = "date"
+
+[[fields]]
+key = "visit_date"
+label = "Visit Date"
+type = "date"
+default = "today"

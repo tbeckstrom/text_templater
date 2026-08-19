@@ -1,0 +1,2 @@
+**Patient:** {{ patient_name }} (DOB: {{ dob }})
+**Visit Date:** {{ visit_date }}

@@ -1,0 +1,76 @@
+id = "follow_up_visit"
+name = "Follow-up Visit"
+description = "Standard follow-up visit note"
+use_shared = ["patient_name", "dob", "visit_date"]
+
+# NOTE: `body` must come before any [[fields]] / [[speed_buttons]] blocks
+# below — in TOML, keys written after an array-of-tables attach to the last
+# table entry, not the document root.
+#
+# `{% include "header" %}` pulls in partials/header.tera, a body section
+# shared with initial_consult.toml — edit it once, both templates update.
+#
+# **bold**, *italic*, __underline__ work anywhere in the body.
+body = """
+{% include "header" %}
+**Visit Type:** {{ visit_type }}
+
+**Chief Complaint:** {{ chief_complaint }}
+{% if symptoms %}
+**Symptoms:**
+{% for s in symptoms %}  - {{ s }}
+{% endfor %}{% endif %}
+{% if notes %}
+Notes: {{ notes }}
+{% endif %}
+{% if follow_up_needed %}
+*Follow-up recommended in {{ follow_up_weeks }} week(s).*
+{% else %}
+No follow-up scheduled at this time.
+{% endif %}
+"""
+
+# Speed buttons fill in several fields at once for a frequently-used pattern.
+# `values` uses the same TOML shape as a field's `default`.
+[[speed_buttons]]
+label = "Annual Visit"
+values = { visit_type = "In-person", chief_complaint = "Annual check up", symptoms = [], notes = "", follow_up_needed = false }
+
+[[fields]]
+key = "visit_type"
+label = "Visit Type"
+type = "dropdown"
+options = ["In-person", "Telehealth", "Phone"]
+default = "In-person"
+required = true
+
+[[fields]]
+key = "chief_complaint"
+label = "Chief Complaint"
+type = "text"
+required = true
+
+[[fields]]
+key = "symptoms"
+label = "Symptoms"
+type = "multiselect"
+options = ["Cough", "Fever", "Fatigue", "Headache", "Nausea"]
+
+[[fields]]
+key = "notes"
+label = "Additional Notes"
+type = "textarea"
+
+[[fields]]
+key = "follow_up_needed"
+label = "Follow-up needed?"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "follow_up_weeks"
+label = "Follow-up in (weeks)"
+type = "number"
+min = 1
+max = 52
+default = 2
