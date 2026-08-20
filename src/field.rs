@@ -54,9 +54,10 @@ impl FieldValue {
     /// `default` (or an unusable one) to fall back to.
     fn empty_for(field_type: FieldType) -> Self {
         match field_type {
-            FieldType::Text | FieldType::Textarea | FieldType::Dropdown => {
-                FieldValue::Text(String::new())
-            }
+            FieldType::Text
+            | FieldType::Textarea
+            | FieldType::Dropdown
+            | FieldType::Computed => FieldValue::Text(String::new()),
             FieldType::Number => FieldValue::Number(0.0),
             FieldType::Checkbox => FieldValue::Bool(false),
             FieldType::Date => FieldValue::Date(DateInput::from_date(today())),
@@ -70,9 +71,10 @@ impl FieldValue {
     /// was expected) rather than guessing.
     fn from_toml_value(field: &FieldDef, value: &toml::Value) -> Option<Self> {
         match field.field_type {
-            FieldType::Text | FieldType::Textarea | FieldType::Dropdown => {
-                value.as_str().map(|s| FieldValue::Text(s.to_owned()))
-            }
+            FieldType::Text
+            | FieldType::Textarea
+            | FieldType::Dropdown
+            | FieldType::Computed => value.as_str().map(|s| FieldValue::Text(s.to_owned())),
             FieldType::Number => value
                 .as_float()
                 .or_else(|| value.as_integer().map(|i| i as f64))
@@ -100,9 +102,10 @@ impl FieldValue {
     /// (e.g. the template's field type changed since it was saved).
     fn from_json(field: &FieldDef, value: &Value) -> Option<Self> {
         match field.field_type {
-            FieldType::Text | FieldType::Textarea | FieldType::Dropdown => {
-                value.as_str().map(|s| FieldValue::Text(s.to_string()))
-            }
+            FieldType::Text
+            | FieldType::Textarea
+            | FieldType::Dropdown
+            | FieldType::Computed => value.as_str().map(|s| FieldValue::Text(s.to_string())),
             FieldType::Number => value.as_f64().map(FieldValue::Number),
             FieldType::Checkbox => value.as_bool().map(FieldValue::Bool),
             FieldType::Date => value
@@ -312,6 +315,11 @@ pub fn sync_source_group(group: &GroupDef, state: &FormState, groups_state: &mut
 pub fn form_state_to_json(fields: &[FieldDef], state: &FormState) -> Value {
     let mut map = Map::new();
     for field in fields {
+        // Computed values are derived, so they're left out of saved snapshots
+        // and worked out again from the stored inputs on restore.
+        if field.field_type == FieldType::Computed {
+            continue;
+        }
         if let Some(value) = state.get(&field.key) {
             map.insert(field.key.clone(), value.to_json());
         }

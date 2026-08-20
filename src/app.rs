@@ -11,14 +11,16 @@ use crate::history::{append_history, load_history, now_timestamp, HistoryEntry};
 use crate::render::{build_context, instance_context_json, render_body_with_context};
 use crate::storage::Paths;
 use crate::template::loader::load_templates;
-use crate::template::{FieldDef, FieldType, GroupDef, TemplateDef};
-use crate::visibility::{context_with_overrides, ExprEvaluator, Scope, Visibility};
+use crate::template::{FieldDef, FieldType, GroupDef, PartialDef, TemplateDef};
+use crate::visibility::{
+    context_with_overrides, recompute_fields, ExprEvaluator, Scope, Visibility,
+};
 use tera::Context;
 
 pub struct NoteTemplaterApp {
     paths: Paths,
     templates: Vec<TemplateDef>,
-    partials: Vec<(String, String)>,
+    partials: Vec<PartialDef>,
     load_errors: Vec<(String, String)>,
     selected: Option<usize>,
     form_state: FormState,
@@ -295,6 +297,10 @@ fn fields_are_valid(
         if !visibility.is_visible(f.visible_if.as_ref(), scope) {
             return true;
         }
+        // Nothing the user can do about a computed value, so it never blocks.
+        if f.field_type == FieldType::Computed {
+            return true;
+        }
         let Some(value) = state.get(&f.key) else {
             return !f.required;
         };
@@ -314,6 +320,19 @@ fn fields_are_valid(
 
 impl eframe::App for NoteTemplaterApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Keyboard shortcuts, read before anything draws so a widget that
+        // consumes the key can't swallow them. `/` is only a shortcut when no
+        // text field has focus, otherwise it's just a slash being typed.
+        let (focus_search, copy_requested) = ui.ctx().input_mut(|i| {
+            let copy = i.consume_shortcut(&egui::KeyboardShortcut::new(
+                egui::Modifiers::COMMAND,
+                egui::Key::Enter,
+            ));
+            let slash = i.key_pressed(egui::Key::Slash);
+            (slash, copy)
+        });
+        let focus_search = focus_search && ui.ctx().memory(|m| m.focused().is_none());
+
         egui::Panel::top("top_bar").show(ui, |ui| {
             ui.add_space(4.0);
             ui.horizontal(|ui| {
@@ -429,7 +448,11 @@ impl eframe::App for NoteTemplaterApp {
             .default_size(240.0)
             .show(ui, |ui| {
                 ui.heading("Templates");
-                ui.add(egui::TextEdit::singleline(&mut self.search).hint_text("Search…"));
+                let search_box =
+                    ui.add(egui::TextEdit::singleline(&mut self.search).hint_text("Search…  ( / )"));
+                if focus_search {
+                    search_box.request_focus();
+                }
                 ui.separator();
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let search = self.search.to_lowercase();
@@ -466,6 +489,37 @@ impl eframe::App for NoteTemplaterApp {
             for group in &template.groups {
                 sync_source_group(group, &self.form_state, &mut self.groups_state);
             }
+            // Derived values are refreshed first, so `visible_if` and the note
+            // body both see this frame's computed results.
+            {
+                let mut ctx = build_context(
+                    &template.fields,
+                    &self.form_state,
+                    &template.groups,
+                    &self.groups_state,
+                );
+                recompute_fields(
+                    &template.fields,
+                    &mut self.form_state,
+                    &mut ctx,
+                    &mut self.expr_eval,
+                );
+                for group in &template.groups {
+                    let Some(instances) = self.groups_state.get_mut(&group.key) else {
+                        continue;
+                    };
+                    for inst in instances.iter_mut() {
+                        let mut inst_ctx = ctx.clone();
+                        recompute_fields(
+                            &group.fields,
+                            &mut inst.values,
+                            &mut inst_ctx,
+                            &mut self.expr_eval,
+                        );
+                    }
+                }
+            }
+
             // Visibility is resolved once, against the values as they stand at
             // the start of the frame, and then just looked up while drawing.
             let visibility = {
@@ -516,15 +570,12 @@ impl eframe::App for NoteTemplaterApp {
                                 });
                             }
                             ui.separator();
-                            for field in &template.fields {
-                                render_field(
-                                    ui,
-                                    field,
-                                    &mut self.form_state,
-                                    &visibility,
-                                    Scope::Form,
-                                );
-                            }
+                            render_fields_in_sections(
+                                ui,
+                                &template.fields,
+                                &mut self.form_state,
+                                &visibility,
+                            );
 
                             for group in &template.groups {
                                 render_group(ui, group, &mut self.groups_state, &visibility);
@@ -570,11 +621,13 @@ impl eframe::App for NoteTemplaterApp {
                     let can_copy = valid && runs.is_some();
                     let mut copied: Option<String> = None;
 
-                    if ui
-                        .add_enabled(can_copy, egui::Button::new("Copy to Clipboard"))
+                    let copy_clicked = ui
+                        .add_enabled(can_copy, egui::Button::new("Copy to Clipboard  (⌘⏎)"))
                         .on_hover_text("Copies formatted (bold/italic/underline), with a plain-text fallback for apps that don't support rich paste.")
-                        .clicked()
-                        && let Some(runs) = &runs
+                        .clicked();
+                    if let Some(runs) = &runs
+                        && can_copy
+                        && (copy_clicked || copy_requested)
                     {
                         let plain = formatting::to_plain_text(runs);
                         let html = formatting::to_html(runs);
@@ -710,6 +763,14 @@ fn render_field(
                 }
             }
         }
+        FieldType::Computed => {
+            // Read-only: the value comes from `compute`, not from typing.
+            let shown = match state.get(&field.key) {
+                Some(FieldValue::Text(s)) if !s.is_empty() => s.clone(),
+                _ => "—".to_string(),
+            };
+            ui.add_enabled(false, egui::Label::new(shown));
+        }
         FieldType::Date => {
             if let Some(FieldValue::Date(d)) = state.get_mut(&field.key) {
                 ui.horizontal(|ui| {
@@ -746,6 +807,55 @@ fn render_field(
         }
     }
     ui.add_space(8.0);
+}
+
+/// Draws `fields` in order, wrapping each stretch that declares the same
+/// `section` in one collapsible heading. Fields with no `section` are drawn
+/// plainly, so a template that never mentions sections looks exactly as it
+/// did before.
+///
+/// A section whose fields are all hidden by `visible_if` is skipped entirely
+/// rather than left as an empty heading.
+fn render_fields_in_sections(
+    ui: &mut egui::Ui,
+    fields: &[FieldDef],
+    state: &mut FormState,
+    visibility: &Visibility,
+) {
+    let mut i = 0;
+    while i < fields.len() {
+        let section = fields[i].section.clone();
+        // How far this run of same-section fields extends.
+        let mut end = i;
+        while end < fields.len() && fields[end].section == section {
+            end += 1;
+        }
+        let run = &fields[i..end];
+        i = end;
+
+        let Some(section) = section else {
+            for field in run {
+                render_field(ui, field, state, visibility, Scope::Form);
+            }
+            continue;
+        };
+
+        let any_visible = run
+            .iter()
+            .any(|f| visibility.is_visible(f.visible_if.as_ref(), Scope::Form));
+        if !any_visible {
+            continue;
+        }
+
+        egui::CollapsingHeader::new(&section)
+            .id_salt(("section", section.as_str()))
+            .default_open(true)
+            .show(ui, |ui| {
+                for field in run {
+                    render_field(ui, field, state, visibility, Scope::Form);
+                }
+            });
+    }
 }
 
 /// Renders one repeatable group as a list of add/remove-able instances, each

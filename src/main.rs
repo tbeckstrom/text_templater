@@ -1,14 +1,4 @@
-mod app;
-mod drafts;
-mod field;
-mod formatting;
-mod history;
-mod render;
-mod storage;
-mod template;
-mod visibility;
-
-use app::NoteTemplaterApp;
+use text_templater::{app::NoteTemplaterApp, storage};
 
 fn main() -> eframe::Result {
     let paths = storage::resolve_paths().expect("failed to resolve app data directory");

@@ -1,13 +1,17 @@
 use std::fs;
 use std::path::Path;
 
-use super::{FieldDef, RawTemplateFile, SharedFieldsFile, TemplateDef};
+use super::{
+    FieldDef, GroupDef, PartialDef, RawPartialFile, RawTemplateFile, SharedFieldsFile,
+    SpeedButtonDef, TemplateDef,
+};
 
 pub struct LoadResult {
     pub templates: Vec<TemplateDef>,
-    /// (name, Tera source) for each reusable body section in `partials/`,
-    /// includable from any template's `body` via `{% include "name" %}`.
-    pub partials: Vec<(String, String)>,
+    /// Every reusable body section in `partials/`, includable from any
+    /// template's `body` via `{% include "name" %}`. Ones defined as `.toml`
+    /// additionally carry form controls, pulled in via `use_partials`.
+    pub partials: Vec<PartialDef>,
     /// (file name, error message) for any template or partial that failed to load.
     pub errors: Vec<(String, String)>,
 }
@@ -16,7 +20,7 @@ pub fn load_templates(dir: &Path) -> LoadResult {
     let mut errors = Vec::new();
 
     let shared_fields = load_shared_fields(dir, &mut errors);
-    let partials = load_partials(dir, &mut errors);
+    let partials = load_partials(dir, &shared_fields, &mut errors);
 
     let mut paths: Vec<_> = match fs::read_dir(dir) {
         Ok(entries) => entries.filter_map(|e| e.ok()).map(|e| e.path()).collect(),
@@ -40,7 +44,7 @@ pub fn load_templates(dir: &Path) -> LoadResult {
             continue;
         }
 
-        match load_one(&path, &shared_fields) {
+        match load_one(&path, &shared_fields, &partials) {
             Ok(template) => templates.push(template),
             Err(e) => errors.push((file_name, e)),
         }
@@ -55,11 +59,16 @@ pub fn load_templates(dir: &Path) -> LoadResult {
     }
 }
 
-/// Loads every `*.tera` file in the reserved `partials/` subdirectory as a
-/// named, includable body section (name = file stem). Missing directory is
-/// fine (no partials); a file that can't be read is reported as an error but
-/// doesn't stop the rest from loading.
-fn load_partials(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<(String, String)> {
+/// Loads the reserved `partials/` subdirectory. A `*.tera` file is a
+/// text-only section; a `*.toml` file is a field-bearing one (same shape as a
+/// template, minus id/name) whose controls a template opts into with
+/// `use_partials`. A missing directory just means no partials; a file that
+/// fails to parse is reported without stopping the rest.
+fn load_partials(
+    dir: &Path,
+    shared_fields: &[FieldDef],
+    errors: &mut Vec<(String, String)>,
+) -> Vec<PartialDef> {
     let partials_dir = dir.join("partials");
     if !partials_dir.exists() {
         return Vec::new();
@@ -74,21 +83,102 @@ fn load_partials(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<(String,
     };
     paths.sort();
 
-    let mut partials = Vec::new();
+    let mut partials: Vec<PartialDef> = Vec::new();
     for path in paths {
-        if path.extension().and_then(|s| s.to_str()) != Some("tera") {
+        let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+        if extension != "tera" && extension != "toml" {
             continue;
         }
         let name = path
             .file_stem()
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_default();
-        match fs::read_to_string(&path) {
-            Ok(content) => partials.push((name, content)),
-            Err(e) => errors.push((format!("partials/{name}.tera"), e.to_string())),
+        let file_label = format!("partials/{name}.{extension}");
+
+        if partials.iter().any(|p| p.name == name) {
+            errors.push((
+                file_label,
+                format!("a partial named '{name}' is already defined"),
+            ));
+            continue;
+        }
+
+        let contents = match fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) => {
+                errors.push((file_label, e.to_string()));
+                continue;
+            }
+        };
+
+        if extension == "tera" {
+            partials.push(PartialDef {
+                name,
+                body: contents,
+                ..Default::default()
+            });
+            continue;
+        }
+
+        match toml::from_str::<RawPartialFile>(&contents) {
+            Ok(raw) => match resolve_shared(&raw.use_shared, shared_fields) {
+                Ok(mut fields) => {
+                    fields.extend(raw.fields);
+                    partials.push(PartialDef {
+                        name,
+                        body: raw.body,
+                        fields,
+                        groups: raw.groups,
+                        speed_buttons: raw.speed_buttons,
+                    });
+                }
+                Err(e) => errors.push((file_label, e)),
+            },
+            Err(e) => errors.push((file_label, e.to_string())),
         }
     }
     partials
+}
+
+/// Looks up `keys` in `shared_fields`, preserving the order asked for.
+fn resolve_shared(keys: &[String], shared_fields: &[FieldDef]) -> Result<Vec<FieldDef>, String> {
+    keys.iter()
+        .map(|key| {
+            shared_fields
+                .iter()
+                .find(|f| &f.key == key)
+                .cloned()
+                .ok_or_else(|| {
+                    format!(
+                        "use_shared references unknown key '{key}' (not found in shared_fields.toml)"
+                    )
+                })
+        })
+        .collect()
+}
+
+/// Rejects a merged form that would carry the same field or group key twice —
+/// otherwise one silently shadows the other in the Tera context.
+fn check_for_duplicates(fields: &[FieldDef], groups: &[GroupDef]) -> Result<(), String> {
+    let mut seen = std::collections::HashSet::new();
+    for field in fields {
+        if !seen.insert(&field.key) {
+            return Err(format!("duplicate field key '{}'", field.key));
+        }
+    }
+    let mut seen_groups = std::collections::HashSet::new();
+    for group in groups {
+        if !seen_groups.insert(&group.key) {
+            return Err(format!("duplicate group key '{}'", group.key));
+        }
+        if seen.contains(&group.key) {
+            return Err(format!(
+                "group key '{}' collides with a field of the same name",
+                group.key
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn load_shared_fields(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<FieldDef> {
@@ -108,21 +198,31 @@ fn load_shared_fields(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<Fie
     }
 }
 
-fn load_one(path: &Path, shared_fields: &[FieldDef]) -> Result<TemplateDef, String> {
+fn load_one(
+    path: &Path,
+    shared_fields: &[FieldDef],
+    partials: &[PartialDef],
+) -> Result<TemplateDef, String> {
     let text = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let raw: RawTemplateFile = toml::from_str(&text).map_err(|e| e.to_string())?;
 
-    let mut fields = Vec::with_capacity(raw.use_shared.len() + raw.fields.len());
-    for key in &raw.use_shared {
-        let field = shared_fields
-            .iter()
-            .find(|f| &f.key == key)
-            .ok_or_else(|| {
-                format!("use_shared references unknown key '{key}' (not found in shared_fields.toml)")
-            })?;
-        fields.push(field.clone());
-    }
+    let mut fields = resolve_shared(&raw.use_shared, shared_fields)?;
     fields.extend(raw.fields);
+    let mut groups: Vec<GroupDef> = raw.groups;
+    let mut speed_buttons: Vec<SpeedButtonDef> = raw.speed_buttons;
+
+    // Field-bearing partials contribute their controls after the template's
+    // own, so a template's fields stay at the top of the form.
+    for name in &raw.use_partials {
+        let partial = partials.iter().find(|p| &p.name == name).ok_or_else(|| {
+            format!("use_partials references unknown partial '{name}' (expected partials/{name}.toml)")
+        })?;
+        fields.extend(partial.fields.iter().cloned());
+        groups.extend(partial.groups.iter().cloned());
+        speed_buttons.extend(partial.speed_buttons.iter().cloned());
+    }
+
+    check_for_duplicates(&fields, &groups)?;
 
     let id = raw.id.unwrap_or_else(|| {
         path.file_stem()
@@ -135,8 +235,8 @@ fn load_one(path: &Path, shared_fields: &[FieldDef]) -> Result<TemplateDef, Stri
         name: raw.name,
         description: raw.description,
         fields,
-        groups: raw.groups,
-        speed_buttons: raw.speed_buttons,
+        groups,
+        speed_buttons,
         body: raw.body,
     })
 }
@@ -210,6 +310,254 @@ mod tests {
         assert_eq!(result.errors.len(), 1);
     }
 
+    fn write_partial(dir: &Path, name: &str, contents: &str) {
+        let p = dir.join("partials");
+        fs::create_dir_all(&p).unwrap();
+        fs::write(p.join(name), contents).unwrap();
+    }
+
+    fn scratch_dir(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "note_templater_partials_{}_{}",
+            std::process::id(),
+            tag
+        ));
+        fs::remove_dir_all(&dir).ok();
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn field_bearing_partial_contributes_fields_groups_and_speed_buttons() {
+        let dir = scratch_dir("contributes");
+        write_partial(
+            &dir,
+            "blocks.toml",
+            r#"
+            body = "{% for b in blocks %}{{ b.tooth }};{% endfor %}"
+
+            [[fields]]
+            key = "block_note"
+            label = "Block note"
+            type = "text"
+
+            [[speed_buttons]]
+            label = "Preset"
+            values = { block_note = "preset" }
+
+            [[groups]]
+            key = "blocks"
+            label = "Block"
+
+            [[groups.fields]]
+            key = "tooth"
+            label = "Tooth"
+            type = "text"
+            "#,
+        );
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            use_partials = ["blocks"]
+            body = "X: {% include \"blocks\" %}"
+
+            [[fields]]
+            key = "own"
+            label = "Own"
+            type = "text"
+            "#,
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+
+        let t = &result.templates[0];
+        // The template's own field stays first; the partial's are appended.
+        let keys: Vec<_> = t.fields.iter().map(|f| f.key.as_str()).collect();
+        assert_eq!(keys, vec!["own", "block_note"]);
+        assert_eq!(t.groups.len(), 1);
+        assert_eq!(t.groups[0].key, "blocks");
+        assert_eq!(t.groups[0].fields.len(), 1);
+        assert_eq!(t.speed_buttons.len(), 1);
+        assert_eq!(t.speed_buttons[0].label, "Preset");
+    }
+
+    #[test]
+    fn a_partial_can_be_shared_by_two_templates() {
+        let dir = scratch_dir("shared");
+        write_partial(
+            &dir,
+            "blocks.toml",
+            r#"
+            body = "{% for b in blocks %}{{ b.tooth }};{% endfor %}"
+
+            [[groups]]
+            key = "blocks"
+            label = "Block"
+
+            [[groups.fields]]
+            key = "tooth"
+            label = "Tooth"
+            type = "text"
+            "#,
+        );
+        for name in ["a.toml", "b.toml"] {
+            write(
+                &dir,
+                name,
+                r#"
+                name = "T"
+                use_partials = ["blocks"]
+                body = "{% include \"blocks\" %}"
+                "#,
+            );
+        }
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        assert_eq!(result.templates.len(), 2);
+        for t in &result.templates {
+            assert_eq!(t.groups.len(), 1, "each template gets its own copy");
+        }
+    }
+
+    #[test]
+    fn a_template_that_does_not_opt_in_gets_no_partial_fields() {
+        let dir = scratch_dir("nooptin");
+        write_partial(
+            &dir,
+            "blocks.toml",
+            r#"
+            body = "x"
+
+            [[fields]]
+            key = "block_note"
+            label = "Block note"
+            type = "text"
+            "#,
+        );
+        write(&dir, "note.toml", "name = \"Note\"\nbody = \"hi\"\n");
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        assert!(result.templates[0].fields.is_empty());
+    }
+
+    #[test]
+    fn unknown_use_partials_name_is_reported() {
+        let dir = scratch_dir("unknown");
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            use_partials = ["nope"]
+            body = "hi"
+            "#,
+        );
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.templates.is_empty());
+        assert_eq!(result.errors.len(), 1);
+        assert!(result.errors[0].1.contains("nope"));
+    }
+
+    #[test]
+    fn a_key_colliding_with_the_partial_is_reported_not_silently_shadowed() {
+        let dir = scratch_dir("collide");
+        write_partial(
+            &dir,
+            "blocks.toml",
+            r#"
+            body = "x"
+
+            [[fields]]
+            key = "shared_key"
+            label = "From partial"
+            type = "text"
+            "#,
+        );
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            use_partials = ["blocks"]
+            body = "hi"
+
+            [[fields]]
+            key = "shared_key"
+            label = "From template"
+            type = "text"
+            "#,
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.templates.is_empty());
+        assert_eq!(result.errors.len(), 1);
+        assert!(
+            result.errors[0].1.contains("shared_key"),
+            "the error should name the clashing key, got: {}",
+            result.errors[0].1
+        );
+    }
+
+    #[test]
+    fn a_broken_partial_is_reported_without_stopping_other_templates() {
+        let dir = scratch_dir("broken");
+        write_partial(&dir, "bad.toml", "this is not = valid toml [[[");
+        write(&dir, "note.toml", "name = \"Note\"\nbody = \"still fine\"\n");
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.templates.len(), 1, "the good template still loads");
+    }
+
+    #[test]
+    fn a_partial_can_pull_in_shared_fields() {
+        let dir = scratch_dir("partialshared");
+        write(
+            &dir,
+            "shared_fields.toml",
+            r#"
+            [[fields]]
+            key = "patient_name"
+            label = "Patient Name"
+            type = "text"
+            "#,
+        );
+        write_partial(
+            &dir,
+            "blocks.toml",
+            r#"
+            use_shared = ["patient_name"]
+            body = "{{ patient_name }}"
+            "#,
+        );
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            use_partials = ["blocks"]
+            body = "{% include \"blocks\" %}"
+            "#,
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        let keys: Vec<_> = result.templates[0].fields.iter().map(|f| f.key.as_str()).collect();
+        assert_eq!(keys, vec!["patient_name"]);
+    }
+
     /// Regression guard: the bundled examples in `examples/templates/` are what
     /// `storage::seed_examples_if_empty` copies into a fresh install, so they must
     /// always load cleanly (e.g. `body` must stay before any `[[fields]]` block —
@@ -222,7 +570,7 @@ mod tests {
         assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
         assert_eq!(result.templates.len(), 4);
         assert!(
-            result.partials.iter().any(|(name, _)| name == "header"),
+            result.partials.iter().any(|p| p.name == "header"),
             "expected the bundled `partials/header.tera` to load"
         );
         for template in &result.templates {
@@ -268,6 +616,147 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Every field in the OMS note should sit under a section heading, and
+    /// the sections should stay contiguous — the form folds by consecutive
+    /// runs, so a field declared out of order would split its own heading in
+    /// two.
+    #[test]
+    fn oms_note_fields_are_grouped_into_contiguous_sections() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let result = load_templates(&dir);
+        let t = result
+            .templates
+            .iter()
+            .find(|t| t.id == "oms_procedure_note")
+            .unwrap();
+
+        assert!(
+            t.fields.iter().all(|f| f.section.is_some()),
+            "every field should declare a section"
+        );
+
+        let mut seen: Vec<&str> = Vec::new();
+        for f in &t.fields {
+            let section = f.section.as_deref().unwrap();
+            if seen.last() != Some(&section) {
+                assert!(
+                    !seen.contains(&section),
+                    "section {section:?} appears in two separate runs"
+                );
+                seen.push(section);
+            }
+        }
+        assert_eq!(
+            seen,
+            vec![
+                "Patient",
+                "Diagnosis",
+                "Procedure",
+                "Anesthesia",
+                "Vitals",
+                "History & Indications",
+                "Description of Procedure",
+            ]
+        );
+    }
+
+    /// The bundled OMS note's computed tally must actually evaluate against
+    /// real field values — a `compute` expression that silently yields blank
+    /// would look like a working read-only field.
+    #[test]
+    fn oms_computed_total_local_anesthetic_evaluates() {
+        use crate::field::*;
+        use crate::visibility::{recompute_fields, ExprEvaluator};
+
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let result = load_templates(&dir);
+        let t = result
+            .templates
+            .iter()
+            .find(|t| t.id == "oms_procedure_note")
+            .unwrap();
+
+        let mut state = build_form_state(&t.fields);
+        state.insert(
+            "local_used".into(),
+            FieldValue::MultiSelect(vec![
+                "Lidocaine 2% w/ epi".into(),
+                "Bupivacaine 0.5% w/ epi".into(),
+            ]),
+        );
+        state.insert("lidocaine_carps".into(), FieldValue::Number(2.0));
+        state.insert("bupivacaine_carps".into(), FieldValue::Number(1.0));
+
+        let groups_state = build_groups_state(&t.groups);
+        let mut ctx = crate::render::build_context(&t.fields, &state, &t.groups, &groups_state);
+        let mut evaluator = ExprEvaluator::default();
+        recompute_fields(&t.fields, &mut state, &mut ctx, &mut evaluator);
+
+        // 3 carpules selected x 1.7 mL; articaine/mepivacaine aren't selected
+        // so their counts must not be included.
+        match state.get("total_local_ml").unwrap() {
+            FieldValue::Text(s) => assert!(
+                s.starts_with("5.1"),
+                "expected 3 x 1.7 = 5.1 mL, got {s:?}"
+            ),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    /// The blanks a template author leaves for manual completion (`# __ to
+    /// # __`, `The ___ root`, the `# ***` block header) have to reach the
+    /// rendered note intact — they're the cue to fill something in, so
+    /// losing them to formatting markup would be silent data loss.
+    #[test]
+    fn fill_in_blanks_survive_into_the_rendered_note() {
+        use crate::field::*;
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let result = load_templates(&dir);
+        let t = result
+            .templates
+            .iter()
+            .find(|t| t.id == "oms_procedure_note")
+            .unwrap();
+        let blocks = t.groups.iter().find(|g| g.key == "blocks").unwrap();
+
+        let state = build_form_state(&t.fields);
+        let mut groups_state = build_groups_state(&t.groups);
+        add_group_instance(&mut groups_state, blocks);
+        let inst = groups_state.get_mut("blocks").unwrap().last_mut().unwrap();
+        inst.values.insert(
+            "soft_tissue".into(),
+            FieldValue::MultiSelect(vec!["Flap from tooth to tooth".into()]),
+        );
+        inst.values.insert(
+            "ostectomy_sectioning".into(),
+            FieldValue::MultiSelect(vec!["Root section".into()]),
+        );
+
+        let note = crate::render::render_body(
+            &t.body,
+            &result.partials,
+            &t.fields,
+            &state,
+            &t.groups,
+            &groups_state,
+        )
+        .unwrap();
+        let plain = crate::formatting::to_plain_text(&crate::formatting::parse(&note));
+
+        assert!(
+            plain.contains("from # __ to # __"),
+            "the tooth-to-tooth blanks were altered: {plain}"
+        );
+        assert!(
+            plain.contains("The ___ root was sectioned"),
+            "the root blank was altered: {plain}"
+        );
+        assert!(
+            plain.contains("# ***"),
+            "the default block header blank was altered: {plain}"
+        );
     }
 
     /// End-to-end guard for the OMS procedure note — the TextBlaze phrase this

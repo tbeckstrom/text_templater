@@ -2,6 +2,10 @@ id = "oms_procedure_note"
 name = "OMS Procedure Note"
 description = "Oral and maxillofacial surgery clinic procedure note"
 
+# The whole procedure-block section — its group, fields and per-block speed
+# buttons — lives in partials/procedure_blocks.toml and is pulled in here.
+use_partials = ["procedure_blocks"]
+
 # NOTE: `body` must come before any [[fields]] / [[groups]] / [[speed_buttons]]
 # blocks below — in TOML, keys written after an array-of-tables attach to the
 # last table entry, not the document root.
@@ -88,16 +92,7 @@ Heart and lungs auscultated prior to beginning. RRR, and lungs CTAB.
 **DESCRIPTION OF PROCEDURE:**
 Timeout performed. {% if preop_albuterol %}Administered 2 puffs Albuterol inhaler prior to beginning procedure. {% endif %}{% if ivga %}IV medication was administered utilizing {{<and_list items={ga_meds}/>}} (see anesthesia report). Patient tolerated this well with good effect. {% endif %}{% if nitrous_used %}100% O2 given via nasal hood at 5L/min for greater than 5 minutes, followed by titration of N2O to 50%. {% endif %}Local anesthesia administered per above. {% set airway = [...throat_screen_text, ...bite_block_text] %}{% if airway %}Throughout the procedure, {{<and_list items={airway}/>}} {% if airway | length > 1 %}were{% else %}was{% endif %} used where appropriate.{% endif %}
 
-{% for b in blocks %}
-{%- set each_word = "each" if b.multiple_teeth else "the" -%}
-{%- set s_word = "s" if b.multiple_teeth else "" -%}
-{%- set converted = ["Using #9 periosteal elevator, PDL and dental gingival attachment was severed. Initial attempt at elevation with inadequate mobility for delivery"] if b.converted_surgical else [] -%}
-{%- set alveo = [b.alveoloplasty_tori_text | join(sep=" ")] if b.alveoloplasty_tori_text else [] -%}
-{%- set combined = [...converted, ...b.soft_tissue_text, ...b.ostectomy_sectioning_text, ...b.elevator_forcep_text, ...b.socket_text, ...alveo, ...b.closure_text] -%}
-{{ b.section_header }}:
-{% if b.multiple_teeth %}The above teeth were extracted in a similar manner as follows:
-{% endif %}{{ combined | join(sep=". ") | replace(from="[[each]]", to=each_word) | replace(from="[[s]]", to=s_word) }}.
-{% endfor %}
+{% include "procedure_blocks" %}
 {%- if failed_deferred %}
 {{ failure_reason_text }}
 {% endif %}
@@ -115,6 +110,7 @@ Throat screen and bite block removed. Placed gauze pressure dressings. {% if nit
 # ---------------------------------------------------------------- patient ---
 [[fields]]
 key = "pt_age"
+section = "Patient"
 label = "Patient Age"
 type = "number"
 min = 0
@@ -123,6 +119,7 @@ required = true
 
 [[fields]]
 key = "pt_sex"
+section = "Patient"
 label = "Sex"
 type = "dropdown"
 options = ["male", "female", "transgender man", "transgender woman", "patient"]
@@ -130,6 +127,7 @@ default = "patient"
 
 [[fields]]
 key = "decision_maker"
+section = "Patient"
 label = "Decision maker"
 type = "dropdown"
 options = ["patient", "patient's guardian", "patient's DPOA", "patient and patient's guardian"]
@@ -137,74 +135,87 @@ default = "patient"
 
 [[fields]]
 key = "pmh"
+section = "Patient"
 label = "PMH (one problem per line)"
 type = "textarea"
 
 # -------------------------------------------------------------- diagnosis ---
 [[fields]]
 key = "diagnosis_teeth"
+section = "Diagnosis"
 label = "Diagnosis by tooth"
 type = "multiselect"
 options = ["1", "16", "17", "32"]
 
 [[fields]]
 key = "carious_teeth"
+section = "Diagnosis"
 label = "Carious, hopeless teeth"
 type = "multiselect"
 options = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32"]
 
 [[fields]]
 key = "diagnoses_free_text"
+section = "Diagnosis"
 label = "Free text diagnoses"
 type = "textarea"
 
 # -------------------------------------------------------------- procedure ---
 [[fields]]
 key = "ext"
+section = "Procedure"
 label = "Extraction"
 type = "checkbox"
 
 [[fields]]
 key = "ext_teeth"
+section = "Procedure"
 label = "Extraction teeth"
 type = "text"
 visible_if = "ext"
 
 [[fields]]
 key = "coronectomy"
+section = "Procedure"
 label = "Coronectomy"
 type = "checkbox"
 
 [[fields]]
 key = "coronectomy_teeth"
+section = "Procedure"
 label = "Coronectomy teeth"
 type = "text"
 visible_if = "coronectomy"
 
 [[fields]]
 key = "plan_changed_to_coronectomy"
+section = "Procedure"
 label = "Plan changed from ext → coronectomy"
 type = "checkbox"
 visible_if = "coronectomy"
 
 [[fields]]
 key = "alveoloplasty"
+section = "Procedure"
 label = "Alveoloplasty"
 type = "checkbox"
 
 [[fields]]
 key = "alveoloplasty_quadrants"
+section = "Procedure"
 label = "Alveoloplasty quadrants"
 type = "text"
 visible_if = "alveoloplasty"
 
 [[fields]]
 key = "biopsy"
+section = "Procedure"
 label = "Biopsy"
 type = "checkbox"
 
 [[fields]]
 key = "biopsy_site"
+section = "Procedure"
 label = "Biopsy site"
 type = "text"
 visible_if = "biopsy"
@@ -212,17 +223,20 @@ visible_if = "biopsy"
 # ------------------------------------------------------------- anesthesia ---
 [[fields]]
 key = "nitrous_used"
+section = "Anesthesia"
 label = "Nitrous (N2O/O2)"
 type = "checkbox"
 default = true
 
 [[fields]]
 key = "ivga"
+section = "Anesthesia"
 label = "IV general anesthesia"
 type = "checkbox"
 
 [[fields]]
 key = "ga_time"
+section = "Anesthesia"
 label = "Total anesthesia time (min)"
 type = "number"
 default = 30
@@ -232,6 +246,7 @@ visible_if = "ivga"
 
 [[fields]]
 key = "asa"
+section = "Anesthesia"
 label = "ASA"
 type = "dropdown"
 options = ["1", "2", "3", "4"]
@@ -240,6 +255,7 @@ visible_if = "ivga"
 
 [[fields]]
 key = "ga_meds"
+section = "Anesthesia"
 label = "GA medications"
 type = "multiselect"
 options = ["midazolam", "fentanyl", "ketamine", "propofol"]
@@ -247,6 +263,7 @@ visible_if = "ivga"
 
 [[fields]]
 key = "local_used"
+section = "Anesthesia"
 label = "Local anesthetic"
 type = "multiselect"
 options = ["Lidocaine 2% w/ epi", "Bupivacaine 0.5% w/ epi", "Articaine 4% w/ epi", "Mepivacaine plain", "Topical"]
@@ -254,6 +271,7 @@ default = ["Lidocaine 2% w/ epi", "Topical"]
 
 [[fields]]
 key = "lidocaine_carps"
+section = "Anesthesia"
 label = "Lidocaine carpules"
 type = "number"
 default = 1
@@ -263,6 +281,7 @@ visible_if = "'Lidocaine 2% w/ epi' in local_used"
 
 [[fields]]
 key = "bupivacaine_carps"
+section = "Anesthesia"
 label = "Bupivacaine carpules"
 type = "number"
 default = 1
@@ -272,6 +291,7 @@ visible_if = "'Bupivacaine 0.5% w/ epi' in local_used"
 
 [[fields]]
 key = "articaine_carps"
+section = "Anesthesia"
 label = "Articaine carpules"
 type = "number"
 default = 1
@@ -281,6 +301,7 @@ visible_if = "'Articaine 4% w/ epi' in local_used"
 
 [[fields]]
 key = "mepivacaine_carps"
+section = "Anesthesia"
 label = "Mepivacaine carpules"
 type = "number"
 default = 1
@@ -288,9 +309,19 @@ min = 1
 max = 20
 visible_if = "'Mepivacaine plain' in local_used"
 
+# A read-only tally shown while filling the form (handy against max-dose
+# limits). It isn't referenced in `body`, so the note text is unaffected.
+[[fields]]
+key = "total_local_ml"
+section = "Anesthesia"
+label = "Total local anesthetic (mL)"
+type = "computed"
+compute = "((lidocaine_carps if 'Lidocaine 2% w/ epi' in local_used else 0) + (bupivacaine_carps if 'Bupivacaine 0.5% w/ epi' in local_used else 0) + (articaine_carps if 'Articaine 4% w/ epi' in local_used else 0) + (mepivacaine_carps if 'Mepivacaine plain' in local_used else 0)) * 1.7"
+
 # ----------------------------------------------------------------- vitals ---
 [[fields]]
 key = "bp"
+section = "Vitals"
 label = "BP"
 type = "text"
 default = "WNL"
@@ -298,6 +329,7 @@ visible_if = "not ivga"
 
 [[fields]]
 key = "hr"
+section = "Vitals"
 label = "HR"
 type = "text"
 default = "WNL"
@@ -306,30 +338,35 @@ visible_if = "not ivga"
 # ---------------------------------------------------- history/indications ---
 [[fields]]
 key = "interval_changes"
+section = "History & Indications"
 label = "Interval changes"
 type = "multiselect"
 options = ["history", "exam", "treatment plan"]
 
 [[fields]]
 key = "history_changes"
+section = "History & Indications"
 label = "History changes"
 type = "text"
 visible_if = "'history' in interval_changes"
 
 [[fields]]
 key = "exam_changes"
+section = "History & Indications"
 label = "Exam changes"
 type = "text"
 visible_if = "'exam' in interval_changes"
 
 [[fields]]
 key = "treatment_plan_changes"
+section = "History & Indications"
 label = "Treatment plan changes"
 type = "text"
 visible_if = "'treatment plan' in interval_changes"
 
 [[fields]]
 key = "ext_indications"
+section = "History & Indications"
 label = "Extraction indications"
 type = "multiselect"
 visible_if = "ext"
@@ -342,6 +379,7 @@ options = [
 
 [[fields]]
 key = "coronectomy_indications"
+section = "History & Indications"
 label = "Coronectomy indications"
 type = "multiselect"
 visible_if = "coronectomy"
@@ -354,6 +392,7 @@ options = [
 
 [[fields]]
 key = "alveoloplasty_indications"
+section = "History & Indications"
 label = "Alveoloplasty indications"
 type = "multiselect"
 visible_if = "alveoloplasty"
@@ -368,6 +407,7 @@ options = [
 # ------------------------------------------------------------ description ---
 [[fields]]
 key = "throat_screen"
+section = "Description of Procedure"
 label = "Throat screen"
 type = "multiselect"
 default = ["Used"]
@@ -375,6 +415,7 @@ options = [{ label = "Used", text = "throat screen" }]
 
 [[fields]]
 key = "bite_block"
+section = "Description of Procedure"
 label = "Bite block"
 type = "multiselect"
 default = ["Used"]
@@ -382,21 +423,25 @@ options = [{ label = "Used", text = "bite block for stabilization" }]
 
 [[fields]]
 key = "preop_albuterol"
+section = "Description of Procedure"
 label = "Pre-op albuterol"
 type = "checkbox"
 
 [[fields]]
 key = "auscultated_heart_lungs"
+section = "Description of Procedure"
 label = "Auscultated heart and lungs"
 type = "checkbox"
 
 [[fields]]
 key = "failed_deferred"
+section = "Description of Procedure"
 label = "Failed / deferred procedure?"
 type = "checkbox"
 
 [[fields]]
 key = "failure_reason"
+section = "Description of Procedure"
 label = "Reason for failure"
 type = "dropdown"
 visible_if = "failed_deferred"
@@ -411,6 +456,7 @@ options = [
 
 [[fields]]
 key = "post_op_medications"
+section = "Description of Procedure"
 label = "Post-op medications"
 type = "multiselect"
 default = ["Acetaminophen 1000mg q6h PRN pain", "Ibuprofen 600mg q6h PRN pain", "Chlorhexidine oral rinse BID x 2 weeks"]
@@ -466,143 +512,3 @@ type = "multiselect"
 required = true
 options = ["symptomatic", "carious", "periodontally compromised", "PBI", "CBI", "soft tissue impacted", "malposed"]
 
-# --- Procedure blocks: one per tooth/area worked on. Each block carries its
-# --- own speed buttons, which fill in only that block.
-[[groups]]
-key = "blocks"
-label = "Procedure Block"
-
-[[groups.speed_buttons]]
-label = "Md 3rd Molar, vertical section"
-values = { soft_tissue = ["Flap + DB release mand 3rds"], ostectomy_sectioning = ["Buccal Trough", "Sectioned vertically"], elevator_forcep = ["Luxated and delivered all remaining segments"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated", "No LN or IAN"], closure = ["3-0 CG -- simple"] }
-
-[[groups.speed_buttons]]
-label = "Mx 3rd Molar"
-values = { soft_tissue = ["Flap w/ DB release"], ostectomy_sectioning = ["Removed buccal bone"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated", "No sinus perforation"], closure = ["3-0 CG -- simple"] }
-
-[[groups.speed_buttons]]
-label = "Normal Ext"
-values = { soft_tissue = ["Severed PDL w/ #9"], ostectomy_sectioning = [], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "Irrigated"], closure = [] }
-
-[[groups.speed_buttons]]
-label = "Surgical Ext"
-values = { soft_tissue = ["Flap adjacent to tooth"], ostectomy_sectioning = [], elevator_forcep = ["Luxated and delivered all remaining segments"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated"], closure = [] }
-
-[[groups.speed_buttons]]
-label = "Coronectomy"
-values = { soft_tissue = ["Flap + DB release mand 3rds"], ostectomy_sectioning = ["Uncovered crown with round bur", "Sectioned horizontally", "Removed remaining enamel (coronectomy)"], elevator_forcep = [], socket = ["Smoothed", "Irrigated", "No LN or IAN"], closure = ["3-0 CG -- simple"] }
-
-[[groups.speed_buttons]]
-label = "FMX + Mx Alveo"
-values = { soft_tissue = ["Flap for alveoloplasty"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "No sinus perforation"], closure = ["3-0 CG -- running"], alveoloplasty_tori = ["Alveo", "bilateral", "maxilla", "rongeurs", "irrigation"] }
-
-[[groups.speed_buttons]]
-label = "FMX + Md Alveo"
-values = { soft_tissue = ["Flap for alveoloplasty"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "No LN or IAN"], closure = ["3-0 CG -- running"], alveoloplasty_tori = ["Alveo", "bilateral", "mandible", "rongeurs", "irrigation"] }
-
-[[groups.fields]]
-key = "section_header"
-label = "Tooth / area"
-type = "text"
-default = "# ***"
-required = true
-
-[[groups.fields]]
-key = "multiple_teeth"
-label = "Multiple teeth"
-type = "checkbox"
-
-[[groups.fields]]
-key = "converted_surgical"
-label = "Converted to surgical ext"
-type = "checkbox"
-
-[[groups.fields]]
-key = "soft_tissue"
-label = "Soft tissue exposure"
-type = "multiselect"
-options = [
-  { label = "Flap w/ DB release", text = "Raised full thickness mucoperiosteal flap with DB release" },
-  { label = "Flap + DB release mand 3rds", text = "Raised full thickness mucoperiosteal flap with DB release to the external oblique ridge" },
-  { label = "Severed PDL w/ #9", text = "Using #9 periosteal elevator, PDL and dental gingival attachment was severed" },
-  { label = "Flap adjacent to tooth", text = "Using a 15 blade, sulcular incision made adjacent to the tooth and full thickness flap raised to the buccal using #9 periosteal elevator" },
-  { label = "Flap from tooth to tooth", text = "Using a 15 blade, crestal/sulcular incision made from # __ to # __. Full thickness flap raised to the buccal using #9 periosteal elevator" },
-  { label = "Flap for alveoloplasty", text = "Using a 15 blade, crestal incision made along the length of the alveolar ridge. Full thickness flap raised to the buccal and lingual using #9 periosteal elevator to expose the ridge" },
-]
-
-[[groups.fields]]
-key = "ostectomy_sectioning"
-label = "Ostectomy / sectioning"
-type = "multiselect"
-options = [
-  { label = "Removed overlying bone w/ periosteal", text = "Using #9 periosteal elevator, removed overlying bone to expose tooth" },
-  { label = "Removed buccal bone", text = "Removed buccal bone with periosteal elevator" },
-  { label = "Uncovered crown with round bur", text = "Overlying bone was removed with a round bur to expose the crown of the tooth" },
-  { label = "Buccal Trough", text = "Using a tapered fissure bur, buccal trough was created adjacent to [[each]] tooth" },
-  { label = "Sectioned horizontally", text = "The tooth was then sectioned at the CEJ with a fissure bur and the coronal portion of the tooth was delivered with elevators and forceps" },
-  { label = "Sectioned vertically", text = "Using a fissure bur and an elevator to complete the split, [[each]] tooth was sectioned into separate fragments containing each root" },
-  { label = "Removed remaining enamel (coronectomy)", text = "Small portion of remaining enamel on the buccal and mesial aspect of the tooth was removed with a round bur" },
-  { label = "Root section", text = "The ___ root was sectioned axially to facilitate removal" },
-  { label = "Sectioned w/ cowhorn", text = "The tooth was split into mesial and distal segments using a cowhorn forcep seated in the furcation" },
-]
-
-[[groups.fields]]
-key = "elevator_forcep"
-label = "Elevator / forcep use"
-type = "multiselect"
-options = [
-  { label = "Luxated and delivered tooth", text = "Luxated and extracted [[each]] tooth in its entirety with elevators and forceps" },
-  { label = "Luxated and delivered all remaining segments", text = "Luxated and delivered all remaining fragments of [[each]] tooth with appropriate elevators and forceps" },
-]
-
-[[groups.fields]]
-key = "socket"
-label = "Socket inspection / treatment"
-type = "multiselect"
-options = [
-  { label = "No tooth structure", text = "No tooth structure retained in socket[[s]]" },
-  { label = "Removed Follicle", text = "Removed follicle tissue" },
-  { label = "Curretted", text = "Gently curetted socket[[s]]" },
-  { label = "Smoothed", text = "Smoothed bony margins using a bone file" },
-  { label = "Irrigated", text = "Irrigated surgical site[[s]] with copious sterile saline" },
-  { label = "No sinus perforation", text = "No oroantral communication" },
-  { label = "No LN or IAN", text = "IAN was not visualized. Lingual plate intact" },
-  { label = "IAN visualized and intact", text = "IAN visualized and intact" },
-  { label = "Lingual plate scored", text = "Lingual plate noted to have partial thickness bur injury without perforation" },
-  { label = "Gelfoam", text = "Gelfoam placed into socket[[s]] to aid in hemostasis" },
-  { label = "Surgicel", text = "Surgicel placed into socket[[s]] to aid in hemostasis" },
-  { label = "Bone wax", text = "Osseous bleeding noted to be coming from the surgical site. Source identified and bone wax was applied / burnished over this point with a periosteal elevator to achieve hemostasis" },
-]
-
-[[groups.fields]]
-key = "alveoloplasty_tori"
-label = "Alveoloplasty / tori"
-type = "multiselect"
-options = [
-  { label = "Alveo", text = "Alveoloplasty of" },
-  { label = "Right", text = "right" },
-  { label = "Left", text = "left" },
-  { label = "bilateral", text = "bilateral" },
-  { label = "maxilla", text = "maxillary alveolar ridge performed with" },
-  { label = "mandible", text = "mandibular alveolar ridge performed with" },
-  { label = "rongeurs", text = "rongeurs and a bone file until contour was appropriate and no sharp edges / excessive undercuts remained." },
-  { label = "pineapple bur", text = "pineapple bur on a surgical handpiece and with a bone file until contour was appropriate and no sharp edges / excessive undercuts remained." },
-  { label = "irrigation", text = "Surgical site was irrigated with copious sterile saline" },
-]
-
-[[groups.fields]]
-key = "closure"
-label = "Soft tissue closure"
-type = "multiselect"
-options = [
-  { label = "3-0 CG -- simple", text = "Reapproximated soft tissue with 3-0 chromic gut suture in simple interrupted fashion" },
-  { label = "3-0 CG -- running", text = "Reapproximated soft tissue with 3-0 chromic gut suture in continuous running pattern" },
-  { label = "3-0 CG -- running locking", text = "Reapproximated soft tissue with 3-0 chromic gut suture in continuous locking pattern" },
-  { label = "3-0 CG -- figure of 8", text = "Reapproximated soft tissue with 3-0 chromic gut suture in figure of eight pattern" },
-  { label = "3-0 CG -- horizontal mattress", text = "Reapproximated soft tissue with 3-0 chromic gut suture in horizontal mattress pattern" },
-  { label = "4-0 vicryl -- simple", text = "Reapproximated soft tissue with 4-0 vicryl suture in simple interrupted fashion" },
-  { label = "4-0 vicryl -- running", text = "Reapproximated soft tissue with 4-0 vicryl suture in continuous running pattern" },
-  { label = "4-0 vicryl -- running locking", text = "Reapproximated soft tissue with 4-0 vicryl suture in continuous locking pattern" },
-  { label = "4-0 vicryl -- figure of 8", text = "Reapproximated soft tissue with 4-0 vicryl suture in figure of eight pattern" },
-  { label = "4-0 vicryl -- horizontal mattress", text = "Reapproximated soft tissue with 4-0 vicryl suture in horizontal mattress pattern" },
-]

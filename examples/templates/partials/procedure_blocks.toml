@@ -1,0 +1,158 @@
+# A field-bearing partial: it brings its own `[[groups]]`, that group's fields
+# and its per-block speed buttons, so any note can gain the whole
+# procedure-block section with `use_partials = ["procedure_blocks"]` plus
+# `{% include "procedure_blocks" %}` wherever the text should appear.
+
+body = """
+{% for b in blocks %}
+{%- set each_word = "each" if b.multiple_teeth else "the" -%}
+{%- set s_word = "s" if b.multiple_teeth else "" -%}
+{%- set converted = ["Using #9 periosteal elevator, PDL and dental gingival attachment was severed. Initial attempt at elevation with inadequate mobility for delivery"] if b.converted_surgical else [] -%}
+{%- set alveo = [b.alveoloplasty_tori_text | join(sep=" ")] if b.alveoloplasty_tori_text else [] -%}
+{%- set combined = [...converted, ...b.soft_tissue_text, ...b.ostectomy_sectioning_text, ...b.elevator_forcep_text, ...b.socket_text, ...alveo, ...b.closure_text] -%}
+{{ b.section_header }}:
+{% if b.multiple_teeth %}The above teeth were extracted in a similar manner as follows:
+{% endif %}{{ combined | join(sep=". ") | replace(from="[[each]]", to=each_word) | replace(from="[[s]]", to=s_word) }}.
+{% endfor %}
+"""
+
+# --- Procedure blocks: one per tooth/area worked on. Each block carries its
+# --- own speed buttons, which fill in only that block.
+[[groups]]
+key = "blocks"
+label = "Procedure Block"
+
+[[groups.speed_buttons]]
+label = "Md 3rd Molar, vertical section"
+values = { soft_tissue = ["Flap + DB release mand 3rds"], ostectomy_sectioning = ["Buccal Trough", "Sectioned vertically"], elevator_forcep = ["Luxated and delivered all remaining segments"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated", "No LN or IAN"], closure = ["3-0 CG -- simple"] }
+
+[[groups.speed_buttons]]
+label = "Mx 3rd Molar"
+values = { soft_tissue = ["Flap w/ DB release"], ostectomy_sectioning = ["Removed buccal bone"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated", "No sinus perforation"], closure = ["3-0 CG -- simple"] }
+
+[[groups.speed_buttons]]
+label = "Normal Ext"
+values = { soft_tissue = ["Severed PDL w/ #9"], ostectomy_sectioning = [], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "Irrigated"], closure = [] }
+
+[[groups.speed_buttons]]
+label = "Surgical Ext"
+values = { soft_tissue = ["Flap adjacent to tooth"], ostectomy_sectioning = [], elevator_forcep = ["Luxated and delivered all remaining segments"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated"], closure = [] }
+
+[[groups.speed_buttons]]
+label = "Coronectomy"
+values = { soft_tissue = ["Flap + DB release mand 3rds"], ostectomy_sectioning = ["Uncovered crown with round bur", "Sectioned horizontally", "Removed remaining enamel (coronectomy)"], elevator_forcep = [], socket = ["Smoothed", "Irrigated", "No LN or IAN"], closure = ["3-0 CG -- simple"] }
+
+[[groups.speed_buttons]]
+label = "FMX + Mx Alveo"
+values = { soft_tissue = ["Flap for alveoloplasty"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "No sinus perforation"], closure = ["3-0 CG -- running"], alveoloplasty_tori = ["Alveo", "bilateral", "maxilla", "rongeurs", "irrigation"] }
+
+[[groups.speed_buttons]]
+label = "FMX + Md Alveo"
+values = { soft_tissue = ["Flap for alveoloplasty"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "No LN or IAN"], closure = ["3-0 CG -- running"], alveoloplasty_tori = ["Alveo", "bilateral", "mandible", "rongeurs", "irrigation"] }
+
+[[groups.fields]]
+key = "section_header"
+label = "Tooth / area"
+type = "text"
+default = "# ***"
+required = true
+
+[[groups.fields]]
+key = "multiple_teeth"
+label = "Multiple teeth"
+type = "checkbox"
+
+[[groups.fields]]
+key = "converted_surgical"
+label = "Converted to surgical ext"
+type = "checkbox"
+
+[[groups.fields]]
+key = "soft_tissue"
+label = "Soft tissue exposure"
+type = "multiselect"
+options = [
+  { label = "Flap w/ DB release", text = "Raised full thickness mucoperiosteal flap with DB release" },
+  { label = "Flap + DB release mand 3rds", text = "Raised full thickness mucoperiosteal flap with DB release to the external oblique ridge" },
+  { label = "Severed PDL w/ #9", text = "Using #9 periosteal elevator, PDL and dental gingival attachment was severed" },
+  { label = "Flap adjacent to tooth", text = "Using a 15 blade, sulcular incision made adjacent to the tooth and full thickness flap raised to the buccal using #9 periosteal elevator" },
+  { label = "Flap from tooth to tooth", text = "Using a 15 blade, crestal/sulcular incision made from # __ to # __. Full thickness flap raised to the buccal using #9 periosteal elevator" },
+  { label = "Flap for alveoloplasty", text = "Using a 15 blade, crestal incision made along the length of the alveolar ridge. Full thickness flap raised to the buccal and lingual using #9 periosteal elevator to expose the ridge" },
+]
+
+[[groups.fields]]
+key = "ostectomy_sectioning"
+label = "Ostectomy / sectioning"
+type = "multiselect"
+options = [
+  { label = "Removed overlying bone w/ periosteal", text = "Using #9 periosteal elevator, removed overlying bone to expose tooth" },
+  { label = "Removed buccal bone", text = "Removed buccal bone with periosteal elevator" },
+  { label = "Uncovered crown with round bur", text = "Overlying bone was removed with a round bur to expose the crown of the tooth" },
+  { label = "Buccal Trough", text = "Using a tapered fissure bur, buccal trough was created adjacent to [[each]] tooth" },
+  { label = "Sectioned horizontally", text = "The tooth was then sectioned at the CEJ with a fissure bur and the coronal portion of the tooth was delivered with elevators and forceps" },
+  { label = "Sectioned vertically", text = "Using a fissure bur and an elevator to complete the split, [[each]] tooth was sectioned into separate fragments containing each root" },
+  { label = "Removed remaining enamel (coronectomy)", text = "Small portion of remaining enamel on the buccal and mesial aspect of the tooth was removed with a round bur" },
+  { label = "Root section", text = "The ___ root was sectioned axially to facilitate removal" },
+  { label = "Sectioned w/ cowhorn", text = "The tooth was split into mesial and distal segments using a cowhorn forcep seated in the furcation" },
+]
+
+[[groups.fields]]
+key = "elevator_forcep"
+label = "Elevator / forcep use"
+type = "multiselect"
+options = [
+  { label = "Luxated and delivered tooth", text = "Luxated and extracted [[each]] tooth in its entirety with elevators and forceps" },
+  { label = "Luxated and delivered all remaining segments", text = "Luxated and delivered all remaining fragments of [[each]] tooth with appropriate elevators and forceps" },
+]
+
+[[groups.fields]]
+key = "socket"
+label = "Socket inspection / treatment"
+type = "multiselect"
+options = [
+  { label = "No tooth structure", text = "No tooth structure retained in socket[[s]]" },
+  { label = "Removed Follicle", text = "Removed follicle tissue" },
+  { label = "Curretted", text = "Gently curetted socket[[s]]" },
+  { label = "Smoothed", text = "Smoothed bony margins using a bone file" },
+  { label = "Irrigated", text = "Irrigated surgical site[[s]] with copious sterile saline" },
+  { label = "No sinus perforation", text = "No oroantral communication" },
+  { label = "No LN or IAN", text = "IAN was not visualized. Lingual plate intact" },
+  { label = "IAN visualized and intact", text = "IAN visualized and intact" },
+  { label = "Lingual plate scored", text = "Lingual plate noted to have partial thickness bur injury without perforation" },
+  { label = "Gelfoam", text = "Gelfoam placed into socket[[s]] to aid in hemostasis" },
+  { label = "Surgicel", text = "Surgicel placed into socket[[s]] to aid in hemostasis" },
+  { label = "Bone wax", text = "Osseous bleeding noted to be coming from the surgical site. Source identified and bone wax was applied / burnished over this point with a periosteal elevator to achieve hemostasis" },
+]
+
+[[groups.fields]]
+key = "alveoloplasty_tori"
+label = "Alveoloplasty / tori"
+type = "multiselect"
+options = [
+  { label = "Alveo", text = "Alveoloplasty of" },
+  { label = "Right", text = "right" },
+  { label = "Left", text = "left" },
+  { label = "bilateral", text = "bilateral" },
+  { label = "maxilla", text = "maxillary alveolar ridge performed with" },
+  { label = "mandible", text = "mandibular alveolar ridge performed with" },
+  { label = "rongeurs", text = "rongeurs and a bone file until contour was appropriate and no sharp edges / excessive undercuts remained." },
+  { label = "pineapple bur", text = "pineapple bur on a surgical handpiece and with a bone file until contour was appropriate and no sharp edges / excessive undercuts remained." },
+  { label = "irrigation", text = "Surgical site was irrigated with copious sterile saline" },
+]
+
+[[groups.fields]]
+key = "closure"
+label = "Soft tissue closure"
+type = "multiselect"
+options = [
+  { label = "3-0 CG -- simple", text = "Reapproximated soft tissue with 3-0 chromic gut suture in simple interrupted fashion" },
+  { label = "3-0 CG -- running", text = "Reapproximated soft tissue with 3-0 chromic gut suture in continuous running pattern" },
+  { label = "3-0 CG -- running locking", text = "Reapproximated soft tissue with 3-0 chromic gut suture in continuous locking pattern" },
+  { label = "3-0 CG -- figure of 8", text = "Reapproximated soft tissue with 3-0 chromic gut suture in figure of eight pattern" },
+  { label = "3-0 CG -- horizontal mattress", text = "Reapproximated soft tissue with 3-0 chromic gut suture in horizontal mattress pattern" },
+  { label = "4-0 vicryl -- simple", text = "Reapproximated soft tissue with 4-0 vicryl suture in simple interrupted fashion" },
+  { label = "4-0 vicryl -- running", text = "Reapproximated soft tissue with 4-0 vicryl suture in continuous running pattern" },
+  { label = "4-0 vicryl -- running locking", text = "Reapproximated soft tissue with 4-0 vicryl suture in continuous locking pattern" },
+  { label = "4-0 vicryl -- figure of 8", text = "Reapproximated soft tissue with 4-0 vicryl suture in figure of eight pattern" },
+  { label = "4-0 vicryl -- horizontal mattress", text = "Reapproximated soft tissue with 4-0 vicryl suture in horizontal mattress pattern" },
+]

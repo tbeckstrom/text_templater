@@ -16,6 +16,8 @@ const ORAL_SURGERY_TOML: &str = include_str!("../examples/templates/oral_surgery
 const OMS_PROCEDURE_NOTE_TOML: &str =
     include_str!("../examples/templates/oms_procedure_note.toml");
 const HEADER_PARTIAL_TERA: &str = include_str!("../examples/templates/partials/header.tera");
+const PROCEDURE_BLOCKS_PARTIAL: &str =
+    include_str!("../examples/templates/partials/procedure_blocks.toml");
 
 pub fn resolve_paths() -> anyhow::Result<Paths> {
     let proj = ProjectDirs::from("", "", "note-templater")
@@ -56,6 +58,10 @@ fn seed_examples_if_empty(templates_dir: &Path) -> anyhow::Result<()> {
     let partials_dir = templates_dir.join("partials");
     fs::create_dir_all(&partials_dir)?;
     fs::write(partials_dir.join("header.tera"), HEADER_PARTIAL_TERA)?;
+    fs::write(
+        partials_dir.join("procedure_blocks.toml"),
+        PROCEDURE_BLOCKS_PARTIAL,
+    )?;
 
     Ok(())
 }

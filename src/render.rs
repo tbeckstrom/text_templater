@@ -3,7 +3,7 @@ use std::error::Error as _;
 use tera::{Context, Tera};
 
 use crate::field::{form_state_to_context_json, FormState, GroupsState};
-use crate::template::{FieldDef, GroupDef};
+use crate::template::{FieldDef, GroupDef, PartialDef};
 
 /// The name the current template's body is registered under, so it can call
 /// `{% include "some_partial" %}` and have Tera resolve it against the other
@@ -59,12 +59,12 @@ pub fn instance_context_json(
 /// this is cheap enough to do on every frame.
 pub fn render_body_with_context(
     body: &str,
-    partials: &[(String, String)],
+    partials: &[PartialDef],
     ctx: &Context,
 ) -> Result<String, String> {
     let mut tera = Tera::default();
-    for (name, content) in partials {
-        tera.add_raw_template(name, content)
+    for partial in partials {
+        tera.add_raw_template(&partial.name, &partial.body)
             .map_err(|e| format_tera_error(&e))?;
     }
     tera.add_raw_template(BODY_TEMPLATE_NAME, body)
@@ -77,7 +77,7 @@ pub fn render_body_with_context(
 #[cfg(test)]
 pub fn render_body(
     body: &str,
-    partials: &[(String, String)],
+    partials: &[PartialDef],
     fields: &[FieldDef],
     state: &FormState,
     groups: &[GroupDef],
@@ -101,7 +101,7 @@ fn format_tera_error(err: &tera::Error) -> String {
 mod tests {
     use super::*;
     use crate::field::{add_group_instance, build_groups_state, FieldValue};
-    use crate::template::FieldDef;
+    use crate::template::{FieldDef, PartialDef};
 
     fn no_groups() -> (Vec<GroupDef>, GroupsState) {
         (Vec::new(), GroupsState::new())
@@ -147,7 +147,11 @@ mod tests {
         let mut state = FormState::new();
         state.insert("name".to_string(), FieldValue::Text("Alex".to_string()));
 
-        let partials = vec![("header".to_string(), "Hello, {{ name }}!".to_string())];
+        let partials = vec![PartialDef {
+            name: "header".to_string(),
+            body: "Hello, {{ name }}!".to_string(),
+            ..Default::default()
+        }];
         let (groups, groups_state) = no_groups();
         let rendered = render_body(
             "{% include \"header\" %} Welcome.",

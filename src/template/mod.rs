@@ -13,6 +13,9 @@ pub enum FieldType {
     Checkbox,
     Multiselect,
     Date,
+    /// A read-only value worked out from the other fields by a Tera
+    /// expression (`compute = "..."`) rather than typed in.
+    Computed,
 }
 
 /// One choice in a `dropdown`/`multiselect`. Written either as a bare string
@@ -67,6 +70,16 @@ pub struct FieldDef {
     /// `required`) while it evaluates truthy against the current form values.
     #[serde(default)]
     pub visible_if: Option<String>,
+    /// For `type = "computed"`: the Tera expression producing this field's
+    /// value, e.g. `compute = "dob | age_years"`. Recomputed whenever the
+    /// form changes; shown read-only.
+    #[serde(default)]
+    pub compute: Option<String>,
+    /// Heading this field sits under in the form. Consecutive fields naming
+    /// the same section are drawn together in one collapsible block, so a
+    /// long form can be folded down to the part being worked on.
+    #[serde(default)]
+    pub section: Option<String>,
 }
 
 impl FieldDef {
@@ -160,6 +173,11 @@ pub struct RawTemplateFile {
     pub description: Option<String>,
     #[serde(default)]
     pub use_shared: Vec<String>,
+    /// Names of field-bearing partials (`partials/<name>.toml`) to pull in —
+    /// their fields, groups and speed buttons join this template's form, and
+    /// their body becomes available to `{% include "<name>" %}`.
+    #[serde(default)]
+    pub use_partials: Vec<String>,
     #[serde(default)]
     pub fields: Vec<FieldDef>,
     #[serde(default)]
@@ -167,6 +185,34 @@ pub struct RawTemplateFile {
     #[serde(default)]
     pub speed_buttons: Vec<SpeedButtonDef>,
     pub body: String,
+}
+
+/// Shape of a field-bearing partial, `partials/<name>.toml`. Same shape as a
+/// template minus the identifying bits — it isn't selectable on its own.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RawPartialFile {
+    #[serde(default)]
+    pub use_shared: Vec<String>,
+    #[serde(default)]
+    pub fields: Vec<FieldDef>,
+    #[serde(default)]
+    pub groups: Vec<GroupDef>,
+    #[serde(default)]
+    pub speed_buttons: Vec<SpeedButtonDef>,
+    pub body: String,
+}
+
+/// A reusable body section. A plain `partials/<name>.tera` contributes text
+/// only; a `partials/<name>.toml` also brings the form controls that text
+/// needs, so a whole section (fields and all) can be shared between notes.
+#[derive(Debug, Clone, Default)]
+pub struct PartialDef {
+    pub name: String,
+    pub body: String,
+    pub fields: Vec<FieldDef>,
+    pub groups: Vec<GroupDef>,
+    pub speed_buttons: Vec<SpeedButtonDef>,
 }
 
 /// Shape of the reserved `shared_fields.toml` file.

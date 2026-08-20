@@ -1,38 +1,87 @@
-//! Evaluation of `visible_if` expressions — the small Tera conditions a
-//! template uses to show a field, group, or speed button only when it's
-//! relevant (e.g. carpule counts only once that anesthetic is selected).
+//! Evaluation of the small Tera expressions a template embeds in its *form*
+//! rather than its body: `visible_if` conditions deciding whether a control is
+//! relevant, and `compute` expressions deriving one field's value from others.
 
 use std::collections::{HashMap, HashSet};
 
 use tera::{Context, Tera};
+
+use crate::field::{FieldValue, FormState};
+use crate::template::{FieldDef, FieldType};
 
 /// Compiles each distinct `visible_if` expression once and reuses it, so a
 /// form with dozens of conditions doesn't re-parse them every frame.
 #[derive(Default)]
 pub struct ExprEvaluator {
     tera: Tera,
-    /// Expressions we've attempted to register (successfully or not), so a
-    /// broken one isn't retried on every frame.
+    /// Expressions we've attempted to register, so a broken one isn't
+    /// re-parsed on every frame.
     seen: HashSet<String>,
+    /// Of those, the ones that wouldn't compile.
+    failed: HashSet<String>,
 }
 
 impl ExprEvaluator {
+    /// Registers `source` under `name` the first time that name is seen.
+    /// Returns whether the template is available to render.
+    fn ensure(&mut self, name: &str, source: &str) -> bool {
+        if self.seen.insert(name.to_string()) && self.tera.add_raw_template(name, source).is_err() {
+            self.failed.insert(name.to_string());
+        }
+        !self.failed.contains(name)
+    }
+
     /// Whether `expr` is truthy for `ctx`.
     ///
     /// Fails **open**: an expression that won't compile or errors while
     /// rendering reports visible, so a typo surfaces as an always-shown field
     /// rather than silently hiding part of the form.
     pub fn truthy(&mut self, expr: &str, ctx: &Context) -> bool {
-        if self.seen.insert(expr.to_string()) {
-            let source = format!("{{% if {expr} %}}1{{% else %}}0{{% endif %}}");
-            if self.tera.add_raw_template(expr, &source).is_err() {
-                return true;
-            }
+        let name = format!("if:{expr}");
+        let source = format!("{{% if {expr} %}}1{{% else %}}0{{% endif %}}");
+        if !self.ensure(&name, &source) {
+            return true;
         }
         self.tera
-            .render(expr, ctx)
+            .render(&name, ctx)
             .map(|out| out.trim() == "1")
             .unwrap_or(true)
+    }
+
+    /// The value `expr` produces for `ctx`, as text. `None` if the expression
+    /// won't compile or errors — the caller shows that as an empty value
+    /// rather than failing the whole form.
+    pub fn value(&mut self, expr: &str, ctx: &Context) -> Option<String> {
+        let name = format!("val:{expr}");
+        let source = format!("{{{{ {expr} }}}}");
+        if !self.ensure(&name, &source) {
+            return None;
+        }
+        self.tera.render(&name, ctx).ok()
+    }
+}
+
+/// Recomputes every `computed` field in `fields`, writing each result into
+/// `state` and into `ctx` — so a later computed field, a `visible_if`, and the
+/// note body all see the fresh value. Evaluated in declared order, which is
+/// what lets one computed field build on an earlier one.
+pub fn recompute_fields(
+    fields: &[FieldDef],
+    state: &mut FormState,
+    ctx: &mut Context,
+    evaluator: &mut ExprEvaluator,
+) {
+    for field in fields {
+        if field.field_type != FieldType::Computed {
+            continue;
+        }
+        let value = field
+            .compute
+            .as_deref()
+            .and_then(|expr| evaluator.value(expr, ctx))
+            .unwrap_or_default();
+        ctx.insert(field.key.clone(), &value);
+        state.insert(field.key.clone(), FieldValue::Text(value));
     }
 }
 
@@ -143,6 +192,91 @@ mod tests {
         let mut ev = ExprEvaluator::default();
         assert!(!ev.truthy("multiple_teeth", &base));
         assert!(ev.truthy("multiple_teeth", &merged));
+    }
+
+    fn computed(key: &str, expr: &str) -> FieldDef {
+        FieldDef {
+            key: key.to_string(),
+            label: key.to_string(),
+            field_type: FieldType::Computed,
+            compute: Some(expr.to_string()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_computed_field_derives_its_value_from_the_others() {
+        let fields = vec![computed("summary", r#"name ~ " (" ~ age ~ " yo)""#)];
+        let mut state = FormState::new();
+        let mut ctx = ctx_with(&[
+            ("name", serde_json::json!("Alex")),
+            ("age", serde_json::json!(47)),
+        ]);
+        let mut ev = ExprEvaluator::default();
+
+        recompute_fields(&fields, &mut state, &mut ctx, &mut ev);
+
+        match state.get("summary").unwrap() {
+            FieldValue::Text(s) => assert_eq!(s, "Alex (47 yo)"),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_computed_field_can_build_on_an_earlier_one() {
+        let fields = vec![
+            computed("doubled", "n * 2"),
+            computed("quadrupled", "doubled | int * 2"),
+        ];
+        let mut state = FormState::new();
+        let mut ctx = ctx_with(&[("n", serde_json::json!(3))]);
+        let mut ev = ExprEvaluator::default();
+
+        recompute_fields(&fields, &mut state, &mut ctx, &mut ev);
+
+        match state.get("quadrupled").unwrap() {
+            FieldValue::Text(s) => assert_eq!(s, "12"),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_computed_value_is_visible_to_later_conditions() {
+        let fields = vec![computed("total", "a + b")];
+        let mut state = FormState::new();
+        let mut ctx = ctx_with(&[
+            ("a", serde_json::json!(2)),
+            ("b", serde_json::json!(3)),
+        ]);
+        let mut ev = ExprEvaluator::default();
+        recompute_fields(&fields, &mut state, &mut ctx, &mut ev);
+
+        assert!(ev.truthy(r#"total == "5""#, &ctx));
+    }
+
+    #[test]
+    fn a_broken_compute_expression_yields_an_empty_value_not_a_crash() {
+        let fields = vec![computed("oops", "this is ( not valid")];
+        let mut state = FormState::new();
+        let mut ctx = ctx_with(&[]);
+        let mut ev = ExprEvaluator::default();
+
+        recompute_fields(&fields, &mut state, &mut ctx, &mut ev);
+
+        match state.get("oops").unwrap() {
+            FieldValue::Text(s) => assert_eq!(s, ""),
+            other => panic!("expected empty Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_same_expression_text_works_as_both_a_condition_and_a_value() {
+        // `truthy` and `value` register under separate names, so reusing one
+        // expression string for both doesn't collide in the template cache.
+        let mut ev = ExprEvaluator::default();
+        let ctx = ctx_with(&[("n", serde_json::json!(5))]);
+        assert!(ev.truthy("n", &ctx));
+        assert_eq!(ev.value("n", &ctx).as_deref(), Some("5"));
     }
 
     #[test]
