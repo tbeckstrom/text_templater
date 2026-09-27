@@ -192,8 +192,15 @@ pub struct RawTemplateFile {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RawPartialFile {
+    /// When set, the partial is also listed as a note of its own under this
+    /// name, so a snippet can be used without writing a template around it.
+    pub name: Option<String>,
     #[serde(default)]
     pub use_shared: Vec<String>,
+    /// Other `.toml` partials whose controls this one brings along, for the
+    /// ones it `{% include %}`s.
+    #[serde(default)]
+    pub use_partials: Vec<String>,
     #[serde(default)]
     pub fields: Vec<FieldDef>,
     #[serde(default)]
@@ -213,6 +220,9 @@ pub struct PartialDef {
     pub fields: Vec<FieldDef>,
     pub groups: Vec<GroupDef>,
     pub speed_buttons: Vec<SpeedButtonDef>,
+    pub use_partials: Vec<String>,
+    /// The `name` it's listed under when selectable on its own.
+    pub title: Option<String>,
 }
 
 /// Shape of the reserved `shared_fields.toml` file.

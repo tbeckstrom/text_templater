@@ -1,0 +1,32 @@
+# SNIPPET: op_findings_mandible_fracture   PREFIX: mandfx_find
+# Generated from the snippet language — see .claude/skills/snippet-to-toml.
+name = "Snippet: Findings – mandible fracture"
+body = """
+- Mandibular fractures involving the {{ mandfx_find_fracture_sites }} consistent with preoperative imaging.
+- Fractures noted to be {{ mandfx_find_fracture_displacement }}.
+- Malocclusion present pre-reduction.
+- Occlusion restored with stable bilateral posterior contacts at conclusion.{% if mandfx_find_arch_bars_line %}
+- Maxillary and mandibular arch bars in place.{% endif %}
+"""
+
+[[fields]]
+key = "mandfx_find_fracture_sites"
+label = "Fracture sites"
+section = "Findings – mandible fracture"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "mandfx_find_fracture_displacement"
+label = "Fracture displacement"
+section = "Findings – mandible fracture"
+type = "dropdown"
+default = "displaced"
+options = ["displaced", "minimally displaced", "comminuted", "telescoped"]
+
+[[fields]]
+key = "mandfx_find_arch_bars_line"
+label = "Arch bars line"
+section = "Findings – mandible fracture"
+type = "checkbox"
+default = true

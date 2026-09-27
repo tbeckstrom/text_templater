@@ -50,6 +50,13 @@ pub fn load_templates(dir: &Path) -> LoadResult {
         }
     }
 
+    for partial in partials.iter().filter(|p| p.title.is_some()) {
+        match partial_as_template(partial, &partials) {
+            Ok(template) => templates.push(template),
+            Err(e) => errors.push((format!("partials/{}.toml", partial.name), e)),
+        }
+    }
+
     templates.sort_by(|a, b| a.name.cmp(&b.name));
 
     LoadResult {
@@ -130,6 +137,8 @@ fn load_partials(
                         fields,
                         groups: raw.groups,
                         speed_buttons: raw.speed_buttons,
+                        use_partials: raw.use_partials,
+                        title: raw.name,
                     });
                 }
                 Err(e) => errors.push((file_label, e)),
@@ -155,6 +164,74 @@ fn resolve_shared(keys: &[String], shared_fields: &[FieldDef]) -> Result<Vec<Fie
                 })
         })
         .collect()
+}
+
+/// A named partial listed as a note of its own: its fields (and those of the
+/// partials it pulls in) with a body that is just the partial.
+fn partial_as_template(partial: &PartialDef, partials: &[PartialDef]) -> Result<TemplateDef, String> {
+    let mut fields = Vec::new();
+    let mut groups = Vec::new();
+    let mut speed_buttons = Vec::new();
+    for p in resolve_partials(std::slice::from_ref(&partial.name), partials)? {
+        fields.extend(p.fields.iter().cloned());
+        groups.extend(p.groups.iter().cloned());
+        speed_buttons.extend(p.speed_buttons.iter().cloned());
+    }
+    check_for_duplicates(&fields, &groups)?;
+    Ok(TemplateDef {
+        id: format!("partials/{}", partial.name),
+        name: partial.title.clone().unwrap_or_default(),
+        description: None,
+        fields,
+        groups,
+        speed_buttons,
+        body: format!("{{% include \"{}\" %}}", partial.name),
+    })
+}
+
+/// Expands `names` into every partial they bring in, each before the ones it
+/// pulls in itself. A partial reached more than once (say, by two parents)
+/// appears once, so its fields are asked once and shared by every include.
+fn resolve_partials<'a>(
+    names: &[String],
+    partials: &'a [PartialDef],
+) -> Result<Vec<&'a PartialDef>, String> {
+    fn visit<'a>(
+        name: &str,
+        parent: Option<&str>,
+        partials: &'a [PartialDef],
+        path: &mut Vec<String>,
+        out: &mut Vec<&'a PartialDef>,
+    ) -> Result<(), String> {
+        if path.iter().any(|p| p == name) {
+            path.push(name.to_string());
+            return Err(format!("partials include each other in a cycle: {}", path.join(" -> ")));
+        }
+        if out.iter().any(|p| p.name == name) {
+            return Ok(());
+        }
+        let partial = partials.iter().find(|p| p.name == name).ok_or_else(|| match parent {
+            None => format!(
+                "use_partials references unknown partial '{name}' (expected partials/{name}.toml)"
+            ),
+            Some(parent) => format!(
+                "partial '{parent}' uses unknown partial '{name}' (expected partials/{name}.toml)"
+            ),
+        })?;
+        out.push(partial);
+        path.push(name.to_string());
+        for child in &partial.use_partials {
+            visit(child, Some(name), partials, path, out)?;
+        }
+        path.pop();
+        Ok(())
+    }
+
+    let mut out = Vec::new();
+    for name in names {
+        visit(name, None, partials, &mut Vec::new(), &mut out)?;
+    }
+    Ok(out)
 }
 
 /// Rejects a merged form that would carry the same field or group key twice —
@@ -213,10 +290,7 @@ fn load_one(
 
     // Field-bearing partials contribute their controls after the template's
     // own, so a template's fields stay at the top of the form.
-    for name in &raw.use_partials {
-        let partial = partials.iter().find(|p| &p.name == name).ok_or_else(|| {
-            format!("use_partials references unknown partial '{name}' (expected partials/{name}.toml)")
-        })?;
+    for partial in resolve_partials(&raw.use_partials, partials)? {
         fields.extend(partial.fields.iter().cloned());
         groups.extend(partial.groups.iter().cloned());
         speed_buttons.extend(partial.speed_buttons.iter().cloned());
@@ -556,6 +630,176 @@ mod tests {
         assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
         let keys: Vec<_> = result.templates[0].fields.iter().map(|f| f.key.as_str()).collect();
         assert_eq!(keys, vec!["patient_name"]);
+    }
+
+    /// `approach` includes `local`, so a note using `approach` gets both
+    /// partials' fields and text.
+    fn write_nested_pair(dir: &Path) {
+        write_partial(
+            dir,
+            "local.toml",
+            r#"
+            body = "{{ local_agent }} infiltrated."
+
+            [[fields]]
+            key = "local_agent"
+            label = "Local"
+            type = "text"
+            default = "lidocaine"
+            "#,
+        );
+        write_partial(
+            dir,
+            "approach.toml",
+            r#"
+            use_partials = ["local"]
+            body = "Incision {{ approach_len }}cm. {% include \"local\" %}"
+
+            [[fields]]
+            key = "approach_len"
+            label = "Length"
+            type = "text"
+            default = "3"
+            "#,
+        );
+    }
+
+    #[test]
+    fn a_partial_can_bring_in_another_partials_fields() {
+        let dir = scratch_dir("nested");
+        write_nested_pair(&dir);
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            use_partials = ["approach"]
+            body = "{% include \"approach\" %}"
+
+            [[fields]]
+            key = "own"
+            label = "Own"
+            type = "text"
+            "#,
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        let t = &result.templates[0];
+        // Own fields first, then each partial before the ones it pulls in.
+        let keys: Vec<_> = t.fields.iter().map(|f| f.key.as_str()).collect();
+        assert_eq!(keys, vec!["own", "approach_len", "local_agent"]);
+
+        let ctx = crate::render::build_context(
+            &t.fields,
+            &crate::field::build_form_state(&t.fields),
+            &t.groups,
+            &crate::field::build_groups_state(&t.groups),
+        );
+        let text = crate::render::render_body_with_context(&t.body, &result.partials, &ctx).unwrap();
+        assert_eq!(text, "Incision 3cm. lidocaine infiltrated.");
+    }
+
+    #[test]
+    fn a_partial_reached_twice_contributes_its_fields_once() {
+        let dir = scratch_dir("nesteddup");
+        write_nested_pair(&dir);
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            use_partials = ["approach", "local"]
+            body = "{% include \"approach\" %} {% include \"local\" %}"
+            "#,
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        let keys: Vec<_> = result.templates[0].fields.iter().map(|f| f.key.as_str()).collect();
+        assert_eq!(keys, vec!["approach_len", "local_agent"]);
+    }
+
+    #[test]
+    fn a_named_partial_is_selectable_on_its_own() {
+        let dir = scratch_dir("selectable");
+        write_nested_pair(&dir);
+        let approach = dir.join("partials/approach.toml");
+        let text = fs::read_to_string(&approach).unwrap();
+        fs::write(&approach, format!("name = \"Snippet: Approach\"\n{text}")).unwrap();
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        // Only the named partial is listed; `local` has no name.
+        assert_eq!(result.templates.len(), 1);
+        let t = &result.templates[0];
+        assert_eq!(t.id, "partials/approach");
+        assert_eq!(t.name, "Snippet: Approach");
+        let keys: Vec<_> = t.fields.iter().map(|f| f.key.as_str()).collect();
+        assert_eq!(keys, vec!["approach_len", "local_agent"]);
+
+        let ctx = crate::render::build_context(
+            &t.fields,
+            &crate::field::build_form_state(&t.fields),
+            &t.groups,
+            &crate::field::build_groups_state(&t.groups),
+        );
+        let text = crate::render::render_body_with_context(&t.body, &result.partials, &ctx).unwrap();
+        assert_eq!(text, "Incision 3cm. lidocaine infiltrated.");
+    }
+
+    #[test]
+    fn a_named_partial_with_a_broken_include_chain_is_reported_under_its_file() {
+        let dir = scratch_dir("selectablebad");
+        write_partial(&dir, "a.toml", "name = \"A\"\nuse_partials = [\"nope\"]\nbody = \"a\"\n");
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.templates.is_empty());
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].0, "partials/a.toml");
+    }
+
+    #[test]
+    fn a_cycle_between_partials_is_reported() {
+        let dir = scratch_dir("nestedcycle");
+        write_partial(&dir, "a.toml", "use_partials = [\"b\"]\nbody = \"a\"\n");
+        write_partial(&dir, "b.toml", "use_partials = [\"a\"]\nbody = \"b\"\n");
+        write(
+            &dir,
+            "note.toml",
+            "name = \"Note\"\nuse_partials = [\"a\"]\nbody = \"hi\"\n",
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.templates.is_empty());
+        assert_eq!(result.errors.len(), 1);
+        assert!(
+            result.errors[0].1.contains("a -> b -> a"),
+            "the error should show the cycle, got: {}",
+            result.errors[0].1
+        );
+    }
+
+    #[test]
+    fn an_unknown_nested_partial_is_reported_naming_its_parent() {
+        let dir = scratch_dir("nestedunknown");
+        write_partial(&dir, "a.toml", "use_partials = [\"nope\"]\nbody = \"a\"\n");
+        write(
+            &dir,
+            "note.toml",
+            "name = \"Note\"\nuse_partials = [\"a\"]\nbody = \"hi\"\n",
+        );
+
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.templates.is_empty());
+        let msg = &result.errors[0].1;
+        assert!(msg.contains("nope") && msg.contains("'a'"), "got: {msg}");
     }
 
     /// Regression guard: the bundled examples in `examples/templates/` are what

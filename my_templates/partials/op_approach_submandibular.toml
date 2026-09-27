@@ -1,0 +1,45 @@
+# SNIPPET: op_approach_submandibular   PREFIX: submand
+# Generated from the snippet language — see .claude/skills/snippet-to-toml.
+name = "Snippet: Submandibular approach"
+use_partials = ["common_local_anesthesia_admin"]
+
+body = """
+Attention was directed to the submandibular region. A {{ submand_incision_length }}cm skin incision was marked approximately 2 cm inferior to the inferior border of the mandible, oriented parallel to a natural skin crease. {% include "common_local_anesthesia_admin" %}
+
+The incision was carried through sharply skin and subcutaneous tissue to the level of the platysma. Subcutaneous undermining was performed superiorly and inferiorly to facilitate retraction and closure. The platysma muscle was divided in a controlled fashion, exposing the superficial layer of deep cervical fascia.
+
+Blunt and sharp dissection through the superficial layer of deep cervical fascia was performed at the level of the skin incision, followed by superior dissection toward the mandible. The submandibular gland was encountered and retracted inferiorly as needed. {{ submand_facial_vessels_statement_text }} {{ submand_marginal_mandibular_statement_text }}
+
+Dissection proceeded superiorly toward the inferior border of the mandible until the pterygomasseteric sling was identified. The sling was divided sharply to expose the inferior border and angle of the mandible.
+"""
+
+[[fields]]
+key = "submand_incision_length"
+label = "Incision length (cm)"
+section = "Submandibular approach"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "submand_facial_vessels_statement"
+label = "Facial vessels"
+section = "Submandibular approach"
+type = "dropdown"
+default = "Facial vessels not seen"
+options = [
+  { label = "Facial vessels not seen", text = "The facial vessels were not encountered within the operative field." },
+  { label = "Facial vessels protected", text = "The facial vessels were identified and protected during dissection." },
+  { label = "Facial vessels ligated", text = "Select branches of the facial vessels were ligated as indicated to facilitate exposure." },
+]
+
+[[fields]]
+key = "submand_marginal_mandibular_statement"
+label = "Marginal mandibular nerve"
+section = "Submandibular approach"
+type = "dropdown"
+default = "Marginal mandibular not seen"
+options = [
+  { label = "Marginal mandibular not seen", text = "Care was taken throughout the dissection to protect the marginal mandibular branch of the facial nerve, which was not encountered within the operative field." },
+  { label = "Marginal mandibular identified", text = "The marginal mandibular branch of the facial nerve was identified and carefully protected throughout the dissection." },
+  { label = "Marginal mandibular stimulated", text = "The marginal mandibular branch of the facial nerve was identified with nerve stimulation and carefully protected throughout the dissection." },
+]

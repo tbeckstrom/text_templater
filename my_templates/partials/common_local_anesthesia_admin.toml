@@ -1,0 +1,16 @@
+# SNIPPET: common_local_anesthesia_admin   PREFIX: local
+# Generated from the snippet language — see .claude/skills/snippet-to-toml.
+name = "Snippet: Local anesthesia"
+body = """{% for v in local_types %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %} was infiltrated subcutaneously along the planned incision."""
+
+[[fields]]
+key = "local_types"
+label = "Local types"
+section = "Local anesthesia"
+type = "multiselect"
+options = [
+  "1% lidocaine with 1:100,000 epinephrine",
+  "0.25% bupivacaine with 1:200,000 epinephrine",
+  "0.5% bupivacaine with 1:200,000 epinephrine",
+]
+default = ["1% lidocaine with 1:100,000 epinephrine"]

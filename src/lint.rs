@@ -130,6 +130,21 @@ fn known_names(fields: &[FieldDef], groups: &[GroupDef]) -> HashSet<String> {
     names
 }
 
+/// Every partial `body` includes, directly or through another partial.
+fn included_partials<'a>(body: &str, partials: &'a [PartialDef]) -> Vec<&'a PartialDef> {
+    let mut found: Vec<&PartialDef> = Vec::new();
+    let mut to_scan = vec![body];
+    while let Some(text) = to_scan.pop() {
+        for p in partials {
+            if !found.iter().any(|f| f.name == p.name) && text.contains(&format!("\"{}\"", p.name)) {
+                found.push(p);
+                to_scan.push(&p.body);
+            }
+        }
+    }
+    found
+}
+
 /// Checks the loaded templates and partials, returning every warning found.
 pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
     let mut lints = Vec::new();
@@ -138,11 +153,9 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
         // Everything this template's text could read from: its own body plus
         // the body of any partial it includes.
         let mut readable = t.body.clone();
-        for p in partials {
-            if t.body.contains(&format!("\"{}\"", p.name)) {
-                readable.push('\n');
-                readable.push_str(&p.body);
-            }
+        for p in included_partials(&t.body, partials) {
+            readable.push('\n');
+            readable.push_str(&p.body);
         }
         // Conditions and computed expressions count as reads too.
         for f in t.fields.iter().chain(t.groups.iter().flat_map(|g| &g.fields)) {
@@ -266,7 +279,7 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
     for p in partials {
         let used = templates
             .iter()
-            .any(|t| t.body.contains(&format!("\"{}\"", p.name)));
+            .any(|t| included_partials(&t.body, partials).iter().any(|i| i.name == p.name));
         if !used {
             lints.push(Lint {
                 subject: format!("partials/{}", p.name),
@@ -484,5 +497,25 @@ mod tests {
             vec![field("patient_name", FieldType::Text)],
         );
         assert!(lint(&[t], &[partial]).is_empty());
+    }
+
+    #[test]
+    fn a_partial_included_only_by_another_partial_is_used_and_its_reads_count() {
+        let outer = PartialDef {
+            name: "approach".to_string(),
+            body: r#"{% include "local" %}"#.to_string(),
+            ..Default::default()
+        };
+        let inner = PartialDef {
+            name: "local".to_string(),
+            body: "{{ local_agent }}".to_string(),
+            ..Default::default()
+        };
+        let t = template(
+            r#"{% include "approach" %}"#,
+            vec![field("local_agent", FieldType::Text)],
+        );
+        let lints = lint(&[t], &[outer, inner]);
+        assert!(lints.is_empty(), "unexpected lints: {lints:?}");
     }
 }

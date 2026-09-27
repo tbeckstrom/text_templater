@@ -269,7 +269,41 @@ partial without listing it gets the text but not the fields (and will fail to re
 template gets its own copy of the controls, so two notes sharing a partial keep separate values.
 Partial fields are appended after the template's own. A key defined in both the template and a
 partial is reported as a load error rather than silently shadowing. A `.toml` partial may
-`use_shared`, but partials can't currently include other partials.
+`use_shared`.
+
+#### Partials inside partials
+
+A `.toml` partial can include another partial exactly the way a template does — list it in its
+own `use_partials` and `{% include %}` it where the text goes:
+
+```toml
+# partials/op_approach_submandibular.toml
+use_partials = ["local_anesthesia_admin"]
+body = """
+Attention was directed to the submandibular region. {% include "local_anesthesia_admin" %}
+...
+"""
+```
+
+A template that uses `op_approach_submandibular` then gets the local-anesthesia fields too,
+listed right after the approach's own. A partial reached more than once in the same note — by two
+parents, or by a parent and the template itself — contributes its fields **once**, so the question
+is asked once and every include renders the same answer. Partials that include each other in a
+loop are reported as a load error showing the loop (`a -> b -> a`).
+
+#### Using a partial on its own
+
+Give a `.toml` partial a `name` and it also appears in the template list as a note of its own —
+its fields (plus those of any partials it pulls in) and just its text — so a snippet is usable
+without writing a template around it:
+
+```toml
+# partials/op_findings_mandible_fracture.toml
+name = "Snippet: Findings – mandible fracture"
+body = """..."""
+```
+
+Partials without a `name` stay include-only.
 
 ### Speed buttons
 

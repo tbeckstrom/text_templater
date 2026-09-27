@@ -63,10 +63,9 @@ pub fn render_body_with_context(
     ctx: &Context,
 ) -> Result<String, String> {
     let mut tera = Tera::default();
-    for partial in partials {
-        tera.add_raw_template(&partial.name, &partial.body)
-            .map_err(|e| format_tera_error(&e))?;
-    }
+    // Added together so a partial can include another regardless of order.
+    tera.add_raw_templates(partials.iter().map(|p| (p.name.as_str(), p.body.as_str())))
+        .map_err(|e| format_tera_error(&e))?;
     tera.add_raw_template(BODY_TEMPLATE_NAME, body)
         .map_err(|e| format_tera_error(&e))?;
     tera.render(BODY_TEMPLATE_NAME, ctx)
