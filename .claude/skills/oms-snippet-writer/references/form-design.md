@@ -25,12 +25,15 @@ When in doubt, match it.
 ## Defaults
 
 - **Preselect the normal or common finding.** Examples: oral hygiene good, occlusion stable,
-  parafunction none, opposing natural dentition, CBCT normal findings ticked, every risk factor
-  "no", decision proceed, and the usual plan choices (local anesthesia, amoxicillin preop,
-  chlorhexidine, schedule surgery).
+  opposing restored natural dentition, face symmetric, opening adequate, a charted tooth
+  nonrestorable, CBCT sinuses clear, every risk factor "no", healing and integration times 4-6
+  months, decision "considering", and the usual plan choices (local anesthesia, fabricate surgical
+  guide).
 - **Leave a finding unpicked when it needs an active look**, so choosing it is a deliberate act.
-  Examples: periodontal status, adjacent teeth, bone adequacy on CBCT, and allergies (give them an
+  Examples: periodontal status, adjacent teeth, parafunction, lymph nodes, TMJ, deviation,
+  muscles, tissue phenotype, current prosthesis, bone adequacy on CBCT, and allergies (give them an
   NKDA speed button instead of a default).
+- **Leave optional plan items unpicked**, such as antibiotics and chlorhexidine.
 - **Nothing is required.** Use `(required)` only where an empty choice would break running prose and
   no default is safe, for example laterality inside an op-note sentence.
 
@@ -40,8 +43,9 @@ When in doubt, match it.
   drops out until something is picked.
 - **Every LIST whose line can drop out ends with a `***` option**, the flag.
 - **Expanded-note content goes behind an optional add**: an OPTIONAL titled "+ Name", default off,
-  whose controls appear only when it is ticked. Examples: extraoral/TMJ exam, additional findings,
-  referral request, interim prosthesis, periodontal history.
+  whose controls appear only when it is ticked. Examples: additional findings, referral request,
+  interim prosthesis, periodontal history. An add used in nearly every note may default on, like
+  the implant consult's extraoral/TMJ exam.
 
 ## Enter once, derive the rest
 
@@ -65,9 +69,13 @@ When in doubt, match it.
   - "Healthy perio, sound adjacent teeth" under the exam;
   - "Limited FOV - mandible" under CBCT;
   - "All adequate" inside each CBCT box.
-- **Pathway presets set a whole combination**: next procedure, descriptors, rationale and sequence.
+- **Pathway presets set a whole combination**: next visit, descriptors, rationale and sequence.
   They clear what they don't use (`= none`), so clicking one preset after another never leaves
   stale picks.
+- **Pathway presets that span sections sit in the top row of the note form**, defined in the NOTE.
+  They fill exam and CBCT boxes as well as the assessment and plan. Examples: "Implant
+  appropriate", "Exo - bone graft", "GBR - lateral aug - staged". They set every span or tooth box
+  that exists when clicked, so the sites are charted first.
 
 ## Clinic note content
 
@@ -85,22 +93,26 @@ When in doubt, match it.
   - The conditions picked for a tooth present (heavily restored, fractured, carious, mobile, and
     so on) describe that tooth throughout the note. "nonrestorable" is the fallback.
   - CBCT uses adequate / marginal / inadequate scales for bone height, bone width, vertical and
-    mesiodistal restorative space.
-  - A vital structure is printed only once picked, as "in close proximity" or "not in close
-    proximity".
+    mesiodistal restorative space, plus an "mm" chip that opens a box for the measurement.
+  - A vital structure is printed only once picked. Its proximity defaults to "in close
+    proximity", with "not in close proximity" one click away.
+  - Sinus pneumatization and sinus membrane thickening are right / left / bilateral chips,
+    unpicked by default.
 - **Assessment.**
   - It opens "58-year-old patient presenting with [the specific problem in clinical terms]", e.g.
     "partial edentulism at sites 35-37 and fractured, carious tooth 46 with horizontal alveolar
     ridge deficiency".
   - The recommendation follows, with one short rationale sentence per adjunct.
   - Alternatives go in one sentence.
+  - Before the risks, one line: "Treatment timing and sequencing were discussed as outlined in the
+    plan below."
 - **Risks.** Concise and medicolegally sound, in two bullets:
   - "General surgical:" one line;
   - "Specific to the planned procedure:" only the risks of the next procedure's components, of the
     charted sites, and of the patient's risk factors, separated by semicolons.
 
   Close with the understanding and questions-answered sentence.
-- **Plan.** Summarized bullets, each dropping out until picked. "Next procedure" chips (extraction,
+- **Plan.** Summarized bullets, each dropping out until picked. "Next visit" chips (extraction,
   socket preservation, implant placement, GBR, sinus lift, and so on) write the procedure bullet
   with its sites, and drive the specific risks. The overall sequence is one short line.
 

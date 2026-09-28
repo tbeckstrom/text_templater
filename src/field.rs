@@ -235,7 +235,8 @@ pub fn add_group_instance(groups_state: &mut GroupsState, group: &GroupDef) {
 }
 
 /// Applies a speed button: overwrites any top-level fields named in
-/// `sb.values`, then (if `sb.group` names one of `groups`) appends one new
+/// `sb.values`, sets `sb.each`'s values in every existing instance of the
+/// groups it names, then (if `sb.group` names one of `groups`) appends one new
 /// instance per table in `sb.group_values`. Unmatched keys (typos, a field
 /// that's since been removed) and type mismatches are silently skipped
 /// rather than treated as errors — a speed button always does what it can.
@@ -247,6 +248,17 @@ pub fn apply_speed_button(
     groups_state: &mut GroupsState,
 ) {
     apply_values(fields, &sb.values, state);
+
+    for (group_key, values) in &sb.each {
+        let (Some(group), Some(values)) =
+            (groups.iter().find(|g| &g.key == group_key), values.as_table())
+        else {
+            continue;
+        };
+        for instance in groups_state.entry(group.key.clone()).or_default() {
+            apply_values(&group.fields, values, &mut instance.values);
+        }
+    }
 
     let Some(group_key) = &sb.group else { return };
     let Some(group) = groups.iter().find(|g| &g.key == group_key) else {
@@ -819,6 +831,35 @@ mod tests {
         apply_speed_button(&sb, &fields, &mut state, &groups, &mut groups_state);
 
         assert_eq!(groups_state.get("procedures").unwrap().len(), 2);
+    }
+
+    #[test]
+    fn speed_button_each_sets_every_existing_instance_of_a_group() {
+        let fields: Vec<FieldDef> = vec![];
+        let mut state = build_form_state(&fields);
+        let groups = vec![procedure_group()];
+        let mut groups_state = build_groups_state(&groups);
+        add_group_instance(&mut groups_state, &groups[0]);
+        add_group_instance(&mut groups_state, &groups[0]);
+
+        let mut sb = speed_button(toml::Table::new());
+        sb.each = toml_table(&[(
+            "procedures",
+            toml::Value::Table(toml_table(&[(
+                "procedure_type",
+                toml::Value::String("Extraction".into()),
+            )])),
+        )]);
+        apply_speed_button(&sb, &fields, &mut state, &groups, &mut groups_state);
+
+        let instances = groups_state.get("procedures").unwrap();
+        assert_eq!(instances.len(), 2, "no instances are added");
+        for instance in instances {
+            match instance.values.get("procedure_type").unwrap() {
+                FieldValue::Text(s) => assert_eq!(s, "Extraction"),
+                other => panic!("expected Text, got {other:?}"),
+            }
+        }
     }
 
     #[test]

@@ -1,6 +1,6 @@
 # SNIPPET: clinic_assessment_plan_implant   PREFIX: imp_ap
 # Revised by hand. The problem one-liner comes from the charted sites and the
-# conditions picked for each tooth present. "Next procedure" drives both its
+# conditions picked for each tooth present. "Next visit" drives both its
 # plan bullet and the specific risks. Plan lines are left out until picked
 # ("***" is a deliberate choice).
 name = "Snippet: Assessment & plan - implant consult"
@@ -43,15 +43,17 @@ body = """
 
 Implant reconstruction with {% if imp_ap_restoration_type == "Splinted crowns" %}splinted implant-supported crowns{% elif imp_ap_restoration_type == "Implant FPD" %}an implant-supported fixed partial denture{% elif imp_ap_restoration_type == "***" %}***{% elif imp_site_count | int > 1 %}individual implant-supported crowns{% else %}a single implant-supported crown{% endif %} is recommended to restore function without preparing the adjacent teeth, using guided placement from CBCT and intraoral scan data.{% if imp_ap_adjunct_rationale_text %} {{ imp_ap_adjunct_rationale_text | join(sep=" ") }}{% endif %}{% if imp_ap_alternatives_discussed_text %} Alternatives reviewed: {% for v in imp_ap_alternatives_discussed_text %}{% if not loop.first %}{% if loop.last %}, and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.{% endif %}
 
+Treatment timing and sequencing were discussed as outlined in the plan below.
+
 {% include "clinic_risks_implant" %}{% if imp_ap_patient_decision %}
 
 {{ imp_ap_patient_decision_text }}{% endif %}
 
 **PLAN:**
 {%- set lines = [
-  ("Next procedure: " ~ next | join(sep="; ") | capitalize ~ ".") if next else "",
+  ("Next visit: " ~ next | join(sep="; ") | capitalize ~ ".") if next else "",
   ("Overall sequence: " ~ imp_ap_treatment_sequence_text | replace(from="[[imp_ap_integration_time]]", to=imp_ap_integration_time) | replace(from="[[imp_ap_graft_time]]", to=imp_ap_graft_time)) if imp_ap_treatment_sequence else "",
-  "Intraoral scan and virtual implant planning; static surgical guide fabrication." if imp_ap_guide_bullet else "",
+  "Fabricate surgical guide." if imp_ap_guide_bullet else "",
   ("Anesthesia: " ~ imp_ap_anesthesia_plan_text) if imp_ap_anesthesia_plan else "",
   ("Antibiotics: " ~ imp_ap_antibiotic_regimen_text | replace(from="[[imp_ap_postop_antibiotic_days]]", to=imp_ap_postop_antibiotic_days)) if imp_ap_antibiotic_regimen else "",
   "Chlorhexidine 0.12% rinse BID beginning the day of surgery for 1-2 weeks." if imp_ap_chlorhexidine_bullet else "",
@@ -59,10 +61,8 @@ Implant reconstruction with {% if imp_ap_restoration_type == "Splinted crowns" %
   "Tobacco cessation counseling provided." if imp_ap_tobacco_bullet or (imp_hx_tobacco_use is defined and imp_hx_tobacco_use in ["Current", "Vaping"]) else "",
   "Recent A1c and PCP clearance requested prior to surgery." if imp_ap_glycemic_bullet or (imp_hx_diabetes_status is defined and imp_hx_diabetes_status == "Yes") else "",
   "Perioperative anticoagulation management to be coordinated with the prescribing provider." if imp_ap_anticoagulation_bullet or (imp_hx_anticoagulant_use is defined and imp_hx_anticoagulant_use == "Yes") else "",
-  ("Consult note sent to " ~ imp_ref_name ~ ".") if imp_ap_letter_bullet else "",
   ("Final restoration by " ~ (imp_ap_restorer_name if imp_ap_restorer == "Other" else imp_ref_name) ~ " following osseointegration.") if imp_ap_restorer else "",
   "Written informed consent to be reviewed and signed at the surgical visit." if imp_ap_consent_bullet else "",
-  imp_ap_next_step_text if imp_ap_next_step else "",
 ] -%}
 {% for l in lines %}{% if l %}
 - {{ l }}{% endif %}{% endfor %}
@@ -125,7 +125,7 @@ key = "imp_ap_patient_decision"
 label = "Patient decision"
 section = "Assessment"
 type = "dropdown"
-default = "Proceed"
+default = "Considering"
 options = [
   { label = "Proceed", text = "After shared decision making, the patient wishes to proceed with the recommended treatment." },
   { label = "Considering", text = "The patient wishes to consider the options discussed and will contact the office when ready to proceed." },
@@ -137,7 +137,7 @@ options = [
 
 [[fields]]
 key = "imp_ap_next_procedure"
-label = "Next procedure (drives the specific risks)"
+label = "Next visit (drives the specific risks)"
 section = "Plan"
 type = "multiselect"
 options = [
@@ -173,7 +173,7 @@ key = "imp_ap_integration_time"
 label = "Integration time"
 section = "Plan"
 type = "dropdown"
-default = "3-4 months"
+default = "4-6 months"
 options = ["3 months", "3-4 months", "4-6 months", "***"]
 visible_if = "imp_ap_treatment_sequence and imp_ap_treatment_sequence != '***'"
 
@@ -188,7 +188,7 @@ visible_if = "imp_ap_treatment_sequence == 'Ext + socket preservation' or imp_ap
 
 [[fields]]
 key = "imp_ap_guide_bullet"
-label = "Intraoral scan / surgical guide"
+label = "Fabricate surgical guide"
 section = "Plan"
 type = "checkbox"
 default = true
@@ -210,7 +210,6 @@ key = "imp_ap_antibiotic_regimen"
 label = "Antibiotics"
 section = "Plan"
 type = "dropdown"
-default = "Amoxicillin preop"
 options = [
   { label = "Amoxicillin preop", text = "amoxicillin 2 g PO 1 hour prior to surgery." },
   { label = "Amoxicillin pre + post", text = "amoxicillin 2 g PO 1 hour prior to surgery, followed by amoxicillin 500 mg PO TID for [[imp_ap_postop_antibiotic_days]] days." },
@@ -233,7 +232,7 @@ key = "imp_ap_chlorhexidine_bullet"
 label = "Chlorhexidine rinse"
 section = "Plan"
 type = "checkbox"
-default = true
+default = false
 
 [[fields]]
 key = "imp_ap_interim_bullet"
@@ -273,13 +272,6 @@ type = "checkbox"
 default = false
 
 [[fields]]
-key = "imp_ap_letter_bullet"
-label = "Consult note to referring provider"
-section = "Plan"
-type = "checkbox"
-default = true
-
-[[fields]]
 key = "imp_ap_restorer"
 label = "Restoring dentist"
 section = "Plan"
@@ -302,19 +294,6 @@ section = "Plan"
 type = "checkbox"
 default = true
 
-[[fields]]
-key = "imp_ap_next_step"
-label = "Next step"
-section = "Plan"
-type = "dropdown"
-default = "Schedule surgery"
-options = [
-  { label = "Schedule surgery", text = "Schedule surgery following surgical guide fabrication." },
-  { label = "Patient to call", text = "Patient to contact the office to schedule when ready." },
-  { label = "Return PRN", text = "Return as needed for re-evaluation." },
-  { label = "***", text = "***" },
-]
-
 # ---------------------------------------------------------- pathway presets ---
 # Each sets the next procedure, descriptors, adjunct rationale and overall
 # sequence together, replacing whatever an earlier preset picked.
@@ -322,17 +301,17 @@ options = [
 [[speed_buttons]]
 label = "Implant only"
 section = "Assessment"
-values = { imp_ap_next_procedure = ["Implant placement"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = [], imp_ap_treatment_sequence = "Implant only", imp_ap_integration_time = "3-4 months" }
+values = { imp_ap_next_procedure = ["Implant placement"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = [], imp_ap_treatment_sequence = "Implant only", imp_ap_integration_time = "4-6 months" }
 
 [[speed_buttons]]
 label = "Ext + socket pres -> delayed"
 section = "Assessment"
-values = { imp_ap_next_procedure = ["Extraction", "Socket preservation"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Ext + socket preservation"], imp_ap_treatment_sequence = "Ext + socket preservation", imp_ap_graft_time = "4 months", imp_ap_integration_time = "3-4 months", imp_ap_interim_bullet = true }
+values = { imp_ap_next_procedure = ["Extraction", "Socket preservation"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Ext + socket preservation"], imp_ap_treatment_sequence = "Ext + socket preservation", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "4-6 months", imp_ap_interim_bullet = true }
 
 [[speed_buttons]]
 label = "Immediate placement"
 section = "Assessment"
-values = { imp_ap_next_procedure = ["Immediate implant"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Immediate placement"], imp_ap_treatment_sequence = "Immediate placement", imp_ap_integration_time = "3-4 months" }
+values = { imp_ap_next_procedure = ["Immediate implant"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Immediate placement"], imp_ap_treatment_sequence = "Immediate placement", imp_ap_integration_time = "4-6 months" }
 
 [[speed_buttons]]
 label = "Simultaneous GBR"
@@ -342,7 +321,7 @@ values = { imp_ap_next_procedure = ["Implant placement", "GBR"], imp_ap_descript
 [[speed_buttons]]
 label = "Staged GBR"
 section = "Assessment"
-values = { imp_ap_next_procedure = ["GBR"], imp_ap_descriptors = ["Horizontal deficiency"], imp_ap_adjunct_rationale = ["Staged GBR"], imp_ap_treatment_sequence = "Staged GBR", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "3-4 months" }
+values = { imp_ap_next_procedure = ["GBR"], imp_ap_descriptors = ["Horizontal deficiency"], imp_ap_adjunct_rationale = ["Staged GBR"], imp_ap_treatment_sequence = "Staged GBR", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "4-6 months" }
 
 [[speed_buttons]]
 label = "Crestal sinus lift"
@@ -352,4 +331,4 @@ values = { imp_ap_next_procedure = ["Crestal sinus lift"], imp_ap_descriptors = 
 [[speed_buttons]]
 label = "Lateral sinus lift"
 section = "Assessment"
-values = { imp_ap_next_procedure = ["Lateral sinus lift"], imp_ap_descriptors = ["Sinus pneumatization"], imp_ap_adjunct_rationale = ["Lateral sinus lift"], imp_ap_treatment_sequence = "Lateral sinus lift", imp_ap_graft_time = "6-9 months", imp_ap_integration_time = "3-4 months" }
+values = { imp_ap_next_procedure = ["Lateral sinus lift"], imp_ap_descriptors = ["Sinus pneumatization"], imp_ap_adjunct_rationale = ["Lateral sinus lift"], imp_ap_treatment_sequence = "Lateral sinus lift", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "4-6 months" }

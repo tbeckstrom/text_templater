@@ -61,7 +61,7 @@ come before any `[[fields]]` (TOML attaches later keys to the last table).
 | `TEETH: NAME` | `type = "teeth"` (options come from the loader); `same chart as:` gives `linked` |
 | `REPEAT ... (each tooth/span of T)` | `[[groups]]` with `source`, `source_as = "site"`, `spans = true` for spans, `section` |
 | `REPEAT(join): NAME (label: X)` | `[[groups]]` `key`, `label = "X"`; lists marked `(in NAME)` become its `[[groups.fields]]` (keys without prefix) |
-| `PRESET: Label` | `[[speed_buttons]]` `label`, `section`, `values = { key = value, ... }` (multiselect → array, OPTIONAL → bool, `none` → `[]` / `""`); `(in REPEAT)` → `[[groups.speed_buttons]]` |
+| `PRESET: Label` | `[[speed_buttons]]` `label`, `section`, `values = { key = value, ... }` (multiselect → array, OPTIONAL → bool, `none` → `[]` / `""`); `(in REPEAT)` → `[[groups.speed_buttons]]`; `REPEAT.LIST = v` lines → `each.<group key> = { <field key> = v, ... }` |
 
 Options: short options → `options = ["a", "b"]`; titled options →
 `options = [{ label = "Title", text = "sentence" }, ...]`.

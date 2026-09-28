@@ -192,6 +192,10 @@ pub struct SpeedButtonDef {
     /// same shape as that group's fields' `default`s.
     #[serde(default)]
     pub group_values: Vec<toml::Table>,
+    /// Group key -> values to set in every instance that group has when the
+    /// button is clicked (e.g. one value for each charted span's box).
+    #[serde(default)]
+    pub each: toml::Table,
     /// Tera expression; the button is only shown while it evaluates truthy.
     #[serde(default)]
     pub visible_if: Option<String>,

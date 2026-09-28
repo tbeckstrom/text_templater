@@ -9,10 +9,10 @@ body = """
 CBCT reviewed:
 {% for b in imp_img_spans %}
 {%- set parts = [
-  ("bone height " ~ b.bone_height) if b.bone_height else "",
-  ("bone width " ~ b.bone_width) if b.bone_width else "",
-  ("vertical restorative space " ~ b.vertical_space) if b.vertical_space else "",
-  ("mesiodistal space " ~ b.mesiodistal_space) if b.mesiodistal_space else "",
+  ("bone height " ~ (b.bone_height_mm ~ " mm" if b.bone_height == "mm" else b.bone_height)) if b.bone_height else "",
+  ("bone width " ~ (b.bone_width_mm ~ " mm" if b.bone_width == "mm" else b.bone_width)) if b.bone_width else "",
+  ("vertical restorative space " ~ (b.vertical_space_mm ~ " mm" if b.vertical_space == "mm" else b.vertical_space)) if b.vertical_space else "",
+  ("mesiodistal space " ~ (b.mesiodistal_space_mm ~ " mm" if b.mesiodistal_space == "mm" else b.mesiodistal_space)) if b.mesiodistal_space else "",
   (b.vital_structure ~ " " ~ b.proximity) if b.vital_structure and b.proximity else "",
 ] -%}
 {%- set parts = [p for p in parts if p] -%}
@@ -21,15 +21,19 @@ CBCT reviewed:
 {%- for b in imp_img_teeth %}
 {%- set parts = [
   (b.findings_text[:-1] | join(sep=", ") ~ " and " ~ b.findings_text[-1] if b.findings_text | length > 1 else b.findings_text | first) if b.findings_text else "",
-  ("bone height " ~ b.bone_height) if b.bone_height else "",
-  ("bone width " ~ b.bone_width) if b.bone_width else "",
-  ("vertical restorative space " ~ b.vertical_space) if b.vertical_space else "",
-  ("mesiodistal space " ~ b.mesiodistal_space) if b.mesiodistal_space else "",
+  ("bone height " ~ (b.bone_height_mm ~ " mm" if b.bone_height == "mm" else b.bone_height)) if b.bone_height else "",
+  ("bone width " ~ (b.bone_width_mm ~ " mm" if b.bone_width == "mm" else b.bone_width)) if b.bone_width else "",
+  ("vertical restorative space " ~ (b.vertical_space_mm ~ " mm" if b.vertical_space == "mm" else b.vertical_space)) if b.vertical_space else "",
+  ("mesiodistal space " ~ (b.mesiodistal_space_mm ~ " mm" if b.mesiodistal_space == "mm" else b.mesiodistal_space)) if b.mesiodistal_space else "",
   (b.vital_structure ~ " " ~ b.proximity) if b.vital_structure and b.proximity else "",
 ] -%}
 {%- set parts = [p for p in parts if p] -%}
 {% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
 {% endif %}{% endfor %}
+{%- if imp_img_sinus_pneumatization %}- {{ imp_img_sinus_pneumatization_text }}
+{% endif %}
+{%- if imp_img_sinus_thickening %}- {{ imp_img_sinus_thickening_text }}
+{% endif %}
 {%- for t in imp_img_normal_findings_text %}- {{ t }}
 {% endfor %}
 {%- if imp_img_additional and imp_img_additional_findings %}- {{ imp_img_additional_findings }}
@@ -42,11 +46,35 @@ section = "CBCT"
 type = "multiselect"
 options = [
   { label = "Condyles seated", text = "Condyles seated within the glenoid fossae bilaterally." },
-  { label = "Sinuses clear", text = "Maxillary sinuses clear without mucosal thickening; ostiomeatal complexes patent." },
+  { label = "Sinuses clear", text = "Maxillary sinuses clear without mucosal thickening." },
   { label = "No periapical pathology", text = "No periapical pathology associated with the teeth adjacent to the planned site(s)." },
   { label = "No other pathology", text = "No other pathology noted within the field of view." },
 ]
-default = ["Condyles seated", "Sinuses clear", "No periapical pathology", "No other pathology"]
+default = ["Sinuses clear"]
+
+[[fields]]
+key = "imp_img_sinus_pneumatization"
+label = "Sinus pneumatization"
+section = "CBCT"
+type = "dropdown"
+options = [
+  { label = "Right", text = "Right maxillary sinus pneumatization." },
+  { label = "Left", text = "Left maxillary sinus pneumatization." },
+  { label = "Bilateral", text = "Bilateral maxillary sinus pneumatization." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_img_sinus_thickening"
+label = "Sinus membrane thickening"
+section = "CBCT"
+type = "dropdown"
+options = [
+  { label = "Right", text = "Right maxillary sinus membrane thickening." },
+  { label = "Left", text = "Left maxillary sinus membrane thickening." },
+  { label = "Bilateral", text = "Bilateral maxillary sinus membrane thickening." },
+  { label = "***", text = "***" },
+]
 
 [[fields]]
 key = "imp_img_additional"
@@ -96,25 +124,53 @@ values = { bone_height = "adequate", bone_width = "adequate", vertical_space = "
 key = "bone_height"
 label = "Bone height"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "bone_height_mm"
+label = "Bone height (mm)"
+type = "text"
+default = "***"
+visible_if = "bone_height == 'mm'"
 
 [[groups.fields]]
 key = "bone_width"
 label = "Bone width"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "bone_width_mm"
+label = "Bone width (mm)"
+type = "text"
+default = "***"
+visible_if = "bone_width == 'mm'"
 
 [[groups.fields]]
 key = "vertical_space"
 label = "Vertical restorative space"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "vertical_space_mm"
+label = "Vertical restorative space (mm)"
+type = "text"
+default = "***"
+visible_if = "vertical_space == 'mm'"
 
 [[groups.fields]]
 key = "mesiodistal_space"
 label = "Mesiodistal space"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "mesiodistal_space_mm"
+label = "Mesiodistal space (mm)"
+type = "text"
+default = "***"
+visible_if = "mesiodistal_space == 'mm'"
 
 [[groups.fields]]
 key = "vital_structure"
@@ -134,7 +190,7 @@ options = [
 key = "proximity"
 label = "Proximity"
 type = "dropdown"
-default = "not in close proximity"
+default = "in close proximity"
 options = ["in close proximity", "not in close proximity"]
 visible_if = "vital_structure"
 
@@ -167,25 +223,53 @@ options = [
 key = "bone_height"
 label = "Bone height"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "bone_height_mm"
+label = "Bone height (mm)"
+type = "text"
+default = "***"
+visible_if = "bone_height == 'mm'"
 
 [[groups.fields]]
 key = "bone_width"
 label = "Bone width"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "bone_width_mm"
+label = "Bone width (mm)"
+type = "text"
+default = "***"
+visible_if = "bone_width == 'mm'"
 
 [[groups.fields]]
 key = "vertical_space"
 label = "Vertical restorative space"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "vertical_space_mm"
+label = "Vertical restorative space (mm)"
+type = "text"
+default = "***"
+visible_if = "vertical_space == 'mm'"
 
 [[groups.fields]]
 key = "mesiodistal_space"
 label = "Mesiodistal space"
 type = "dropdown"
-options = ["adequate", "marginal", "inadequate", "***"]
+options = ["adequate", "marginal", "inadequate", "mm", "***"]
+
+[[groups.fields]]
+key = "mesiodistal_space_mm"
+label = "Mesiodistal space (mm)"
+type = "text"
+default = "***"
+visible_if = "mesiodistal_space == 'mm'"
 
 [[groups.fields]]
 key = "vital_structure"
@@ -205,6 +289,6 @@ options = [
 key = "proximity"
 label = "Proximity"
 type = "dropdown"
-default = "not in close proximity"
+default = "in close proximity"
 options = ["in close proximity", "not in close proximity"]
 visible_if = "vital_structure"

@@ -306,6 +306,30 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
                     });
                 }
             }
+            for (group_key, values) in &sb.each {
+                let Some(g) = t.groups.iter().find(|g| &g.key == group_key) else {
+                    lints.push(Lint {
+                        subject: t.id.clone(),
+                        message: format!(
+                            "speed button '{}' sets values in '{group_key}', which is not a group",
+                            sb.label
+                        ),
+                    });
+                    continue;
+                };
+                for key in values.as_table().into_iter().flat_map(|v| v.keys()) {
+                    if !g.fields.iter().any(|f| &f.key == key) {
+                        lints.push(Lint {
+                            subject: t.id.clone(),
+                            message: format!(
+                                "speed button '{}' sets '{key}', which is not a field of group \
+                                 '{group_key}'",
+                                sb.label
+                            ),
+                        });
+                    }
+                }
+            }
         }
         for g in &t.groups {
             for sb in &g.speed_buttons {
@@ -458,6 +482,30 @@ mod tests {
         let lints = lint(&[t], &[]);
         assert_eq!(lints.len(), 1);
         assert!(lints[0].message.contains("gone"));
+    }
+
+    #[test]
+    fn a_speed_button_setting_an_unknown_group_or_group_field_is_flagged() {
+        let mut t = template("{% for b in blocks %}{{ b.real }}{% endfor %}", vec![]);
+        t.groups = vec![crate::template::GroupDef {
+            key: "blocks".to_string(),
+            label: "Block".to_string(),
+            fields: vec![field("real", FieldType::Text)],
+            ..Default::default()
+        }];
+        let each: toml::Table = toml::from_str(
+            "blocks = { real = \"x\", gone = \"x\" }\nmissing = { real = \"x\" }",
+        )
+        .unwrap();
+        t.speed_buttons = vec![crate::template::SpeedButtonDef {
+            label: "Preset".to_string(),
+            each,
+            ..Default::default()
+        }];
+        let lints = lint(&[t], &[]);
+        assert_eq!(lints.len(), 2, "{lints:?}");
+        assert!(lints.iter().any(|l| l.message.contains("'gone'")));
+        assert!(lints.iter().any(|l| l.message.contains("'missing'")));
     }
 
     #[test]

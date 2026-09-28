@@ -124,6 +124,11 @@ list as `"text" if <condition> else ""`.
 - `section = "<section it was defined under>"` on the speed button.
 - `(in REPEAT)` becomes `[[groups.speed_buttons]]` on that group, with unprefixed keys.
 - `= none` becomes `[]` for a multiselect and `""` for a dropdown.
+- `REPEAT_NAME.LIST = value` lines go in `each`, keyed by the group, with the group's unprefixed
+  field keys. The app sets them in every instance the group has when the button is clicked:
+  `each.imp_exam_spans = { ridge_form = "Width deficient", keratinized_tissue = "adequate" }`.
+- A PRESET defined in a NOTE goes in the note's TOML with no `section`, which puts it in the
+  row at the top of the form. `clinic_note_implant_consult.toml` has worked examples.
 
 ## Tera gotchas
 

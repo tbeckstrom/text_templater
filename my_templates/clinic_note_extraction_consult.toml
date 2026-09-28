@@ -5,8 +5,7 @@ name = "Clinic - Extraction Consult"
 use_partials = ["common_extraction_case", "clinic_hpi_extraction", "clinic_history_extraction", "clinic_exam_extraction", "clinic_imaging_extraction", "clinic_assessment_plan_extraction"]
 
 body = """
-{% include "common_extraction_case" %}**HPI:**
-{% include "clinic_hpi_extraction" %}
+{% include "common_extraction_case" %}{% include "clinic_hpi_extraction" %}
 {% include "clinic_history_extraction" %}
 **EXAMINATION:**
 {% include "clinic_exam_extraction" %}

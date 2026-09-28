@@ -223,6 +223,13 @@ PRESET: All adequate (in CBCT_SPANS)
 
 A pathway preset sets its whole combination and clears what it doesn't use (`= none`).
 
+A preset outside a REPEAT can also set a list inside one, in every block the REPEAT has when it is clicked: write the REPEAT's name, a dot, then the list. Blocks driven by a TEETH chart must be charted first.
+
+PRESET: GBR - lateral aug - staged
+  NEXT_PROCEDURE = GBR
+  EXAM_SPANS.RIDGE_FORM = Width deficient
+  CBCT_SPANS.BONE_WIDTH = inadequate
+
 SECTION: starts a new form heading for the definitions after it (e.g. separate "Past medical history", "Medications" and "Allergies" headings). REPEATs and PRESETs follow the section they are defined in.
 
 ------------------------------------------------
@@ -244,6 +251,8 @@ TEXT:
 @op_closure_...@
 
 A NOTE may also contain its own prose, placeholders and definitions (with a PREFIX: line), but keep it mostly a list of embedded snippets.
+
+A PRESET defined in a NOTE sits in the row at the top of the form. Use it for a pathway preset that spans several snippets; it may set any list of the snippets the NOTE embeds, including lists inside their REPEATs (REPEAT_NAME.LIST).
 
 ------------------------------------------------
 

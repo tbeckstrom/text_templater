@@ -1,6 +1,6 @@
 # SNIPPET: clinic_risks_implant   PREFIX: imp_risk
 # Revised by hand. General surgical risks, then the risks specific to the next
-# procedure: those of each component picked under "Next procedure" in the
+# procedure: those of each component picked under "Next visit" in the
 # plan, of the charted sites (nerve, sinus, esthetic zone), and of the risk
 # factors in the history. Anything missing can be added by checkbox.
 name = "Snippet: Risks - dental implants"

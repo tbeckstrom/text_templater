@@ -17,6 +17,7 @@ body = """
 Reason for visit: {{ ext_hpi_visit_reason_text }}{% if ext_referring_provider %}
 Referring provider: {{ ext_referring_provider }}{% endif %}
 
+**HPI:**
 {{ ext_pt_intro }} presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}{% if ext_hpi_additional_history and ext_hpi_additional_history_2 %}
 {{ ext_hpi_additional_history_2 }}{% endif %}
 """

@@ -5,8 +5,7 @@ name = "Clinic - Implant Consult"
 use_partials = ["common_implant_case", "clinic_hpi_implant", "clinic_history_implant", "clinic_exam_implant", "clinic_imaging_implant", "clinic_assessment_plan_implant"]
 
 body = """
-{% include "common_implant_case" %}**HPI:**
-{% include "clinic_hpi_implant" %}
+{% include "common_implant_case" %}{% include "clinic_hpi_implant" %}
 {% include "clinic_history_implant" %}
 **EXAMINATION:**
 {% include "clinic_exam_implant" %}
@@ -14,3 +13,25 @@ body = """
 {% include "clinic_imaging_implant" %}
 {% include "clinic_assessment_plan_implant" %}
 """
+
+# ---------------------------------------------------------- pathway presets ---
+# Top row of the form. Each sets the exam and CBCT boxes of every charted
+# span/tooth (`each`; chart the sites first) and the assessment pathway,
+# replacing whatever an earlier preset picked.
+
+[[speed_buttons]]
+label = "Implant appropriate"
+values = { imp_ap_next_procedure = ["Implant placement"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = [], imp_ap_treatment_sequence = "Implant only", imp_ap_integration_time = "4-6 months" }
+each.imp_exam_spans = { ridge_form = "Adequate", keratinized_tissue = "adequate" }
+each.imp_img_spans = { bone_height = "adequate", bone_width = "adequate", vertical_space = "adequate", mesiodistal_space = "adequate" }
+
+[[speed_buttons]]
+label = "Exo - bone graft"
+values = { imp_ap_next_procedure = ["Extraction", "Socket preservation"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Ext + socket preservation"], imp_ap_treatment_sequence = "Ext + socket preservation", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "4-6 months", imp_ap_interim_bullet = false }
+each.imp_img_teeth = { findings = ["Periapical radiolucency"] }
+
+[[speed_buttons]]
+label = "GBR - lateral aug - staged"
+values = { imp_ap_next_procedure = ["GBR"], imp_ap_descriptors = ["Horizontal deficiency"], imp_ap_adjunct_rationale = ["Staged GBR"], imp_ap_treatment_sequence = "Staged GBR", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "4-6 months" }
+each.imp_exam_spans = { ridge_form = "Width deficient", keratinized_tissue = "adequate" }
+each.imp_img_spans = { bone_height = "adequate", bone_width = "inadequate", vertical_space = "adequate", mesiodistal_space = "adequate" }

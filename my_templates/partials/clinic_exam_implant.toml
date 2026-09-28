@@ -102,7 +102,7 @@ key = "imp_exam_opposing_dentition"
 label = "Opposing dentition"
 section = "Exam"
 type = "dropdown"
-default = "natural dentition"
+default = "restored natural dentition"
 options = [
   "natural dentition",
   "restored natural dentition",
@@ -140,7 +140,6 @@ key = "imp_exam_parafunction_signs"
 label = "Parafunction"
 section = "Exam"
 type = "dropdown"
-default = "None"
 options = [
   { label = "None", text = "no wear facets or other signs of parafunction" },
   { label = "Present", text = "wear facets consistent with parafunction" },
@@ -178,7 +177,7 @@ key = "imp_exam_extraoral"
 label = "+ Extraoral/TMJ exam"
 section = "Exam"
 type = "checkbox"
-default = false
+default = true
 
 [[fields]]
 key = "imp_exam_eo_face"
@@ -206,7 +205,6 @@ key = "imp_exam_eo_nodes"
 label = "Lymph nodes"
 section = "Exam"
 type = "dropdown"
-default = "None"
 options = [
   { label = "None", text = "no cervical lymphadenopathy" },
   { label = "Lymphadenopathy", text = "cervical lymphadenopathy, ***" },
@@ -219,7 +217,6 @@ key = "imp_exam_eo_tmj"
 label = "TMJ"
 section = "Exam"
 type = "dropdown"
-default = "Normal"
 options = [
   { label = "Normal", text = "non-tender without clicking or crepitus" },
   { label = "Clicking", text = "with clicking" },
@@ -263,7 +260,6 @@ key = "imp_exam_eo_deviation"
 label = "Deviation on opening"
 section = "Exam"
 type = "dropdown"
-default = "None"
 options = [
   { label = "None", text = "no deviation on opening" },
   { label = "Right", text = "deviation to the right on opening" },
@@ -277,7 +273,6 @@ key = "imp_exam_eo_muscles"
 label = "Muscles of mastication"
 section = "Exam"
 type = "dropdown"
-default = "Non-tender"
 options = [
   { label = "Non-tender", text = "non-tender" },
   { label = "Tender", text = "tender to palpation" },
@@ -332,7 +327,6 @@ options = ["adequate", "limited", "no", "***"]
 key = "tissue_phenotype"
 label = "Tissue phenotype"
 type = "dropdown"
-default = "thick"
 options = ["thick", "thin", "***"]
 
 # ------------------------------------------------ one box per tooth present ---
@@ -348,6 +342,7 @@ section = "Exam"
 key = "conditions"
 label = "Condition (describes the tooth; none = nonrestorable)"
 type = "multiselect"
+default = ["Nonrestorable"]
 options = [
   { label = "Heavily restored", text = "heavily restored" },
   { label = "Fractured", text = "fractured" },
@@ -370,5 +365,4 @@ options = ["adequate", "limited", "no", "***"]
 key = "tissue_phenotype"
 label = "Tissue phenotype"
 type = "dropdown"
-default = "thick"
 options = ["thick", "thin", "***"]
