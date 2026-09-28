@@ -1,0 +1,16 @@
+# NOTE: clinic_note_implant_consult
+# Assembled from the implant consult snippets; common_implant_case holds the
+# facts they share (age, sites, site status, referring provider).
+name = "Clinic - Implant Consult"
+use_partials = ["common_implant_case", "clinic_hpi_implant", "clinic_history_implant", "clinic_exam_implant", "clinic_imaging_implant", "clinic_assessment_plan_implant"]
+
+body = """
+{% include "common_implant_case" %}**HPI:**
+{% include "clinic_hpi_implant" %}
+{% include "clinic_history_implant" %}
+**EXAMINATION:**
+{% include "clinic_exam_implant" %}
+**IMAGING:**
+{% include "clinic_imaging_implant" %}
+{% include "clinic_assessment_plan_implant" %}
+"""

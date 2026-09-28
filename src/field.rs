@@ -61,7 +61,7 @@ impl FieldValue {
             FieldType::Number => FieldValue::Number(0.0),
             FieldType::Checkbox => FieldValue::Bool(false),
             FieldType::Date => FieldValue::Date(DateInput::from_date(today())),
-            FieldType::Multiselect => FieldValue::MultiSelect(Vec::new()),
+            FieldType::Multiselect | FieldType::Teeth => FieldValue::MultiSelect(Vec::new()),
         }
     }
 
@@ -87,7 +87,7 @@ impl FieldValue {
                     FieldValue::Date(DateInput::from_text(s.to_owned()))
                 }
             }),
-            FieldType::Multiselect => value.as_array().map(|arr| {
+            FieldType::Multiselect | FieldType::Teeth => value.as_array().map(|arr| {
                 let picked: Vec<String> = arr
                     .iter()
                     .filter_map(|v| v.as_str().map(str::to_owned))
@@ -111,7 +111,7 @@ impl FieldValue {
             FieldType::Date => value
                 .as_str()
                 .map(|s| FieldValue::Date(DateInput::from_text(s.to_string()))),
-            FieldType::Multiselect => value.as_array().map(|arr| {
+            FieldType::Multiselect | FieldType::Teeth => value.as_array().map(|arr| {
                 let picked: Vec<String> = arr
                     .iter()
                     .filter_map(|v| v.as_str().map(str::to_string))
@@ -276,13 +276,15 @@ pub fn apply_values(fields: &[FieldDef], values: &toml::Table, state: &mut FormS
 
 /// Reconciles a `source`-driven group's instances against the current
 /// selection of its driving multiselect: one instance per selected choice, in
-/// declared option order. Instances for still-selected choices keep whatever
+/// declared option order (or, for a `spans` group, one per run of adjacent
+/// teeth). Instances for still-selected choices keep whatever
 /// has already been typed into them; deselecting a choice drops its instance.
 pub fn sync_source_group(group: &GroupDef, state: &FormState, groups_state: &mut GroupsState) {
     let Some(source_key) = &group.source else {
         return;
     };
     let selection: Vec<String> = match state.get(source_key) {
+        Some(FieldValue::MultiSelect(v)) if group.spans => crate::template::contiguous_spans(v),
         Some(FieldValue::MultiSelect(v)) => v.clone(),
         // A single-choice driver (dropdown) is treated as a one-item list.
         Some(FieldValue::Text(s)) if !s.trim().is_empty() => vec![s.clone()],
@@ -354,6 +356,12 @@ pub fn form_state_to_context_json(fields: &[FieldDef], state: &FormState) -> Val
             continue;
         };
         map.insert(field.key.clone(), to_context_json(value));
+
+        // A tooth list also offers its runs of adjacent teeth ("35-37").
+        if let (FieldType::Teeth, FieldValue::MultiSelect(picked)) = (field.field_type, value) {
+            let spans = crate::template::contiguous_spans(picked);
+            map.insert(format!("{}_spans", field.key), Value::from(spans));
+        }
 
         if !field.has_option_text() {
             continue;
@@ -1032,6 +1040,40 @@ mod new_capability_tests {
             instances.iter().map(|i| i.source_item.clone().unwrap()).collect::<Vec<_>>(),
             vec!["1", "17"]
         );
+    }
+
+    #[test]
+    fn a_span_group_gets_one_instance_per_run_of_adjacent_teeth() {
+        let (_, mut group) = tooth_group();
+        group.spans = true;
+        let mut state = FormState::new();
+        state.insert(
+            "teeth".into(),
+            FieldValue::MultiSelect(vec!["35".into(), "36".into(), "37".into(), "46".into()]),
+        );
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+
+        sync_source_group(&group, &state, &mut groups_state);
+
+        let items: Vec<_> = groups_state["per_tooth"]
+            .iter()
+            .map(|i| i.source_item.clone().unwrap())
+            .collect();
+        assert_eq!(items, vec!["46", "35-37"]);
+    }
+
+    #[test]
+    fn a_teeth_field_publishes_its_spans_to_the_template() {
+        let field = FieldDef {
+            key: "sites".to_string(),
+            label: "Sites".to_string(),
+            field_type: FieldType::Teeth,
+            ..Default::default()
+        };
+        let mut state = FormState::new();
+        state.insert("sites".into(), FieldValue::MultiSelect(vec!["11".into(), "21".into()]));
+        let json = form_state_to_context_json(std::slice::from_ref(&field), &state);
+        assert_eq!(json["sites_spans"], serde_json::json!(["11-21"]));
     }
 
     #[test]

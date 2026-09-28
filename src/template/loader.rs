@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 
 use super::{
-    FieldDef, GroupDef, PartialDef, RawPartialFile, RawTemplateFile, SharedFieldsFile,
-    SpeedButtonDef, TemplateDef,
+    FieldDef, FieldType, GroupDef, PartialDef, RawPartialFile, RawTemplateFile, SharedFieldsFile,
+    SpeedButtonDef, TemplateDef, FDI_TEETH,
 };
 
 pub struct LoadResult {
@@ -128,8 +128,9 @@ fn load_partials(
         }
 
         match toml::from_str::<RawPartialFile>(&contents) {
-            Ok(raw) => match resolve_shared(&raw.use_shared, shared_fields) {
+            Ok(mut raw) => match resolve_shared(&raw.use_shared, shared_fields) {
                 Ok(mut fields) => {
+                    fill_implicit_options(&mut raw.fields, &mut raw.groups);
                     fields.extend(raw.fields);
                     partials.push(PartialDef {
                         name,
@@ -258,6 +259,22 @@ fn check_for_duplicates(fields: &[FieldDef], groups: &[GroupDef]) -> Result<(), 
     Ok(())
 }
 
+/// Gives each `teeth` field its fixed list of FDI numbers, unless the file
+/// narrowed it with its own `options`.
+fn fill_implicit_options(fields: &mut [FieldDef], groups: &mut [GroupDef]) {
+    let all = fields
+        .iter_mut()
+        .chain(groups.iter_mut().flat_map(|g| g.fields.iter_mut()));
+    for field in all {
+        if field.field_type == FieldType::Teeth && field.options.is_empty() {
+            field.options = FDI_TEETH
+                .iter()
+                .map(|t| super::OptionDef { label: t.to_string(), text: None })
+                .collect();
+        }
+    }
+}
+
 fn load_shared_fields(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<FieldDef> {
     let path = dir.join("shared_fields.toml");
     if !path.exists() {
@@ -267,7 +284,10 @@ fn load_shared_fields(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<Fie
         .map_err(|e| e.to_string())
         .and_then(|text| toml::from_str::<SharedFieldsFile>(&text).map_err(|e| e.to_string()));
     match result {
-        Ok(file) => file.fields,
+        Ok(mut file) => {
+            fill_implicit_options(&mut file.fields, &mut []);
+            file.fields
+        }
         Err(e) => {
             errors.push(("shared_fields.toml".to_string(), e));
             Vec::new()
@@ -281,7 +301,8 @@ fn load_one(
     partials: &[PartialDef],
 ) -> Result<TemplateDef, String> {
     let text = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let raw: RawTemplateFile = toml::from_str(&text).map_err(|e| e.to_string())?;
+    let mut raw: RawTemplateFile = toml::from_str(&text).map_err(|e| e.to_string())?;
+    fill_implicit_options(&mut raw.fields, &mut raw.groups);
 
     let mut fields = resolve_shared(&raw.use_shared, shared_fields)?;
     fields.extend(raw.fields);
@@ -321,6 +342,28 @@ mod tests {
 
     fn write(dir: &Path, name: &str, contents: &str) {
         fs::write(dir.join(name), contents).unwrap();
+    }
+
+    #[test]
+    fn a_teeth_field_gets_every_fdi_number_and_keeps_picks_in_fdi_order() {
+        let dir = std::env::temp_dir().join(format!("note_templater_teeth_{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        write(
+            &dir,
+            "t.toml",
+            "name = \"T\"\nbody = \"{{ sites | join(sep=\\\", \\\") }}\"\n\n[[fields]]\nkey = \"sites\"\nlabel = \"Sites\"\ntype = \"teeth\"\ndefault = [\"47\", \"36\", \"12\"]\n",
+        );
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        let field = &result.templates[0].fields[0];
+        assert_eq!(field.options.len(), 52);
+        assert_eq!(field.options[0].label, "11");
+        let state = crate::field::build_form_state(&result.templates[0].fields);
+        let Some(crate::field::FieldValue::MultiSelect(picked)) = state.get("sites") else {
+            panic!("expected a list value, got {:?}", state.get("sites"));
+        };
+        assert_eq!(picked, &["12", "36", "47"]);
     }
 
     #[test]

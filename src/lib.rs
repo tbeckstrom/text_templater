@@ -12,4 +12,5 @@ pub mod lint;
 pub mod render;
 pub mod storage;
 pub mod template;
+pub mod typography;
 pub mod visibility;

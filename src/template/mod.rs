@@ -16,6 +16,70 @@ pub enum FieldType {
     /// A read-only value worked out from the other fields by a Tera
     /// expression (`compute = "..."`) rather than typed in.
     Computed,
+    /// A multiselect of FDI tooth numbers, picked on an odontogram. Its
+    /// options are filled in by the loader (see [`FDI_TEETH`]), so a template
+    /// only writes `type = "teeth"`; everywhere else it behaves exactly like a
+    /// `multiselect`, including driving a group via `source`.
+    Teeth,
+}
+
+impl FieldType {
+    /// Whether the value is a list of picked options.
+    pub fn is_multi(self) -> bool {
+        matches!(self, FieldType::Multiselect | FieldType::Teeth)
+    }
+}
+
+/// Every FDI tooth number a `teeth` field offers, in the order selections are
+/// kept (and so read in the note): permanent quadrants 1-4, then primary 5-8.
+pub const FDI_TEETH: [&str; 52] = [
+    "11", "12", "13", "14", "15", "16", "17", "18", "21", "22", "23", "24", "25", "26", "27", "28",
+    "31", "32", "33", "34", "35", "36", "37", "38", "41", "42", "43", "44", "45", "46", "47", "48",
+    "51", "52", "53", "54", "55", "61", "62", "63", "64", "65", "71", "72", "73", "74", "75", "81",
+    "82", "83", "84", "85",
+];
+
+/// Whether an FDI number is a primary tooth (quadrants 5-8).
+pub fn is_primary_tooth(fdi: &str) -> bool {
+    matches!(fdi.as_bytes().first(), Some(b'5'..=b'8'))
+}
+
+/// Each arch in chart order, patient's right to left. Neighbours in one of
+/// these lists are adjacent teeth, including across the midline (11 and 21).
+const ARCHES: [&[&str]; 4] = [
+    &["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"],
+    &["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"],
+    &["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"],
+    &["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"],
+];
+
+/// Groups picked teeth into runs of adjacent teeth, each labelled the way a
+/// surgeon writes it: `"36"`, `"35-37"` within a quadrant (low to high), or
+/// `"12-22"` across the midline (chart order). Spans come out upper arch
+/// first, each read from the patient's right.
+pub fn contiguous_spans(teeth: &[String]) -> Vec<String> {
+    let picked = |t: &str| teeth.iter().any(|p| p == t);
+    let mut spans = Vec::new();
+    for arch in ARCHES {
+        let mut run: Vec<&str> = Vec::new();
+        for &tooth in arch.iter().chain(std::iter::once(&"")) {
+            if !tooth.is_empty() && picked(tooth) {
+                run.push(tooth);
+                continue;
+            }
+            match run.as_slice() {
+                [] => {}
+                [only] => spans.push(only.to_string()),
+                [first, .., last] => {
+                    let same_quadrant = first.as_bytes()[0] == last.as_bytes()[0];
+                    let (lo, hi) = if same_quadrant && first > last { (last, first) } else { (first, last) };
+                    spans.push(format!("{lo}-{hi}"));
+                }
+            }
+            run.clear();
+        }
+    }
+    spans
 }
 
 /// One choice in a `dropdown`/`multiselect`. Written either as a bare string
@@ -80,6 +144,12 @@ pub struct FieldDef {
     /// long form can be folded down to the part being worked on.
     #[serde(default)]
     pub section: Option<String>,
+    /// For a `teeth` field: another `teeth` field charted on the same
+    /// odontogram. The chart gets a paint mode per field (named by each
+    /// field's label), a tooth can be in only one of them, and the linked
+    /// field isn't drawn separately.
+    #[serde(default)]
+    pub linked: Option<String>,
 }
 
 impl FieldDef {
@@ -125,6 +195,11 @@ pub struct SpeedButtonDef {
     /// Tera expression; the button is only shown while it evaluates truthy.
     #[serde(default)]
     pub visible_if: Option<String>,
+    /// Form section to show the button in, beside the fields it fills. A
+    /// button without one (or naming a section no field uses) sits in the row
+    /// at the top of the form.
+    #[serde(default)]
+    pub section: Option<String>,
 }
 
 /// A repeatable block of fields (e.g. one "Procedure Step" per tooth worked
@@ -155,6 +230,15 @@ pub struct GroupDef {
     /// Tera expression; the whole group is only shown while it is truthy.
     #[serde(default)]
     pub visible_if: Option<String>,
+    /// Form section to draw the group in, after that section's fields.
+    /// Without one (or naming a section no field uses) it is drawn at the end
+    /// of the form.
+    #[serde(default)]
+    pub section: Option<String>,
+    /// With a `teeth` source: one instance per run of adjacent teeth (see
+    /// [`contiguous_spans`]) instead of one per tooth.
+    #[serde(default)]
+    pub spans: bool,
 }
 
 impl GroupDef {
@@ -243,4 +327,25 @@ pub struct TemplateDef {
     pub groups: Vec<GroupDef>,
     pub speed_buttons: Vec<SpeedButtonDef>,
     pub body: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn spans(teeth: &[&str]) -> Vec<String> {
+        contiguous_spans(&teeth.iter().map(|t| t.to_string()).collect::<Vec<_>>())
+    }
+
+    #[test]
+    fn adjacent_teeth_in_a_quadrant_form_one_span_written_low_to_high() {
+        assert_eq!(spans(&["35", "36", "37", "46"]), vec!["46", "35-37"]);
+        assert_eq!(spans(&["14", "15", "16"]), vec!["14-16"]);
+    }
+
+    #[test]
+    fn a_span_can_cross_the_midline_and_gaps_split_spans() {
+        assert_eq!(spans(&["11", "12", "21", "24"]), vec!["12-21", "24"]);
+        assert_eq!(spans(&["36", "38"]), vec!["36", "38"]);
+    }
 }

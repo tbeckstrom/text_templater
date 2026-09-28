@@ -1,0 +1,112 @@
+# SNIPPET: clinic_hpi_implant   PREFIX: imp_hpi
+# Revised by hand (shared case fields, chips, optional adds); the snippet
+# language has no way to express a field shared across snippets.
+name = "Snippet: HPI - implant consult"
+use_partials = ["common_implant_case"]
+
+body = """
+Reason for visit: {{ imp_hpi_reason_for_visit }}{% if imp_referring_provider %}
+Referring provider: {{ imp_referring_provider }}{% endif %}
+
+{{ imp_pt_intro }} presenting for implant evaluation of {{ imp_site_phrase }}.{% if imp_missing and (imp_hpi_loss_cause or imp_hpi_time_since_loss) %} {{ "Teeth" if imp_missing | length > 1 else "Tooth" }} {{ imp_missing_text }} {% if imp_hpi_loss_cause == "Congenital" %}{{ "are" if imp_missing | length > 1 else "is" }} congenitally missing{% else %}{{ "were" if imp_missing | length > 1 else "was" }} lost{% if imp_hpi_loss_cause %} secondary to {{ imp_hpi_loss_cause_text | replace(from="[[imp_hpi_cause_of_loss]]", to=imp_hpi_cause_of_loss) }}{% endif %}{% if imp_hpi_time_since_loss %} approximately {{ imp_hpi_time_since_loss }} ago{% endif %}{% endif %}.{% endif %}{% if imp_hpi_current_prosthesis %} {{ imp_hpi_current_prosthesis_text }}{% endif %}{% if imp_hpi_goals_text %} Patient desires {% for v in imp_hpi_goals_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.{% endif %}{% if imp_hpi_referral_request %} {% if imp_referring_provider %}{{ imp_referring_provider }}{% else %}The referring dentist{% endif %} requests {{ imp_hpi_requested_treatment }}.{% endif %}{% if imp_hpi_additional %}
+
+{{ imp_hpi_additional_history }}{% endif %}
+"""
+
+[[fields]]
+key = "imp_hpi_reason_for_visit"
+label = "Reason for visit"
+section = "HPI"
+type = "text"
+default = "Implant consultation"
+
+[[fields]]
+key = "imp_hpi_loss_cause"
+label = "Cause of tooth loss (edentulous sites)"
+section = "HPI"
+type = "dropdown"
+options = [
+  { label = "Caries", text = "caries" },
+  { label = "Fracture", text = "fracture" },
+  { label = "Periodontal disease", text = "periodontal disease" },
+  { label = "Failed endodontics", text = "failed endodontic therapy" },
+  { label = "Trauma", text = "trauma" },
+  { label = "Congenital", text = "congenital absence" },
+  { label = "Other", text = "[[imp_hpi_cause_of_loss]]" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_missing"
+
+[[fields]]
+key = "imp_hpi_cause_of_loss"
+label = "Other cause"
+section = "HPI"
+type = "text"
+default = "***"
+visible_if = "imp_hpi_loss_cause == 'Other'"
+
+[[fields]]
+key = "imp_hpi_time_since_loss"
+label = "Time since loss (e.g. 2 years; blank = omitted)"
+section = "HPI"
+type = "text"
+default = ""
+visible_if = "imp_missing and imp_hpi_loss_cause != 'Congenital'"
+
+[[fields]]
+key = "imp_hpi_current_prosthesis"
+label = "Current prosthesis"
+section = "HPI"
+type = "dropdown"
+default = "None"
+options = [
+  { label = "None", text = "No current replacement prosthesis." },
+  { label = "RPD", text = "Currently wears a removable partial denture." },
+  { label = "Flipper", text = "Currently wears an interim flipper." },
+  { label = "Essix", text = "Currently wears an Essix retainer with pontic." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_hpi_goals"
+label = "Patient goals"
+section = "HPI"
+type = "multiselect"
+options = [
+  { label = "Fixed replacement", text = "a fixed replacement" },
+  { label = "Chewing function", text = "improved chewing function" },
+  { label = "Esthetics", text = "improved esthetics" },
+  { label = "Avoid removable", text = "to avoid a removable prosthesis" },
+  { label = "***", text = "***" },
+]
+default = ["Fixed replacement"]
+
+[[fields]]
+key = "imp_hpi_referral_request"
+label = "+ Referral request"
+section = "HPI"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_hpi_requested_treatment"
+label = "Requested treatment"
+section = "HPI"
+type = "text"
+default = "***"
+visible_if = "imp_hpi_referral_request"
+
+[[fields]]
+key = "imp_hpi_additional"
+label = "+ Additional history"
+section = "HPI"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_hpi_additional_history"
+label = "Additional history"
+section = "HPI"
+type = "textarea"
+default = ""
+visible_if = "imp_hpi_additional"

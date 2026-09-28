@@ -1,6 +1,6 @@
 # SNIPPET: op_indications_enucleation_cyst   PREFIX: enuc
 # Generated from the snippet language — see .claude/skills/snippet-to-toml.
-name = "Snippet: Indications – enucleation & curettage"
+name = "Snippet: Indications - enucleation & curettage"
 body = """
 {%- set enuc_bone_graft_types_joined %}{% for v in enuc_bone_graft_types %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% endset -%}
 Given the presence of a {{ enuc_lesion_description_text | replace(from="[[enuc_diagnosis]]", to=enuc_diagnosis) }} of the {{ enuc_laterality }} {{ enuc_maxilla_mandible }} with potential for continued expansion and structural compromise of adjacent structures, definitive surgical management was recommended.
@@ -13,7 +13,7 @@ The risks, benefits, and alternatives to operative management, including observa
 [[fields]]
 key = "enuc_lesion_description"
 label = "Lesion description"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "dropdown"
 required = true
 options = [
@@ -24,7 +24,7 @@ options = [
 [[fields]]
 key = "enuc_diagnosis"
 label = "Diagnosis"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "text"
 default = "***"
 visible_if = "enuc_lesion_description == 'Biopsy proven'"
@@ -32,7 +32,7 @@ visible_if = "enuc_lesion_description == 'Biopsy proven'"
 [[fields]]
 key = "enuc_laterality"
 label = "Laterality"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "dropdown"
 required = true
 options = ["right", "left", "bilateral"]
@@ -40,7 +40,7 @@ options = ["right", "left", "bilateral"]
 [[fields]]
 key = "enuc_maxilla_mandible"
 label = "Maxilla / mandible"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "dropdown"
 required = true
 options = ["maxilla", "mandible"]
@@ -48,7 +48,7 @@ options = ["maxilla", "mandible"]
 [[fields]]
 key = "enuc_optional_adds"
 label = "Optional adds"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "multiselect"
 options = [
   { label = "Extraction Single", text = "Given the intimate association of the lesion with tooth #[[enuc_tooth]], extraction of this tooth was discussed as a potential measure to reduce risk of recurrence and facilitate complete lesion removal. The patient elected to [[enuc_proceed_defer]] the proposed extraction after discussion of the risks and benefits." },
@@ -61,7 +61,7 @@ options = [
 [[fields]]
 key = "enuc_tooth"
 label = "Tooth #"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "text"
 default = "***"
 visible_if = "'Extraction Single' in enuc_optional_adds"
@@ -69,7 +69,7 @@ visible_if = "'Extraction Single' in enuc_optional_adds"
 [[fields]]
 key = "enuc_teeth"
 label = "Teeth #"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "text"
 default = "***"
 visible_if = "'Extraction Multiple' in enuc_optional_adds"
@@ -77,7 +77,7 @@ visible_if = "'Extraction Multiple' in enuc_optional_adds"
 [[fields]]
 key = "enuc_proceed_defer"
 label = "Proceed / defer"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "dropdown"
 required = true
 options = ["proceed with", "defer"]
@@ -86,7 +86,7 @@ visible_if = "'Extraction Single' in enuc_optional_adds or 'Extraction Multiple'
 [[fields]]
 key = "enuc_bone_graft_types"
 label = "Bone graft types"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "multiselect"
 options = ["particulate allograft", "particulate xenograft", "BMP", "autogenous bone graft"]
 visible_if = "'Bone Grafting' in enuc_optional_adds"
@@ -94,6 +94,6 @@ visible_if = "'Bone Grafting' in enuc_optional_adds"
 [[fields]]
 key = "enuc_lesion_type"
 label = "Lesion type"
-section = "Indications – enucleation & curettage"
+section = "Indications - enucleation & curettage"
 type = "text"
 default = "***"

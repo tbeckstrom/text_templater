@@ -7,20 +7,27 @@
 //!   cargo run --bin check_templates                 # the app's own templates
 //!   cargo run --bin check_templates -- examples/templates
 //!   cargo run --bin check_templates -- <dir> <template_id>   # print that note
+//!   cargo run --bin check_templates -- <dir> --fix  # replace AI-style characters
 //!
 //! With a template id it prints the fully rendered note, which is the quickest
 //! way to eyeball wording changes.
+//!
+//! It also reports em dashes, curly quotes and other AI-style characters in
+//! the template files (see `typography`). `--fix` rewrites those files with
+//! plain keyboard equivalents before checking them.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use text_templater::field::{build_form_state, build_groups_state, sync_source_group};
 use text_templater::lint::lint;
 use text_templater::template::loader::load_templates;
 use text_templater::visibility::{recompute_fields, ExprEvaluator};
-use text_templater::{formatting, render, storage};
+use text_templater::{formatting, render, storage, typography};
 
 fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let apply_fix = args.iter().any(|a| a == "--fix");
+    args.retain(|a| a != "--fix");
     let dir: PathBuf = match args.first() {
         Some(d) => PathBuf::from(d),
         None => storage::resolve_paths()
@@ -30,6 +37,8 @@ fn main() {
     let only = args.get(1);
 
     println!("templates dir: {}", dir.display());
+    // Fix first, so everything below checks the rewritten files.
+    let typography_report = check_typography(&dir, apply_fix);
     let result = load_templates(&dir);
 
     if result.errors.is_empty() {
@@ -116,8 +125,65 @@ fn main() {
         }
     }
 
+    println!("{typography_report}");
+
     // Warnings alone don't fail the run — only genuine load/render errors do.
     if failures > 0 || !result.errors.is_empty() {
         std::process::exit(1);
+    }
+}
+
+/// Scans (and with `fix`, rewrites) every `.toml` file under `dir` for
+/// AI-style characters, returning the report to print.
+fn check_typography(dir: &Path, fix: bool) -> String {
+    let mut files = Vec::new();
+    collect_toml_files(dir, &mut files);
+    files.sort();
+
+    let mut lines = Vec::new();
+    let mut affected = 0;
+    for file in &files {
+        let Ok(source) = std::fs::read_to_string(file) else { continue };
+        // A file that doesn't parse is already reported as a load error.
+        let Ok(findings) = typography::scan(&source) else { continue };
+        if findings.is_empty() {
+            continue;
+        }
+        affected += 1;
+        let name = file.strip_prefix(dir).unwrap_or(file).display();
+        if fix {
+            match typography::fix(&source).map(|fixed| std::fs::write(file, fixed)) {
+                Ok(Ok(())) => lines.push(format!("  ✓ fixed {name} ({} value(s))", findings.len())),
+                Ok(Err(e)) => lines.push(format!("  ✗ {name}: could not write: {e}")),
+                Err(e) => lines.push(format!("  ✗ {name}: {e}")),
+            }
+        } else {
+            for f in &findings {
+                lines.push(format!("  ! {name}: {}: {}", f.path, f.characters.join(", ")));
+            }
+        }
+    }
+
+    if affected == 0 {
+        "typography: no AI-style characters".to_string()
+    } else if fix {
+        format!("typography: fixed {affected} file(s)\n{}", lines.join("\n"))
+    } else {
+        format!(
+            "typography: {affected} file(s) with AI-style characters (run with --fix to replace)\n{}",
+            lines.join("\n")
+        )
+    }
+}
+
+fn collect_toml_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_toml_files(&path, out);
+        } else if path.extension().is_some_and(|e| e == "toml") {
+            out.push(path);
+        }
     }
 }

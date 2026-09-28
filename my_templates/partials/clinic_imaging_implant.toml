@@ -1,0 +1,210 @@
+# SNIPPET: clinic_imaging_implant   PREFIX: imp_img
+# Revised by hand. One box per edentulous span and per tooth present. Each
+# descriptor is left out until picked ("***" is a deliberate choice); a vital
+# structure is only mentioned once picked, with whether it is close.
+name = "Snippet: CBCT - implant consult"
+use_partials = ["common_implant_case"]
+
+body = """
+CBCT reviewed:
+{% for b in imp_img_spans %}
+{%- set parts = [
+  ("bone height " ~ b.bone_height) if b.bone_height else "",
+  ("bone width " ~ b.bone_width) if b.bone_width else "",
+  ("vertical restorative space " ~ b.vertical_space) if b.vertical_space else "",
+  ("mesiodistal space " ~ b.mesiodistal_space) if b.mesiodistal_space else "",
+  (b.vital_structure ~ " " ~ b.proximity) if b.vital_structure and b.proximity else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- {{ "Sites" if "-" in b.span else "Site" }} {{ b.span }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- for b in imp_img_teeth %}
+{%- set parts = [
+  (b.findings_text[:-1] | join(sep=", ") ~ " and " ~ b.findings_text[-1] if b.findings_text | length > 1 else b.findings_text | first) if b.findings_text else "",
+  ("bone height " ~ b.bone_height) if b.bone_height else "",
+  ("bone width " ~ b.bone_width) if b.bone_width else "",
+  ("vertical restorative space " ~ b.vertical_space) if b.vertical_space else "",
+  ("mesiodistal space " ~ b.mesiodistal_space) if b.mesiodistal_space else "",
+  (b.vital_structure ~ " " ~ b.proximity) if b.vital_structure and b.proximity else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- for t in imp_img_normal_findings_text %}- {{ t }}
+{% endfor %}
+{%- if imp_img_additional and imp_img_additional_findings %}- {{ imp_img_additional_findings }}
+{% endif %}"""
+
+[[fields]]
+key = "imp_img_normal_findings"
+label = "Normal findings"
+section = "CBCT"
+type = "multiselect"
+options = [
+  { label = "Condyles seated", text = "Condyles seated within the glenoid fossae bilaterally." },
+  { label = "Sinuses clear", text = "Maxillary sinuses clear without mucosal thickening; ostiomeatal complexes patent." },
+  { label = "No periapical pathology", text = "No periapical pathology associated with the teeth adjacent to the planned site(s)." },
+  { label = "No other pathology", text = "No other pathology noted within the field of view." },
+]
+default = ["Condyles seated", "Sinuses clear", "No periapical pathology", "No other pathology"]
+
+[[fields]]
+key = "imp_img_additional"
+label = "+ Additional findings"
+section = "CBCT"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_img_additional_findings"
+label = "Additional findings"
+section = "CBCT"
+type = "textarea"
+default = ""
+visible_if = "imp_img_additional"
+
+[[speed_buttons]]
+label = "Full FOV, normal"
+section = "CBCT"
+values = { imp_img_normal_findings = ["Condyles seated", "Sinuses clear", "No periapical pathology", "No other pathology"] }
+
+[[speed_buttons]]
+label = "Limited FOV - mandible"
+section = "CBCT"
+values = { imp_img_normal_findings = ["No periapical pathology", "No other pathology"] }
+
+[[speed_buttons]]
+label = "Limited FOV - maxilla"
+section = "CBCT"
+values = { imp_img_normal_findings = ["Sinuses clear", "No periapical pathology", "No other pathology"] }
+
+# ------------------------------------------- one box per edentulous span ---
+
+[[groups]]
+key = "imp_img_spans"
+label = "CBCT edentulous span"
+source = "imp_missing"
+source_as = "span"
+spans = true
+section = "CBCT"
+
+[[groups.speed_buttons]]
+label = "All adequate"
+values = { bone_height = "adequate", bone_width = "adequate", vertical_space = "adequate", mesiodistal_space = "adequate" }
+
+[[groups.fields]]
+key = "bone_height"
+label = "Bone height"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "bone_width"
+label = "Bone width"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "vertical_space"
+label = "Vertical restorative space"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "mesiodistal_space"
+label = "Mesiodistal space"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "vital_structure"
+label = "Vital structure"
+type = "dropdown"
+options = [
+  "inferior alveolar canal",
+  "mental foramen",
+  "maxillary sinus floor",
+  "nasal floor",
+  "nasopalatine canal",
+  "adjacent tooth roots",
+  "***",
+]
+
+[[groups.fields]]
+key = "proximity"
+label = "Proximity"
+type = "dropdown"
+default = "not in close proximity"
+options = ["in close proximity", "not in close proximity"]
+visible_if = "vital_structure"
+
+# ------------------------------------------------ one box per tooth present ---
+
+[[groups]]
+key = "imp_img_teeth"
+label = "CBCT tooth present"
+source = "imp_present"
+source_as = "tooth"
+section = "CBCT"
+
+[[groups.speed_buttons]]
+label = "All adequate"
+values = { bone_height = "adequate", bone_width = "adequate", vertical_space = "adequate", mesiodistal_space = "adequate" }
+
+[[groups.fields]]
+key = "findings"
+label = "Tooth findings"
+type = "multiselect"
+options = [
+  { label = "Periapical radiolucency", text = "periapical radiolucency" },
+  { label = "Root fracture", text = "root fracture" },
+  { label = "Buccal plate dehiscence", text = "buccal plate dehiscence" },
+  { label = "Root resorption", text = "root resorption" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "bone_height"
+label = "Bone height"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "bone_width"
+label = "Bone width"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "vertical_space"
+label = "Vertical restorative space"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "mesiodistal_space"
+label = "Mesiodistal space"
+type = "dropdown"
+options = ["adequate", "marginal", "inadequate", "***"]
+
+[[groups.fields]]
+key = "vital_structure"
+label = "Vital structure"
+type = "dropdown"
+options = [
+  "inferior alveolar canal",
+  "mental foramen",
+  "maxillary sinus floor",
+  "nasal floor",
+  "nasopalatine canal",
+  "adjacent tooth roots",
+  "***",
+]
+
+[[groups.fields]]
+key = "proximity"
+label = "Proximity"
+type = "dropdown"
+default = "not in close proximity"
+options = ["in close proximity", "not in close proximity"]
+visible_if = "vital_structure"

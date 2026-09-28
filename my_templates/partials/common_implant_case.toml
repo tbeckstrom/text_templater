@@ -1,0 +1,124 @@
+# SNIPPET: common_implant_case   PREFIX: imp
+# The facts every implant consult section shares, entered once at the top of
+# the form. One odontogram holds two tooth lists: edentulous sites and teeth
+# still present at a planned site. The hidden computed fields turn them into
+# ready-made wording the other snippets reuse.
+body = ""
+
+[[fields]]
+key = "imp_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = ""
+
+[[fields]]
+key = "imp_missing"
+label = "Edentulous"
+section = "Case"
+type = "teeth"
+linked = "imp_present"
+
+[[fields]]
+key = "imp_present"
+label = "Tooth present"
+section = "Case"
+type = "teeth"
+
+[[fields]]
+key = "imp_referring_provider"
+label = "Referring provider (blank = omitted)"
+section = "Case"
+type = "text"
+default = ""
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "imp_missing_text"
+label = "Edentulous spans"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(imp_missing_spans[:-1] | join(sep=", ")) ~ " and " ~ imp_missing_spans[-1] if imp_missing_spans | length > 1 else (imp_missing_spans | first if imp_missing_spans else "")'
+
+[[fields]]
+key = "imp_missing_word"
+label = "site/sites"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"sites" if imp_missing | length > 1 else "site"'
+
+[[fields]]
+key = "imp_present_text"
+label = "Teeth present"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(imp_present[:-1] | join(sep=", ")) ~ " and " ~ imp_present[-1] if imp_present | length > 1 else (imp_present | first if imp_present else "")'
+
+[[fields]]
+key = "imp_present_word"
+label = "tooth/teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if imp_present | length > 1 else "tooth"'
+
+[[fields]]
+key = "imp_site_count"
+label = "Number of implant sites"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(imp_missing | length) + (imp_present | length)'
+
+[[fields]]
+key = "imp_site_phrase"
+label = "Site phrase"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '((("edentulous " ~ imp_missing_word ~ " " ~ imp_missing_text) if imp_missing else "") ~ (" and " if imp_missing and imp_present else "") ~ ((imp_present_word ~ " " ~ imp_present_text) if imp_present else "")) if (imp_missing or imp_present) else "***"'
+
+[[fields]]
+key = "imp_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(imp_age ~ "-year-old patient") if imp_age else "Patient"'
+
+[[fields]]
+key = "imp_ref_name"
+label = "Referring provider name"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'imp_referring_provider if imp_referring_provider else "the referring dentist"'
+
+[[fields]]
+key = "imp_mand_posterior"
+label = "Mandibular posterior site"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in imp_missing if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) + ([t for t in imp_present if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 else ""'
+
+[[fields]]
+key = "imp_max_posterior"
+label = "Maxillary posterior site"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in imp_missing if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) + ([t for t in imp_present if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 else ""'
+
+[[fields]]
+key = "imp_esthetic"
+label = "Esthetic zone site"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in imp_missing if t in ["11", "12", "13", "21", "22", "23", "31", "32", "33", "41", "42", "43"]] | length) + ([t for t in imp_present if t in ["11", "12", "13", "21", "22", "23", "31", "32", "33", "41", "42", "43"]] | length) > 0 else ""'

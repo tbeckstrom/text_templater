@@ -11,7 +11,7 @@ use crate::history::{append_history, load_history, now_timestamp, HistoryEntry};
 use crate::render::{build_context, instance_context_json, render_body_with_context};
 use crate::storage::Paths;
 use crate::template::loader::load_templates;
-use crate::template::{FieldDef, FieldType, GroupDef, PartialDef, TemplateDef};
+use crate::template::{FieldDef, FieldType, GroupDef, PartialDef, SpeedButtonDef, TemplateDef};
 use crate::visibility::{
     context_with_overrides, recompute_fields, ExprEvaluator, Scope, Visibility,
 };
@@ -548,10 +548,17 @@ impl eframe::App for NoteTemplaterApp {
                             if let Some(desc) = &template.description {
                                 ui.label(desc);
                             }
-                            if !template.speed_buttons.is_empty() {
+                            let top_row: Vec<&SpeedButtonDef> = template
+                                .speed_buttons
+                                .iter()
+                                .filter(|sb| {
+                                    !is_field_section(&template.fields, sb.section.as_deref())
+                                })
+                                .collect();
+                            if !top_row.is_empty() {
                                 ui.add_space(4.0);
                                 ui.horizontal_wrapped(|ui| {
-                                    for sb in &template.speed_buttons {
+                                    for sb in top_row {
                                         if !visibility
                                             .is_visible(sb.visible_if.as_ref(), Scope::Form)
                                         {
@@ -570,14 +577,28 @@ impl eframe::App for NoteTemplaterApp {
                                 });
                             }
                             ui.separator();
-                            render_fields_in_sections(
+                            let clicked = render_fields_in_sections(
                                 ui,
                                 &template.fields,
                                 &mut self.form_state,
                                 &visibility,
+                                &template.speed_buttons,
+                                &template.groups,
+                                &mut self.groups_state,
                             );
+                            if let Some(index) = clicked {
+                                apply_speed_button(
+                                    &template.speed_buttons[index],
+                                    &template.fields,
+                                    &mut self.form_state,
+                                    &template.groups,
+                                    &mut self.groups_state,
+                                );
+                            }
 
-                            for group in &template.groups {
+                            for group in template.groups.iter().filter(|g| {
+                                !is_field_section(&template.fields, g.section.as_deref())
+                            }) {
                                 render_group(ui, group, &mut self.groups_state, &visibility);
                             }
                         });
@@ -698,9 +719,234 @@ impl eframe::App for NoteTemplaterApp {
     }
 }
 
+/// A dropdown with at most this many choices is drawn as a row of chips.
+const CHIP_LIMIT: usize = 10;
+
+/// A multiselect whose labels are all at most this long lays its checkboxes
+/// out side by side instead of one per line.
+const COMPACT_LABEL_CHARS: usize = 24;
+
+/// FDI numbers as they sit on a chart facing the patient: the patient's right
+/// on the viewer's left, upper arch over lower, with the midline between
+/// the two halves of each row.
+const PERMANENT_CHART: [[&str; 16]; 2] = [
+    ["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"],
+    ["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"],
+];
+const PRIMARY_CHART: [[&str; 10]; 2] = [
+    ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"],
+    ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"],
+];
+
+/// Colour of a tooth in a `teeth` field's own list, and in its linked list.
+const OWN_TOOTH: egui::Color32 = egui::Color32::from_rgb(70, 130, 200);
+const LINKED_TOOTH: egui::Color32 = egui::Color32::from_rgb(214, 140, 40);
+
+const TOOTH_BUTTON: egui::Vec2 = egui::vec2(26.0, 20.0);
+const TOOTH_SPACING: f32 = 2.0;
+const MIDLINE_GAP: f32 = 10.0;
+
+/// A `teeth` field as an FDI chart: click a tooth, or press and drag across
+/// several, to paint them; the Tooth and Quadrant buttons paint whole sets.
+/// With `linked`, the chart also holds that field's teeth, and a paint mode
+/// picks which list strokes go into (a tooth is only ever in one).
+fn odontogram(ui: &mut egui::Ui, field: &FieldDef, siblings: &[FieldDef], state: &mut FormState) {
+    let linked = field
+        .linked
+        .as_ref()
+        .and_then(|key| siblings.iter().find(|f| &f.key == key));
+
+    let mode_id = ui.make_persistent_id(("teeth_mode", &field.key));
+    let mut painting_linked = ui.data(|d| d.get_temp::<bool>(mode_id)).unwrap_or(false);
+    if let Some(other) = linked {
+        ui.horizontal(|ui| {
+            ui.label("Paint:");
+            for (is_linked, label, color) in
+                [(false, &field.label, OWN_TOOTH), (true, &other.label, LINKED_TOOTH)]
+            {
+                ui.colored_label(color, "■");
+                if ui.selectable_label(painting_linked == is_linked, label).clicked() {
+                    painting_linked = is_linked;
+                }
+            }
+        });
+        ui.data_mut(|d| d.insert_temp(mode_id, painting_linked));
+    }
+
+    let mut chart = Chart {
+        field,
+        own: take_list(state, &field.key),
+        linked: linked.map(|o| take_list(state, &o.key)).unwrap_or_default(),
+        painting_linked: painting_linked && linked.is_some(),
+    };
+    chart.draw(ui);
+    state.insert(field.key.clone(), FieldValue::MultiSelect(chart.own));
+    if let Some(other) = linked {
+        state.insert(other.key.clone(), FieldValue::MultiSelect(chart.linked));
+    }
+}
+
+fn take_list(state: &FormState, key: &str) -> Vec<String> {
+    match state.get(key) {
+        Some(FieldValue::MultiSelect(v)) => v.clone(),
+        _ => Vec::new(),
+    }
+}
+
+/// The two tooth lists one odontogram edits, and which one is being painted.
+struct Chart<'a> {
+    field: &'a FieldDef,
+    own: Vec<String>,
+    linked: Vec<String>,
+    painting_linked: bool,
+}
+
+impl Chart<'_> {
+    fn offered(&self, tooth: &str) -> bool {
+        self.field.options.iter().any(|o| o.label == tooth)
+    }
+
+    fn painted(&self, tooth: &str) -> bool {
+        let list = if self.painting_linked { &self.linked } else { &self.own };
+        list.iter().any(|t| t == tooth)
+    }
+
+    /// Adds `tooth` to the list being painted (taking it out of the other),
+    /// or removes it from that list.
+    fn paint(&mut self, tooth: &str, on: bool) {
+        let (target, other) = if self.painting_linked {
+            (&mut self.linked, &mut self.own)
+        } else {
+            (&mut self.own, &mut self.linked)
+        };
+        toggle_multiselect(self.field, target, tooth, on);
+        if on {
+            toggle_multiselect(self.field, other, tooth, false);
+        }
+    }
+
+    /// Paints every offered tooth in `teeth`, or clears them if all of them
+    /// are already painted.
+    fn paint_set(&mut self, teeth: &[String]) {
+        let teeth: Vec<&String> = teeth.iter().filter(|t| self.offered(t)).collect();
+        let on = !teeth.iter().all(|t| self.painted(t));
+        for tooth in teeth {
+            self.paint(tooth, on);
+        }
+    }
+
+    fn draw(&mut self, ui: &mut egui::Ui) {
+        // A stroke lasts while the button is held: it paints (or clears, if
+        // it started on a painted tooth) every tooth the pointer passes over.
+        let drag_id = ui.make_persistent_id(("teeth_drag", &self.field.key));
+        if !ui.input(|i| i.pointer.primary_down()) {
+            ui.data_mut(|d| d.remove::<bool>(drag_id));
+        }
+
+        for teeth in &PERMANENT_CHART {
+            self.row(ui, teeth, 0.0, drag_id);
+        }
+        let primary_id = ui.make_persistent_id(("show_primary_teeth", &self.field.key));
+        let any_primary = self
+            .own
+            .iter()
+            .chain(&self.linked)
+            .any(|t| crate::template::is_primary_tooth(t));
+        let mut show_primary = ui.data(|d| d.get_temp::<bool>(primary_id)).unwrap_or(false) || any_primary;
+        if show_primary {
+            // Centred under the permanent arch: three tooth widths in.
+            let indent = 3.0 * (TOOTH_BUTTON.x + TOOTH_SPACING);
+            for teeth in &PRIMARY_CHART {
+                self.row(ui, teeth, indent, drag_id);
+            }
+        }
+
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing.x = TOOTH_SPACING;
+            ui.label("Tooth:");
+            for n in 1..=8 {
+                if ui.small_button(n.to_string()).on_hover_text(format!("All {n}s")).clicked() {
+                    let teeth: Vec<String> = (1..=4).map(|q| format!("{q}{n}")).collect();
+                    self.paint_set(&teeth);
+                }
+            }
+            ui.add_space(8.0);
+            ui.label("Quadrant:");
+            for (q, name) in [(1, "UR"), (2, "UL"), (3, "LL"), (4, "LR")] {
+                if ui.small_button(name).clicked() {
+                    let teeth: Vec<String> = (1..=8).map(|n| format!("{q}{n}")).collect();
+                    self.paint_set(&teeth);
+                }
+            }
+            ui.add_space(8.0);
+            if ui.small_button("Clear").clicked() {
+                if self.painting_linked {
+                    self.linked.clear();
+                } else {
+                    self.own.clear();
+                }
+            }
+            ui.add_space(8.0);
+            if ui.checkbox(&mut show_primary, "Primary").changed() {
+                ui.data_mut(|d| d.insert_temp(primary_id, show_primary));
+            }
+        });
+    }
+
+    /// One arch, split at the midline. A tooth the field doesn't offer leaves
+    /// a gap so the rest stay in their chart positions.
+    fn row(&mut self, ui: &mut egui::Ui, teeth: &[&str], indent: f32, drag_id: egui::Id) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = TOOTH_SPACING;
+            ui.add_space(indent);
+            let half = teeth.len() / 2;
+            for (i, &tooth) in teeth.iter().enumerate() {
+                if i == half {
+                    ui.add_space(MIDLINE_GAP);
+                }
+                if !self.offered(tooth) {
+                    ui.add_space(TOOTH_BUTTON.x + TOOTH_SPACING);
+                    continue;
+                }
+                let fill = if self.own.iter().any(|t| t == tooth) {
+                    OWN_TOOTH
+                } else if self.linked.iter().any(|t| t == tooth) {
+                    LINKED_TOOTH
+                } else {
+                    ui.visuals().widgets.inactive.weak_bg_fill
+                };
+                // Sensing drag keeps the scroll area from claiming the stroke.
+                let response = ui.add(
+                    egui::Button::new(tooth)
+                        .fill(fill)
+                        .min_size(TOOTH_BUTTON)
+                        .sense(egui::Sense::click_and_drag()),
+                );
+                let (pressed, down, pos) = ui.input(|i| {
+                    (i.pointer.primary_pressed(), i.pointer.primary_down(), i.pointer.interact_pos())
+                });
+                if !pos.is_some_and(|p| response.rect.contains(p)) {
+                    continue;
+                }
+                if pressed {
+                    let on = !self.painted(tooth);
+                    ui.data_mut(|d| d.insert_temp(drag_id, on));
+                    self.paint(tooth, on);
+                } else if down
+                    && let Some(on) = ui.data(|d| d.get_temp::<bool>(drag_id))
+                    && self.painted(tooth) != on
+                {
+                    self.paint(tooth, on);
+                }
+            }
+        });
+    }
+}
+
 fn render_field(
     ui: &mut egui::Ui,
     field: &FieldDef,
+    siblings: &[FieldDef],
     state: &mut FormState,
     visibility: &Visibility,
     scope: Scope,
@@ -708,8 +954,16 @@ fn render_field(
     if !visibility.is_visible(field.visible_if.as_ref(), scope) {
         return;
     }
+    // A tooth list linked from another chart is drawn as part of that chart.
+    if siblings.iter().any(|f| f.linked.as_deref() == Some(field.key.as_str())) {
+        return;
+    }
+    // A linked chart names both of its lists in its own paint-mode row.
+    let labelled_by_chart = field.field_type == FieldType::Teeth && field.linked.is_some();
     ui.horizontal(|ui| {
-        ui.label(&field.label);
+        if !labelled_by_chart {
+            ui.label(&field.label);
+        }
         if field.required {
             ui.colored_label(egui::Color32::from_rgb(200, 60, 60), "*");
         }
@@ -741,28 +995,53 @@ fn render_field(
         }
         FieldType::Dropdown => {
             if let Some(FieldValue::Text(s)) = state.get_mut(&field.key) {
-                let current = s.clone();
-                egui::ComboBox::from_id_salt(&field.key)
-                    .selected_text(current)
-                    .show_ui(ui, |ui| {
+                if field.options.len() <= CHIP_LIMIT {
+                    // Every choice on show as a chip: one click to pick, and
+                    // clicking the picked chip again clears it.
+                    ui.horizontal_wrapped(|ui| {
                         for label in field.option_labels() {
-                            ui.selectable_value(s, label.to_owned(), label);
+                            let on = s == label;
+                            if ui.selectable_label(on, label).clicked() {
+                                *s = if on { String::new() } else { label.to_owned() };
+                            }
                         }
                     });
+                } else {
+                    let current = s.clone();
+                    egui::ComboBox::from_id_salt(&field.key)
+                        .selected_text(current)
+                        .show_ui(ui, |ui| {
+                            for label in field.option_labels() {
+                                ui.selectable_value(s, label.to_owned(), label);
+                            }
+                        });
+                }
             }
         }
         FieldType::Multiselect => {
             if let Some(FieldValue::MultiSelect(selected)) = state.get_mut(&field.key) {
-                for label in field.option_labels() {
-                    let mut checked = selected.iter().any(|s| s == label);
-                    if ui.checkbox(&mut checked, label).changed() {
-                        // Goes through the helper so the stored selection stays
-                        // in declared option order, not click order.
-                        toggle_multiselect(field, selected, label, checked);
+                let mut checkboxes = |ui: &mut egui::Ui| {
+                    for label in field.option_labels() {
+                        let mut checked = selected.iter().any(|s| s == label);
+                        if ui.checkbox(&mut checked, label).changed() {
+                            // Goes through the helper so the stored selection stays
+                            // in declared option order, not click order.
+                            toggle_multiselect(field, selected, label, checked);
+                        }
                     }
+                };
+                // Short labels sit side by side; sentence-length ones stack.
+                let compact = field
+                    .option_labels()
+                    .all(|l| l.chars().count() <= COMPACT_LABEL_CHARS);
+                if compact {
+                    ui.horizontal_wrapped(|ui| checkboxes(ui));
+                } else {
+                    checkboxes(ui);
                 }
             }
         }
+        FieldType::Teeth => odontogram(ui, field, siblings, state),
         FieldType::Computed => {
             // Read-only: the value comes from `compute`, not from typing.
             let shown = match state.get(&field.key) {
@@ -809,19 +1088,26 @@ fn render_field(
     ui.add_space(8.0);
 }
 
-/// Draws `fields` in order, wrapping each stretch that declares the same
+/// Draws `fields` in order, grouping each run of consecutive fields sharing a
 /// `section` in one collapsible heading. Fields with no `section` are drawn
 /// plainly, so a template that never mentions sections looks exactly as it
-/// did before.
+/// did before. A section also holds the speed buttons and groups that name
+/// it: buttons above its fields, groups after them.
 ///
 /// A section whose fields are all hidden by `visible_if` is skipped entirely
 /// rather than left as an empty heading.
+///
+/// Returns the index (into `buttons`) of a speed button clicked this frame.
 fn render_fields_in_sections(
     ui: &mut egui::Ui,
     fields: &[FieldDef],
     state: &mut FormState,
     visibility: &Visibility,
-) {
+    buttons: &[SpeedButtonDef],
+    groups: &[GroupDef],
+    groups_state: &mut GroupsState,
+) -> Option<usize> {
+    let mut clicked = None;
     let mut i = 0;
     while i < fields.len() {
         let section = fields[i].section.clone();
@@ -835,7 +1121,7 @@ fn render_fields_in_sections(
 
         let Some(section) = section else {
             for field in run {
-                render_field(ui, field, state, visibility, Scope::Form);
+                render_field(ui, field, fields, state, visibility, Scope::Form);
             }
             continue;
         };
@@ -851,11 +1137,39 @@ fn render_fields_in_sections(
             .id_salt(("section", section.as_str()))
             .default_open(true)
             .show(ui, |ui| {
+                let here: Vec<_> = buttons
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, sb)| sb.section.as_deref() == Some(section.as_str()))
+                    .filter(|(_, sb)| visibility.is_visible(sb.visible_if.as_ref(), Scope::Form))
+                    .collect();
+                if !here.is_empty() {
+                    ui.horizontal_wrapped(|ui| {
+                        for (index, sb) in here {
+                            if ui.button(&sb.label).clicked() {
+                                clicked = Some(index);
+                            }
+                        }
+                    });
+                }
                 for field in run {
-                    render_field(ui, field, state, visibility, Scope::Form);
+                    render_field(ui, field, fields, state, visibility, Scope::Form);
+                }
+                for group in groups
+                    .iter()
+                    .filter(|g| g.section.as_deref() == Some(section.as_str()))
+                {
+                    render_group(ui, group, groups_state, visibility);
                 }
             });
     }
+    clicked
+}
+
+/// Whether `section` names a section some field in `fields` sits in — the
+/// test for whether a button or group naming it is drawn there.
+fn is_field_section(fields: &[FieldDef], section: Option<&str>) -> bool {
+    section.is_some_and(|name| fields.iter().any(|f| f.section.as_deref() == Some(name)))
 }
 
 /// Renders one repeatable group as a list of add/remove-able instances, each
@@ -907,7 +1221,7 @@ fn render_group(
                     });
                 }
                 for field in &group.fields {
-                    render_field(ui, field, &mut instance.values, visibility, scope);
+                    render_field(ui, field, &group.fields, &mut instance.values, visibility, scope);
                 }
             });
         });

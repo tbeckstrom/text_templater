@@ -34,9 +34,10 @@ const TERA_WORDS: &[&str] = &[
 
 /// Pulls the identifier-looking words out of a Tera expression, ignoring the
 /// contents of string literals (so `'Lidocaine 2% w/ epi' in local_used`
-/// reports only `local_used`).
+/// reports only `local_used`) and the loop variable of a list comprehension
+/// (so `[t for t in teeth if t in ["36"]]` reports only `teeth`).
 fn identifiers(expr: &str) -> Vec<String> {
-    let mut out = Vec::new();
+    let mut words = Vec::new();
     let mut current = String::new();
     let mut quote: Option<char> = None;
     let mut chars = expr.chars().peekable();
@@ -53,7 +54,7 @@ fn identifiers(expr: &str) -> Vec<String> {
             None if c == '\'' || c == '"' => quote = Some(c),
             None if c.is_alphanumeric() || c == '_' => current.push(c),
             None => {
-                push_identifier(&mut out, &mut current);
+                push_word(&mut words, &mut current);
                 // A dotted access (`b.tooth`) only names the head; skip the
                 // member so it isn't mistaken for a field of its own.
                 if c == '.' {
@@ -64,18 +65,25 @@ fn identifiers(expr: &str) -> Vec<String> {
             }
         }
     }
-    push_identifier(&mut out, &mut current);
-    out
+    push_word(&mut words, &mut current);
+
+    let bound: Vec<String> = words
+        .windows(2)
+        .filter(|pair| pair[0] == "for")
+        .map(|pair| pair[1].clone())
+        .collect();
+    words
+        .into_iter()
+        .filter(|w| !TERA_WORDS.contains(&w.as_str()) && !bound.contains(w))
+        .collect()
 }
 
-fn push_identifier(out: &mut Vec<String>, current: &mut String) {
+fn push_word(out: &mut Vec<String>, current: &mut String) {
     let word = std::mem::take(current);
     if word.is_empty() || word.chars().next().is_some_and(|c| c.is_ascii_digit()) {
         return;
     }
-    if !TERA_WORDS.contains(&word.as_str()) {
-        out.push(word);
-    }
+    out.push(word);
 }
 
 /// Whether `text` mentions `key` as a whole word — used to decide if anything
@@ -110,7 +118,9 @@ fn is_unread(readable: &str, field: &FieldDef) -> bool {
     if field.field_type == FieldType::Computed {
         return false;
     }
-    !mentions(readable, &field.key) && !mentions(readable, &format!("{}_text", field.key))
+    !mentions(readable, &field.key)
+        && !mentions(readable, &format!("{}_text", field.key))
+        && !mentions(readable, &format!("{}_spans", field.key))
 }
 
 /// Names a template's expressions may legitimately mention: its fields, the
@@ -122,6 +132,9 @@ fn known_names(fields: &[FieldDef], groups: &[GroupDef]) -> HashSet<String> {
         names.insert(f.key.clone());
         if f.has_option_text() {
             names.insert(format!("{}_text", f.key));
+        }
+        if f.field_type == FieldType::Teeth {
+            names.insert(format!("{}_spans", f.key));
         }
     }
     for g in groups {
@@ -226,7 +239,7 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
                     Some(f)
                         if !matches!(
                             f.field_type,
-                            FieldType::Multiselect | FieldType::Dropdown
+                            FieldType::Multiselect | FieldType::Teeth | FieldType::Dropdown
                         ) =>
                     {
                         lints.push(Lint {
@@ -240,6 +253,43 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
                     }
                     Some(_) => {}
                 }
+            }
+        }
+
+        // A chart can only share its odontogram with another tooth list.
+        for f in &t.fields {
+            let Some(linked) = &f.linked else { continue };
+            let ok = f.field_type == FieldType::Teeth
+                && t.fields.iter().any(|o| &o.key == linked && o.field_type == FieldType::Teeth);
+            if !ok {
+                lints.push(Lint {
+                    subject: t.id.clone(),
+                    message: format!(
+                        "field '{}' links to '{linked}', but both must be `teeth` fields",
+                        f.key
+                    ),
+                });
+            }
+        }
+
+        // A section name that matches no field's section is almost always a
+        // typo: the button or group quietly falls back to the top/end.
+        let has_section = |name: &str| t.fields.iter().any(|f| f.section.as_deref() == Some(name));
+        for (what, label, section) in t
+            .speed_buttons
+            .iter()
+            .map(|sb| ("speed button", &sb.label, &sb.section))
+            .chain(t.groups.iter().map(|g| ("group", &g.key, &g.section)))
+        {
+            if let Some(name) = section
+                && !has_section(name)
+            {
+                lints.push(Lint {
+                    subject: t.id.clone(),
+                    message: format!(
+                        "{what} '{label}' names section '{name}', which no field uses"
+                    ),
+                });
             }
         }
 
@@ -349,6 +399,12 @@ mod tests {
     }
 
     #[test]
+    fn identifiers_skip_a_list_comprehension_loop_variable() {
+        let names = identifiers(r#""1" if [t for t in sites if t in ["36", "46"]] | length > 0 else """#);
+        assert_eq!(names, vec!["sites".to_string()]);
+    }
+
+    #[test]
     fn identifiers_skip_tera_keywords_and_filters() {
         let names = identifiers("items | join(sep=\", \") | length");
         assert_eq!(names, vec!["items".to_string()]);
@@ -402,6 +458,28 @@ mod tests {
         let lints = lint(&[t], &[]);
         assert_eq!(lints.len(), 1);
         assert!(lints[0].message.contains("gone"));
+    }
+
+    #[test]
+    fn a_speed_button_naming_an_unknown_section_is_flagged() {
+        let mut f = field("real", FieldType::Text);
+        f.section = Some("History".to_string());
+        let mut t = template("{{ real }}", vec![f]);
+        t.speed_buttons = vec![
+            crate::template::SpeedButtonDef {
+                label: "Here".to_string(),
+                section: Some("History".to_string()),
+                ..Default::default()
+            },
+            crate::template::SpeedButtonDef {
+                label: "Lost".to_string(),
+                section: Some("Histroy".to_string()),
+                ..Default::default()
+            },
+        ];
+        let lints = lint(&[t], &[]);
+        assert_eq!(lints.len(), 1, "got {lints:?}");
+        assert!(lints[0].message.contains("Histroy"));
     }
 
     #[test]

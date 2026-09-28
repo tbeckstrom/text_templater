@@ -1,0 +1,355 @@
+# SNIPPET: clinic_assessment_plan_implant   PREFIX: imp_ap
+# Revised by hand. The problem one-liner comes from the charted sites and the
+# conditions picked for each tooth present. "Next procedure" drives both its
+# plan bullet and the specific risks. Plan lines are left out until picked
+# ("***" is a deliberate choice).
+name = "Snippet: Assessment & plan - implant consult"
+use_partials = ["common_implant_case", "clinic_risks_implant"]
+
+body = """
+{%- set np = imp_ap_next_procedure -%}
+{%- set missing_sites = (imp_missing_word ~ " " ~ imp_missing_text) if imp_missing else "***" -%}
+{%- set problems = [
+  ("a single-tooth edentulous space at site " ~ imp_missing_text) if imp_missing | length == 1 else "",
+  ("partial edentulism at sites " ~ imp_missing_text) if imp_missing | length > 1 else "",
+] -%}
+{%- if imp_exam_teeth is defined -%}
+{%- set teeth = [((t.conditions_text | join(sep=", ")) if t.conditions_text else "nonrestorable") ~ " tooth " ~ t.tooth for t in imp_exam_teeth] -%}
+{%- else -%}
+{%- set teeth = ["nonrestorable tooth " ~ t for t in imp_present] -%}
+{%- endif -%}
+{%- set problems = [p for p in problems if p] -%}
+{%- set extraction_with = [
+  "socket preservation" if "Socket preservation" in np else "",
+  "immediate guided implant placement" if "Immediate implant" in np else "",
+  "immediate provisionalization" if "Immediate provisional" in np else "",
+] -%}
+{%- set extraction_with = [w for w in extraction_with if w] -%}
+{%- set placement_with = [
+  "simultaneous guided bone regeneration" if "GBR" in np else "",
+  "transcrestal sinus floor elevation" if "Crestal sinus lift" in np else "",
+] -%}
+{%- set placement_with = [w for w in placement_with if w] -%}
+{%- set next = [
+  ("extraction of " ~ ((imp_present_word ~ " " ~ imp_present_text) if imp_present else "***") ~ ((" with " ~ extraction_with | join(sep=" and ")) if extraction_with else "")) if "Extraction" in np or "Immediate implant" in np else "",
+  ("guided implant placement at " ~ missing_sites ~ ((" with " ~ placement_with | join(sep=" and ")) if placement_with else "")) if "Implant placement" in np or "Crestal sinus lift" in np else "",
+  ("ridge augmentation with guided bone regeneration at " ~ missing_sites) if "GBR" in np and not ("Implant placement" in np or "Crestal sinus lift" in np) else "",
+  ("lateral window sinus augmentation at " ~ missing_sites) if "Lateral sinus lift" in np else "",
+  "***" if "***" in np else "",
+] -%}
+{%- set next = [n for n in next if n] -%}
+**ASSESSMENT:**
+{{ imp_pt_intro }} presenting with {% for p in problems %}{{ p }}{% if not loop.last %} and {% endif %}{% endfor %}{% if problems and teeth %} and {% endif %}{% for t in teeth %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ t }}{% endfor %}{% if not problems and not teeth %}***{% endif %}{% if imp_ap_descriptors_text %} with {% for v in imp_ap_descriptors_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% endif %}.
+
+Implant reconstruction with {% if imp_ap_restoration_type == "Splinted crowns" %}splinted implant-supported crowns{% elif imp_ap_restoration_type == "Implant FPD" %}an implant-supported fixed partial denture{% elif imp_ap_restoration_type == "***" %}***{% elif imp_site_count | int > 1 %}individual implant-supported crowns{% else %}a single implant-supported crown{% endif %} is recommended to restore function without preparing the adjacent teeth, using guided placement from CBCT and intraoral scan data.{% if imp_ap_adjunct_rationale_text %} {{ imp_ap_adjunct_rationale_text | join(sep=" ") }}{% endif %}{% if imp_ap_alternatives_discussed_text %} Alternatives reviewed: {% for v in imp_ap_alternatives_discussed_text %}{% if not loop.first %}{% if loop.last %}, and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.{% endif %}
+
+{% include "clinic_risks_implant" %}{% if imp_ap_patient_decision %}
+
+{{ imp_ap_patient_decision_text }}{% endif %}
+
+**PLAN:**
+{%- set lines = [
+  ("Next procedure: " ~ next | join(sep="; ") | capitalize ~ ".") if next else "",
+  ("Overall sequence: " ~ imp_ap_treatment_sequence_text | replace(from="[[imp_ap_integration_time]]", to=imp_ap_integration_time) | replace(from="[[imp_ap_graft_time]]", to=imp_ap_graft_time)) if imp_ap_treatment_sequence else "",
+  "Intraoral scan and virtual implant planning; static surgical guide fabrication." if imp_ap_guide_bullet else "",
+  ("Anesthesia: " ~ imp_ap_anesthesia_plan_text) if imp_ap_anesthesia_plan else "",
+  ("Antibiotics: " ~ imp_ap_antibiotic_regimen_text | replace(from="[[imp_ap_postop_antibiotic_days]]", to=imp_ap_postop_antibiotic_days)) if imp_ap_antibiotic_regimen else "",
+  "Chlorhexidine 0.12% rinse BID beginning the day of surgery for 1-2 weeks." if imp_ap_chlorhexidine_bullet else "",
+  ("Interim prosthesis during healing: " ~ imp_ap_interim_prosthesis ~ ", with instructions to avoid loading the surgical site.") if imp_ap_interim_bullet and imp_ap_interim_prosthesis else "",
+  "Tobacco cessation counseling provided." if imp_ap_tobacco_bullet or (imp_hx_tobacco_use is defined and imp_hx_tobacco_use in ["Current", "Vaping"]) else "",
+  "Recent A1c and PCP clearance requested prior to surgery." if imp_ap_glycemic_bullet or (imp_hx_diabetes_status is defined and imp_hx_diabetes_status == "Yes") else "",
+  "Perioperative anticoagulation management to be coordinated with the prescribing provider." if imp_ap_anticoagulation_bullet or (imp_hx_anticoagulant_use is defined and imp_hx_anticoagulant_use == "Yes") else "",
+  ("Consult note sent to " ~ imp_ref_name ~ ".") if imp_ap_letter_bullet else "",
+  ("Final restoration by " ~ (imp_ap_restorer_name if imp_ap_restorer == "Other" else imp_ref_name) ~ " following osseointegration.") if imp_ap_restorer else "",
+  "Written informed consent to be reviewed and signed at the surgical visit." if imp_ap_consent_bullet else "",
+  imp_ap_next_step_text if imp_ap_next_step else "",
+] -%}
+{% for l in lines %}{% if l %}
+- {{ l }}{% endif %}{% endfor %}
+"""
+
+# ------------------------------------------------------------- assessment ---
+
+[[fields]]
+key = "imp_ap_descriptors"
+label = "Problem descriptors (optional)"
+section = "Assessment"
+type = "multiselect"
+options = [
+  { label = "Horizontal deficiency", text = "horizontal alveolar ridge deficiency" },
+  { label = "Vertical deficiency", text = "vertical alveolar ridge deficiency" },
+  { label = "Sinus pneumatization", text = "maxillary sinus pneumatization" },
+  { label = "Thin phenotype", text = "thin gingival phenotype" },
+  { label = "Limited KT", text = "limited keratinized tissue" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_ap_restoration_type"
+label = "Restoration"
+section = "Assessment"
+type = "dropdown"
+default = "Crown(s)"
+options = ["Crown(s)", "Splinted crowns", "Implant FPD", "***"]
+
+[[fields]]
+key = "imp_ap_adjunct_rationale"
+label = "Adjunct rationale"
+section = "Assessment"
+type = "multiselect"
+options = [
+  { label = "Ext + socket preservation", text = "Extraction with socket preservation is recommended to limit ridge resorption before delayed implant placement." },
+  { label = "Immediate placement", text = "Immediate implant placement is recommended given intact socket walls and adequate bone for primary stability; if stability is not achieved, the site will be grafted and placement delayed." },
+  { label = "Simultaneous GBR", text = "Simultaneous guided bone regeneration is recommended to correct the horizontal deficiency and achieve bone coverage of the implant." },
+  { label = "Staged GBR", text = "Staged ridge augmentation is recommended because the current ridge cannot support prosthetically driven placement with primary stability." },
+  { label = "Crestal sinus lift", text = "Transcrestal sinus floor elevation is recommended given limited residual bone height beneath the sinus." },
+  { label = "Lateral sinus lift", text = "Lateral window sinus augmentation is recommended given insufficient residual bone height for primary stability, with implant placement after graft maturation." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_ap_alternatives_discussed"
+label = "Alternatives discussed"
+section = "Assessment"
+type = "multiselect"
+options = [
+  { label = "No treatment", text = "no treatment (risk of drift, supraeruption, and bone loss)" },
+  { label = "Fixed partial denture", text = "a fixed partial denture (requires preparing adjacent teeth)" },
+  { label = "Removable partial denture", text = "a removable partial denture (less stable and comfortable)" },
+  { label = "***", text = "***" },
+]
+default = ["No treatment", "Fixed partial denture", "Removable partial denture"]
+
+[[fields]]
+key = "imp_ap_patient_decision"
+label = "Patient decision"
+section = "Assessment"
+type = "dropdown"
+default = "Proceed"
+options = [
+  { label = "Proceed", text = "After shared decision making, the patient wishes to proceed with the recommended treatment." },
+  { label = "Considering", text = "The patient wishes to consider the options discussed and will contact the office when ready to proceed." },
+  { label = "Declines", text = "The patient declines implant therapy at this time; the consequences of no treatment were reviewed." },
+  { label = "***", text = "***" },
+]
+
+# ------------------------------------------------------------------- plan ---
+
+[[fields]]
+key = "imp_ap_next_procedure"
+label = "Next procedure (drives the specific risks)"
+section = "Plan"
+type = "multiselect"
+options = [
+  "Extraction",
+  "Socket preservation",
+  "Immediate implant",
+  "Immediate provisional",
+  "Implant placement",
+  "GBR",
+  "Crestal sinus lift",
+  "Lateral sinus lift",
+  "***",
+]
+
+[[fields]]
+key = "imp_ap_treatment_sequence"
+label = "Overall sequence"
+section = "Plan"
+type = "dropdown"
+options = [
+  { label = "Implant only", text = "Guided implant placement, then restoration after [[imp_ap_integration_time]] of osseointegration." },
+  { label = "Ext + socket preservation", text = "Extraction with socket preservation, implant placement after [[imp_ap_graft_time]] of healing, then restoration after [[imp_ap_integration_time]]." },
+  { label = "Immediate placement", text = "Extraction with immediate implant placement, then restoration after [[imp_ap_integration_time]] of osseointegration." },
+  { label = "Simultaneous GBR", text = "Implant placement with simultaneous GBR, then restoration after [[imp_ap_integration_time]]." },
+  { label = "Staged GBR", text = "Ridge augmentation, implant placement after [[imp_ap_graft_time]] of consolidation, then restoration after [[imp_ap_integration_time]]." },
+  { label = "Crestal sinus lift", text = "Transcrestal sinus elevation with implant placement, then restoration after [[imp_ap_integration_time]]." },
+  { label = "Lateral sinus lift", text = "Lateral window sinus augmentation, implant placement after [[imp_ap_graft_time]] of graft maturation, then restoration after [[imp_ap_integration_time]]." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_ap_integration_time"
+label = "Integration time"
+section = "Plan"
+type = "dropdown"
+default = "3-4 months"
+options = ["3 months", "3-4 months", "4-6 months", "***"]
+visible_if = "imp_ap_treatment_sequence and imp_ap_treatment_sequence != '***'"
+
+[[fields]]
+key = "imp_ap_graft_time"
+label = "Graft time"
+section = "Plan"
+type = "dropdown"
+default = "4-6 months"
+options = ["4 months", "4-6 months", "6-9 months", "***"]
+visible_if = "imp_ap_treatment_sequence == 'Ext + socket preservation' or imp_ap_treatment_sequence == 'Staged GBR' or imp_ap_treatment_sequence == 'Lateral sinus lift'"
+
+[[fields]]
+key = "imp_ap_guide_bullet"
+label = "Intraoral scan / surgical guide"
+section = "Plan"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "imp_ap_anesthesia_plan"
+label = "Anesthesia"
+section = "Plan"
+type = "dropdown"
+default = "Local"
+options = [
+  { label = "Local", text = "Local anesthesia." },
+  { label = "IV sedation", text = "Local anesthesia with IV sedation; NPO instructions reviewed and responsible adult escort required." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_ap_antibiotic_regimen"
+label = "Antibiotics"
+section = "Plan"
+type = "dropdown"
+default = "Amoxicillin preop"
+options = [
+  { label = "Amoxicillin preop", text = "amoxicillin 2 g PO 1 hour prior to surgery." },
+  { label = "Amoxicillin pre + post", text = "amoxicillin 2 g PO 1 hour prior to surgery, followed by amoxicillin 500 mg PO TID for [[imp_ap_postop_antibiotic_days]] days." },
+  { label = "Azithromycin (PCN allergy)", text = "azithromycin 500 mg PO 1 hour prior to surgery (penicillin allergy)." },
+  { label = "Clindamycin (PCN allergy)", text = "clindamycin 600 mg PO 1 hour prior to surgery (penicillin allergy)." },
+  { label = "None", text = "no antibiotic prophylaxis indicated." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_ap_postop_antibiotic_days"
+label = "Postop antibiotic days"
+section = "Plan"
+type = "text"
+default = "***"
+visible_if = "imp_ap_antibiotic_regimen == 'Amoxicillin pre + post'"
+
+[[fields]]
+key = "imp_ap_chlorhexidine_bullet"
+label = "Chlorhexidine rinse"
+section = "Plan"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "imp_ap_interim_bullet"
+label = "+ Interim prosthesis"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_ap_interim_prosthesis"
+label = "Interim prosthesis type"
+section = "Plan"
+type = "dropdown"
+default = "Essix retainer with pontic"
+options = ["existing removable partial denture", "Essix retainer with pontic", "interim flipper", "***"]
+visible_if = "imp_ap_interim_bullet"
+
+[[fields]]
+key = "imp_ap_tobacco_bullet"
+label = "+ Tobacco cessation (automatic for current tobacco use)"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_ap_glycemic_bullet"
+label = "+ A1c / PCP clearance (automatic for diabetes)"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_ap_anticoagulation_bullet"
+label = "+ Anticoagulation management (automatic for anticoagulants)"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_ap_letter_bullet"
+label = "Consult note to referring provider"
+section = "Plan"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "imp_ap_restorer"
+label = "Restoring dentist"
+section = "Plan"
+type = "dropdown"
+default = "Referring provider"
+options = ["Referring provider", "Other"]
+
+[[fields]]
+key = "imp_ap_restorer_name"
+label = "Restoring dentist name"
+section = "Plan"
+type = "text"
+default = "***"
+visible_if = "imp_ap_restorer == 'Other'"
+
+[[fields]]
+key = "imp_ap_consent_bullet"
+label = "Consent at surgical visit"
+section = "Plan"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "imp_ap_next_step"
+label = "Next step"
+section = "Plan"
+type = "dropdown"
+default = "Schedule surgery"
+options = [
+  { label = "Schedule surgery", text = "Schedule surgery following surgical guide fabrication." },
+  { label = "Patient to call", text = "Patient to contact the office to schedule when ready." },
+  { label = "Return PRN", text = "Return as needed for re-evaluation." },
+  { label = "***", text = "***" },
+]
+
+# ---------------------------------------------------------- pathway presets ---
+# Each sets the next procedure, descriptors, adjunct rationale and overall
+# sequence together, replacing whatever an earlier preset picked.
+
+[[speed_buttons]]
+label = "Implant only"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["Implant placement"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = [], imp_ap_treatment_sequence = "Implant only", imp_ap_integration_time = "3-4 months" }
+
+[[speed_buttons]]
+label = "Ext + socket pres -> delayed"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["Extraction", "Socket preservation"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Ext + socket preservation"], imp_ap_treatment_sequence = "Ext + socket preservation", imp_ap_graft_time = "4 months", imp_ap_integration_time = "3-4 months", imp_ap_interim_bullet = true }
+
+[[speed_buttons]]
+label = "Immediate placement"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["Immediate implant"], imp_ap_descriptors = [], imp_ap_adjunct_rationale = ["Immediate placement"], imp_ap_treatment_sequence = "Immediate placement", imp_ap_integration_time = "3-4 months" }
+
+[[speed_buttons]]
+label = "Simultaneous GBR"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["Implant placement", "GBR"], imp_ap_descriptors = ["Horizontal deficiency"], imp_ap_adjunct_rationale = ["Simultaneous GBR"], imp_ap_treatment_sequence = "Simultaneous GBR", imp_ap_integration_time = "4-6 months" }
+
+[[speed_buttons]]
+label = "Staged GBR"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["GBR"], imp_ap_descriptors = ["Horizontal deficiency"], imp_ap_adjunct_rationale = ["Staged GBR"], imp_ap_treatment_sequence = "Staged GBR", imp_ap_graft_time = "4-6 months", imp_ap_integration_time = "3-4 months" }
+
+[[speed_buttons]]
+label = "Crestal sinus lift"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["Crestal sinus lift"], imp_ap_descriptors = ["Sinus pneumatization"], imp_ap_adjunct_rationale = ["Crestal sinus lift"], imp_ap_treatment_sequence = "Crestal sinus lift", imp_ap_integration_time = "4-6 months" }
+
+[[speed_buttons]]
+label = "Lateral sinus lift"
+section = "Assessment"
+values = { imp_ap_next_procedure = ["Lateral sinus lift"], imp_ap_descriptors = ["Sinus pneumatization"], imp_ap_adjunct_rationale = ["Lateral sinus lift"], imp_ap_treatment_sequence = "Lateral sinus lift", imp_ap_graft_time = "6-9 months", imp_ap_integration_time = "3-4 months" }

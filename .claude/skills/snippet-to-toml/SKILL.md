@@ -1,20 +1,29 @@
 ---
 name: snippet-to-toml
-description: Convert pasted snippet-language text (SNIPPET:/NOTE: blocks with LIST:, MULTILIST(...):, OPTIONAL:, REPEAT:, PRESET: definitions, produced by prompts/templater_snippet_prompt.md) into Templater TOML files in my_templates/. Use whenever the user pastes text containing "SNIPPET:" or "NOTE:" blocks, or asks to convert/import snippets.
+description: Convert pasted snippet-language text (SNIPPET:/NOTE: blocks with LIST:, MULTILIST(...):, OPTIONAL:, TEETH:, REPEAT:, PARTS:, AUTO:, PRESET: definitions, produced by the oms-snippet-writer skill) into Templater TOML files in my_templates/. Use whenever the user pastes text containing "SNIPPET:" or "NOTE:" blocks, or asks to convert/import snippets.
 ---
 
 # Snippet language → Templater TOML
 
-The user generates OMS note snippets in another chat using `prompts/templater_snippet_prompt.md`
-(read it for the full language) and pastes the result here. Convert every block into TOML under
+Snippets come from the `oms-snippet-writer` skill — run here, or in a claude.ai chat and pasted
+in. Read its [`references/snippet-language.md`](../oms-snippet-writer/references/snippet-language.md)
+for the full language. Convert every block into TOML under
 `my_templates/`, verify it, and report. Never change the clinical wording — convert it exactly,
 including punctuation. If the paste breaks the language (undefined placeholder, unknown `@name@`,
 mixed short/titled options), stop and ask rather than guessing.
 
-Worked examples of every rule below: `my_templates/partials/op_indications_enucleation_cyst.toml`
+Worked examples of the simple constructs: `my_templates/partials/op_indications_enucleation_cyst.toml`
 (nested choices, required lists, blanks), `op_approach_submandibular.toml` (titled options,
 embedded snippet), `common_local_anesthesia_admin.toml` (and-join, defaults),
 `op_findings_mandible_fracture.toml` (OPTIONAL line). Match their layout.
+
+For `?` lines, PARTS, TEETH, REPEAT driven by TEETH, AUTO and conditions, USES, BLANK, OPTIONAL
+adds and section presets, read [`references/tera-patterns.md`](references/tera-patterns.md) before
+converting; the implant consult files (`common_implant_case.toml`, `clinic_*_implant.toml`) are
+their reference implementation.
+
+When the surgeon asks for behaviour the snippet language can't express, write the TOML directly in
+the style of the implant consult files, and say so in the report.
 
 ## Files
 
@@ -26,12 +35,13 @@ embedded snippet), `common_local_anesthesia_admin.toml` (and-join, defaults),
 A revision of an existing snippet (same SNIPPET name) overwrites that file — show the user a
 short summary of what changed. Start each file with a comment line
 `# SNIPPET: <name>   PREFIX: <prefix>`, then `name = "Snippet: <TITLE>"` — that line makes the
-snippet selectable in the app on its own (listed as id `partials/<name>`). `body` must come
-before any `[[fields]]` (TOML attaches later keys to the last table).
+snippet selectable in the app on its own (listed as id `partials/<name>`). A `common_...`
+shared-facts snippet (empty TEXT) gets no `name` line, so it isn't listed on its own. `body` must
+come before any `[[fields]]` (TOML attaches later keys to the last table).
 
 ## Keys
 
-- List/OPTIONAL/REPEAT `NAME` → `<prefix>_<name lowercased>`; if the lowercased name already starts
+- LIST/MULTILIST/OPTIONAL/BLANK/TEETH/REPEAT `NAME` → `<prefix>_<name lowercased>`; if the lowercased name already starts
   with `<prefix>_`, don't double it (`LOCAL_TYPES` in prefix `local` → `local_types`).
 - `***(label)` → `<prefix>_<slug(label)>` (slug: lowercase, runs of non-alphanumerics → `_`,
   trimmed). Bare `***` → name it from the sentence. On a clash with another key, append `_2`.
@@ -46,18 +56,20 @@ before any `[[fields]]` (TOML attaches later keys to the last table).
 |---|---|
 | `LIST:` | `type = "dropdown"` |
 | `MULTILIST(join):` | `type = "multiselect"` |
-| `OPTIONAL: NAME (default on/off)` | `type = "checkbox"`, `default = true/false` |
-| `***(label)` | `type = "text"`, `default = "***"` (never required) |
+| `OPTIONAL: NAME (default on/off)` | `type = "checkbox"`, `default = true/false` (`label:` modifier sets the label) |
+| `***(label)` / `BLANK:` | `type = "text"`, `default = "***"`; `optional` gives `default = ""`; `paragraph` gives `type = "textarea"` (never required) |
+| `TEETH: NAME` | `type = "teeth"` (options come from the loader); `same chart as:` gives `linked` |
+| `REPEAT ... (each tooth/span of T)` | `[[groups]]` with `source`, `source_as = "site"`, `spans = true` for spans, `section` |
 | `REPEAT(join): NAME (label: X)` | `[[groups]]` `key`, `label = "X"`; lists marked `(in NAME)` become its `[[groups.fields]]` (keys without prefix) |
-| `PRESET: Label` | `[[speed_buttons]]` `label`, `values = { key = value, ... }` (multiselect → array, OPTIONAL → bool) |
+| `PRESET: Label` | `[[speed_buttons]]` `label`, `section`, `values = { key = value, ... }` (multiselect → array, OPTIONAL → bool, `none` → `[]` / `""`); `(in REPEAT)` → `[[groups.speed_buttons]]` |
 
 Options: short options → `options = ["a", "b"]`; titled options →
 `options = [{ label = "Title", text = "sentence" }, ...]`.
 
 Defaults: `(default)` on a LIST option → `default = "<option label>"`; on MULTILIST options →
-`default = [...]`. **A LIST with no `(default)` gets `required = true`** — an unset dropdown
-renders as empty text, so it must block Copy (like an unresolved Epic SmartList). A MULTILIST
-with no default stays optional (nothing picked is valid).
+`default = [...]`. **Only a LIST marked `(required)` gets `required = true`**, so Copy waits for a
+pick. Every other unpicked control is valid and prints nothing: its `?` line or PARTS phrase drops
+out.
 
 ## Body
 
@@ -73,6 +85,7 @@ Placeholder → Tera, in place:
 | REPEAT | `{% for b in k %}{% if not loop.first %}<join>{% endif %}...{{ b.field }}...{% endfor %}` |
 | `@name@` | `{% include "name" %}`, and add `"name"` to this file's `use_partials` |
 | `***(label)` | `{{ k }}` |
+| `?` line, PARTS, AUTO, TEETH suffixes, THIS_SITE, conditions | see `references/tera-patterns.md` |
 
 A titled MULTILIST that can be empty and sits mid-paragraph: wrap it so the leading space
 disappears too — `{% if k_text %} {{ k_text | join(sep=" ") }}{% endif %}`.
@@ -83,8 +96,7 @@ Option `text` is static, so:
 1. In the option's `text`, replace the inner placeholder with the marker `[[<inner key>]]`.
 2. Define the inner control as its own field with `visible_if` true exactly when a parent option
    containing it is picked: `"'Opt A' in parent"` (multiselect, `or`-ed across options) or
-   `"parent == 'Opt A'"` (dropdown). Inner LISTs still get `required = true` — hidden fields never
-   block Copy.
+   `"parent == 'Opt A'"` (dropdown). Inner LISTs follow the same `(required)` rule as any other.
 3. Where the parent renders, chain one `| replace(from="[[<inner key>]]", to=<value>)` per inner
    control. For an inner MULTILIST, first build its joined string at the top of the body:
    `{%- set <k>_joined %}...join loop...{% endset -%}` and use `to=<k>_joined`; an inner titled
@@ -99,14 +111,17 @@ Option `text` is static, so:
 
 ## Verify, then report
 
-1. Render: copy `my_templates/` to the scratchpad, add a throwaway `demo.toml` with
+1. Render defaults: copy `my_templates/` to the scratchpad, add a throwaway `demo.toml` with
    `use_partials` + `{% include %}` for each new/changed snippet, and run
-   `cargo run -q --bin check_templates -- <scratch dir> demo`. Also inject defaults into a scratch
-   copy to exercise nested choices. Show the user the rendered text.
-2. `cargo run -q --bin check_templates -- my_templates` must have no load errors or lint
-   warnings (named snippets are rendered standalone, so this also renders every snippet with
-   its defaults).
-3. Report the files written. Remind the user to install with:
+   `cargo run -q --bin check_templates -- <scratch dir> demo`. With nothing picked, every lean line
+   must drop out cleanly.
+2. Render filled cases: inject defaults into scratch copies so every branch prints at least once.
+   That means nested choices, optional adds, each AUTO condition, and TEETH lists. Give TEETH
+   fields a `default` list to generate their REPEAT boxes. Show the user the rendered text.
+3. `cargo run -q --bin check_templates -- my_templates` must report no load errors, no lint
+   warnings and no AI-style characters (named snippets are rendered standalone, so this also
+   renders every snippet with its defaults). Run it with `--fix` to replace any stray characters.
+4. Report the files written. Remind the user to install with:
 
 ```bash
 rsync -av --exclude shared_fields.toml my_templates/ "$HOME/Library/Application Support/note-templater/templates/"

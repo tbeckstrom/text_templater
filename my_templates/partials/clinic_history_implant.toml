@@ -1,0 +1,214 @@
+# SNIPPET: clinic_history_implant   PREFIX: imp_hx
+# Revised by hand (own section headers, chips defaulting to "no", optional
+# periodontal history, section speed buttons).
+name = "Snippet: History - implant consult"
+
+body = """
+**PAST MEDICAL HISTORY:**
+{{ imp_hx_pmh if imp_hx_pmh else "***" }}
+
+**MEDICATIONS:**
+{{ imp_hx_medications if imp_hx_medications else "***" }}
+
+**ALLERGIES:**
+{{ imp_hx_allergies if imp_hx_allergies else "***" }}
+
+**IMPLANT RISK FACTORS:**
+- Tobacco: {{ imp_hx_tobacco_use_text }}{% if imp_hx_tobacco_use == "Former" and imp_hx_tobacco_quit %}, quit {{ imp_hx_tobacco_quit }}{% elif imp_hx_tobacco_use == "Current" and imp_hx_tobacco_amount %}, {{ imp_hx_tobacco_amount }}{% endif %}
+- Diabetes: {{ imp_hx_diabetes_status_text }}{% if imp_hx_diabetes_status == "Yes" and imp_hx_a1c %}, most recent A1c {{ imp_hx_a1c }}%{% endif %}
+- Antiresorptive therapy: {{ imp_hx_antiresorptive_history_text | replace(from="[[imp_hx_antiresorptive_details]]", to=imp_hx_antiresorptive_details) }}
+- Head and neck radiation: {{ imp_hx_head_neck_radiation_text | replace(from="[[imp_hx_radiation_details]]", to=imp_hx_radiation_details) }}
+- Anticoagulant/antiplatelet therapy: {{ imp_hx_anticoagulant_use_text | replace(from="[[imp_hx_anticoagulant_agent]]", to=imp_hx_anticoagulant_agent) }}
+- Clenching/bruxism: {{ imp_hx_bruxism_history_text }}{% if imp_hx_perio_add %}
+- Periodontal history: {{ imp_hx_perio_history_text }}{% if imp_hx_perio_details %}, {{ imp_hx_perio_details }}{% endif %}{% endif %}
+"""
+
+[[fields]]
+key = "imp_hx_pmh"
+label = "Past medical history"
+section = "Past medical history"
+type = "textarea"
+default = ""
+
+[[fields]]
+key = "imp_hx_medications"
+label = "Medications"
+section = "Medications"
+type = "textarea"
+default = ""
+
+[[fields]]
+key = "imp_hx_allergies"
+label = "Allergies"
+section = "Allergies"
+type = "textarea"
+default = ""
+
+[[fields]]
+key = "imp_hx_tobacco_use"
+label = "Tobacco"
+section = "Implant risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Former", text = "former" },
+  { label = "Current", text = "current" },
+  { label = "Vaping", text = "current vaping/e-cigarette use" },
+]
+
+[[fields]]
+key = "imp_hx_tobacco_quit"
+label = "Quit (optional)"
+section = "Implant risk factors"
+type = "text"
+default = ""
+visible_if = "imp_hx_tobacco_use == 'Former'"
+
+[[fields]]
+key = "imp_hx_tobacco_amount"
+label = "Type/amount (optional)"
+section = "Implant risk factors"
+type = "text"
+default = ""
+visible_if = "imp_hx_tobacco_use == 'Current'"
+
+[[fields]]
+key = "imp_hx_diabetes_status"
+label = "Diabetes"
+section = "Implant risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "diabetes mellitus" },
+]
+
+[[fields]]
+key = "imp_hx_a1c"
+label = "Most recent A1c % (optional)"
+section = "Implant risk factors"
+type = "text"
+default = ""
+visible_if = "imp_hx_diabetes_status == 'Yes'"
+
+[[fields]]
+key = "imp_hx_antiresorptive_history"
+label = "Antiresorptive therapy"
+section = "Implant risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Oral bisphosphonate", text = "oral bisphosphonate ([[imp_hx_antiresorptive_details]])" },
+  { label = "IV BP / denosumab", text = "parenteral antiresorptive therapy ([[imp_hx_antiresorptive_details]])" },
+]
+
+[[fields]]
+key = "imp_hx_antiresorptive_details"
+label = "Agent, duration, last dose"
+section = "Implant risk factors"
+type = "text"
+default = "***"
+visible_if = "imp_hx_antiresorptive_history != 'No' and imp_hx_antiresorptive_history != ''"
+
+[[fields]]
+key = "imp_hx_head_neck_radiation"
+label = "Head and neck radiation"
+section = "Implant risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "yes, [[imp_hx_radiation_details]]" },
+]
+
+[[fields]]
+key = "imp_hx_radiation_details"
+label = "Radiation site, dose, date"
+section = "Implant risk factors"
+type = "text"
+default = "***"
+visible_if = "imp_hx_head_neck_radiation == 'Yes'"
+
+[[fields]]
+key = "imp_hx_anticoagulant_use"
+label = "Anticoagulant / antiplatelet"
+section = "Implant risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "[[imp_hx_anticoagulant_agent]]" },
+]
+
+[[fields]]
+key = "imp_hx_anticoagulant_agent"
+label = "Agent"
+section = "Implant risk factors"
+type = "text"
+default = "***"
+visible_if = "imp_hx_anticoagulant_use == 'Yes'"
+
+[[fields]]
+key = "imp_hx_bruxism_history"
+label = "Clenching / bruxism"
+section = "Implant risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Reports", text = "reports clenching/bruxism" },
+]
+
+[[fields]]
+key = "imp_hx_perio_add"
+label = "+ Periodontal history"
+section = "Implant risk factors"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_hx_perio_history"
+label = "Periodontal history"
+section = "Implant risk factors"
+type = "dropdown"
+default = "Treated"
+options = [
+  { label = "Treated", text = "history of treated periodontal disease" },
+  { label = "Active", text = "active/untreated periodontal disease" },
+]
+visible_if = "imp_hx_perio_add"
+
+[[fields]]
+key = "imp_hx_perio_details"
+label = "Periodontal details (optional)"
+section = "Implant risk factors"
+type = "text"
+default = ""
+visible_if = "imp_hx_perio_add"
+
+[[speed_buttons]]
+label = "Healthy: noncontributory / none / NKDA"
+section = "Past medical history"
+values = { imp_hx_pmh = "Noncontributory", imp_hx_medications = "None", imp_hx_allergies = "NKDA" }
+
+[[speed_buttons]]
+label = "Noncontributory"
+section = "Past medical history"
+values = { imp_hx_pmh = "Noncontributory" }
+
+[[speed_buttons]]
+label = "None"
+section = "Medications"
+values = { imp_hx_medications = "None" }
+
+[[speed_buttons]]
+label = "NKDA"
+section = "Allergies"
+values = { imp_hx_allergies = "NKDA" }
+
+[[speed_buttons]]
+label = "Penicillin"
+section = "Allergies"
+values = { imp_hx_allergies = "Penicillin (***)" }

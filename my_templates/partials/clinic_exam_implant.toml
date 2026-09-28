@@ -1,0 +1,374 @@
+# SNIPPET: clinic_exam_implant   PREFIX: imp_exam
+# Revised by hand. Every line is left out of the note until something is
+# picked; "***" is a deliberate choice, never the fallback. Edentulous sites
+# get one box per span, teeth present one box each with their conditions.
+name = "Snippet: Exam - implant consult"
+use_partials = ["common_implant_case"]
+
+body = """
+{%- set eo = [
+  ("face " ~ imp_exam_eo_face_text | replace(from="[[imp_exam_eo_asymmetry]]", to=imp_exam_eo_asymmetry)) if imp_exam_eo_face else "",
+  imp_exam_eo_nodes_text if imp_exam_eo_nodes else "",
+  ("TMJs " ~ imp_exam_eo_tmj_text ~ ((" (" ~ imp_exam_eo_tmj_side ~ ")") if imp_exam_eo_tmj_side and imp_exam_eo_tmj != "Normal" else "")) if imp_exam_eo_tmj else "",
+  ("maximal interincisal opening " ~ imp_exam_mio_text | replace(from="[[imp_exam_mio_mm]]", to=imp_exam_mio_mm)) if imp_exam_mio else "",
+  imp_exam_eo_deviation_text if imp_exam_eo_deviation else "",
+  ("muscles of mastication " ~ imp_exam_eo_muscles_text) if imp_exam_eo_muscles else "",
+] -%}
+{%- set eo = [p for p in eo if p] -%}
+{%- set lines = [
+  ("Extraoral/TMJ: " ~ eo | join(sep="; ")) if imp_exam_extraoral and eo else "",
+  ("Oral hygiene: " ~ imp_exam_oral_hygiene) if imp_exam_oral_hygiene else "",
+  ("Periodontal status: " ~ imp_exam_perio_status_text ~ ((", " ~ imp_exam_periodontal_findings) if imp_exam_perio_status == "Periodontitis" and imp_exam_periodontal_findings else "")) if imp_exam_perio_status else "",
+  ("Adjacent teeth: " ~ imp_exam_adjacent_teeth_text | replace(from="[[imp_exam_adjacent_tooth_findings]]", to=imp_exam_adjacent_tooth_findings)) if imp_exam_adjacent_teeth else "",
+  ("Opposing dentition: " ~ imp_exam_opposing_dentition) if imp_exam_opposing_dentition else "",
+  ("Occlusion: " ~ imp_exam_occlusion_text | replace(from="[[imp_exam_occlusion_other]]", to=imp_exam_occlusion_other)) if imp_exam_occlusion else "",
+  ("Parafunction: " ~ imp_exam_parafunction_signs_text) if imp_exam_parafunction_signs else "",
+  ("Smile line: " ~ imp_exam_smile_line) if imp_esthetic and imp_exam_smile_line else "",
+  imp_exam_additional_findings if imp_exam_additional and imp_exam_additional_findings else "",
+] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}
+{%- for b in imp_exam_spans %}
+{%- set parts = [
+  b.ridge_form_text if b.ridge_form else "",
+  (b.keratinized_tissue ~ " keratinized tissue") if b.keratinized_tissue else "",
+  (b.tissue_phenotype ~ " tissue phenotype") if b.tissue_phenotype else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- {{ "Sites" if "-" in b.span else "Site" }} {{ b.span }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- for b in imp_exam_teeth %}
+{%- set parts = [
+  (b.conditions_text[:-1] | join(sep=", ") ~ " and " ~ b.conditions_text[-1] if b.conditions_text | length > 1 else b.conditions_text | first) if b.conditions_text else "",
+  (b.keratinized_tissue ~ " keratinized tissue") if b.keratinized_tissue else "",
+  (b.tissue_phenotype ~ " tissue phenotype") if b.tissue_phenotype else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}"""
+
+# ---------------------------------------------------------- general exam ---
+
+[[fields]]
+key = "imp_exam_oral_hygiene"
+label = "Oral hygiene"
+section = "Exam"
+type = "dropdown"
+default = "good"
+options = ["good", "fair", "poor", "***"]
+
+[[fields]]
+key = "imp_exam_perio_status"
+label = "Periodontal status"
+section = "Exam"
+type = "dropdown"
+options = [
+  { label = "Healthy", text = "periodontium healthy, without generalized inflammation or mobility" },
+  { label = "Gingivitis", text = "generalized gingival inflammation without evidence of attachment loss" },
+  { label = "Periodontitis", text = "periodontitis" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_exam_periodontal_findings"
+label = "Periodontal findings (optional)"
+section = "Exam"
+type = "text"
+default = ""
+visible_if = "imp_exam_perio_status == 'Periodontitis'"
+
+[[fields]]
+key = "imp_exam_adjacent_teeth"
+label = "Adjacent teeth"
+section = "Exam"
+type = "dropdown"
+options = [
+  { label = "Sound", text = "sound, without caries, mobility, or periapical pathology" },
+  { label = "Restored, stable", text = "restored, clinically stable" },
+  { label = "Pathology", text = "[[imp_exam_adjacent_tooth_findings]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_exam_adjacent_tooth_findings"
+label = "Adjacent tooth findings"
+section = "Exam"
+type = "text"
+default = "***"
+visible_if = "imp_exam_adjacent_teeth == 'Pathology'"
+
+[[fields]]
+key = "imp_exam_opposing_dentition"
+label = "Opposing dentition"
+section = "Exam"
+type = "dropdown"
+default = "natural dentition"
+options = [
+  "natural dentition",
+  "restored natural dentition",
+  "natural dentition with supraeruption",
+  "removable prosthesis",
+  "implant-supported prosthesis",
+  "***",
+]
+
+[[fields]]
+key = "imp_exam_occlusion"
+label = "Occlusion"
+section = "Exam"
+type = "dropdown"
+default = "Stable"
+options = [
+  { label = "Stable", text = "stable and reproducible" },
+  { label = "Deep bite", text = "deep bite" },
+  { label = "Crossbite", text = "crossbite" },
+  { label = "Bite collapse", text = "posterior bite collapse" },
+  { label = "Other", text = "[[imp_exam_occlusion_other]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_exam_occlusion_other"
+label = "Occlusion"
+section = "Exam"
+type = "text"
+default = "***"
+visible_if = "imp_exam_occlusion == 'Other'"
+
+[[fields]]
+key = "imp_exam_parafunction_signs"
+label = "Parafunction"
+section = "Exam"
+type = "dropdown"
+default = "None"
+options = [
+  { label = "None", text = "no wear facets or other signs of parafunction" },
+  { label = "Present", text = "wear facets consistent with parafunction" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "imp_exam_smile_line"
+label = "Smile line (esthetic-zone sites)"
+section = "Exam"
+type = "dropdown"
+default = "average"
+options = ["low", "average", "high", "***"]
+visible_if = "imp_esthetic"
+
+[[fields]]
+key = "imp_exam_additional"
+label = "+ Additional findings"
+section = "Exam"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_exam_additional_findings"
+label = "Additional findings"
+section = "Exam"
+type = "textarea"
+default = ""
+visible_if = "imp_exam_additional"
+
+# ------------------------------------------------ extraoral / TMJ (add-on) ---
+
+[[fields]]
+key = "imp_exam_extraoral"
+label = "+ Extraoral/TMJ exam"
+section = "Exam"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "imp_exam_eo_face"
+label = "Face"
+section = "Exam"
+type = "dropdown"
+default = "Symmetric"
+options = [
+  { label = "Symmetric", text = "symmetric" },
+  { label = "Asymmetric", text = "asymmetric, [[imp_exam_eo_asymmetry]]" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_exam_extraoral"
+
+[[fields]]
+key = "imp_exam_eo_asymmetry"
+label = "Asymmetry"
+section = "Exam"
+type = "text"
+default = "***"
+visible_if = "imp_exam_extraoral and imp_exam_eo_face == 'Asymmetric'"
+
+[[fields]]
+key = "imp_exam_eo_nodes"
+label = "Lymph nodes"
+section = "Exam"
+type = "dropdown"
+default = "None"
+options = [
+  { label = "None", text = "no cervical lymphadenopathy" },
+  { label = "Lymphadenopathy", text = "cervical lymphadenopathy, ***" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_exam_extraoral"
+
+[[fields]]
+key = "imp_exam_eo_tmj"
+label = "TMJ"
+section = "Exam"
+type = "dropdown"
+default = "Normal"
+options = [
+  { label = "Normal", text = "non-tender without clicking or crepitus" },
+  { label = "Clicking", text = "with clicking" },
+  { label = "Crepitus", text = "with crepitus" },
+  { label = "Tender", text = "tender to palpation" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_exam_extraoral"
+
+[[fields]]
+key = "imp_exam_eo_tmj_side"
+label = "TMJ side"
+section = "Exam"
+type = "dropdown"
+options = ["right", "left", "bilateral"]
+visible_if = "imp_exam_extraoral and imp_exam_eo_tmj and imp_exam_eo_tmj != 'Normal'"
+
+[[fields]]
+key = "imp_exam_mio"
+label = "Opening"
+section = "Exam"
+type = "dropdown"
+default = "Adequate"
+options = [
+  { label = "Adequate", text = "adequate for guided surgery (>40 mm)" },
+  { label = "Limited", text = "limited, [[imp_exam_mio_mm]] mm" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_exam_extraoral"
+
+[[fields]]
+key = "imp_exam_mio_mm"
+label = "MIO mm"
+section = "Exam"
+type = "text"
+default = "***"
+visible_if = "imp_exam_extraoral and imp_exam_mio == 'Limited'"
+
+[[fields]]
+key = "imp_exam_eo_deviation"
+label = "Deviation on opening"
+section = "Exam"
+type = "dropdown"
+default = "None"
+options = [
+  { label = "None", text = "no deviation on opening" },
+  { label = "Right", text = "deviation to the right on opening" },
+  { label = "Left", text = "deviation to the left on opening" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_exam_extraoral"
+
+[[fields]]
+key = "imp_exam_eo_muscles"
+label = "Muscles of mastication"
+section = "Exam"
+type = "dropdown"
+default = "Non-tender"
+options = [
+  { label = "Non-tender", text = "non-tender" },
+  { label = "Tender", text = "tender to palpation" },
+  { label = "***", text = "***" },
+]
+visible_if = "imp_exam_extraoral"
+
+[[speed_buttons]]
+label = "Healthy perio, sound adjacent teeth"
+section = "Exam"
+values = { imp_exam_perio_status = "Healthy", imp_exam_adjacent_teeth = "Sound" }
+
+# ------------------------------------------- one box per edentulous span ---
+
+[[groups]]
+key = "imp_exam_spans"
+label = "Edentulous span"
+source = "imp_missing"
+source_as = "span"
+spans = true
+section = "Exam"
+
+[[groups.speed_buttons]]
+label = "Adequate"
+values = { ridge_form = "Adequate", keratinized_tissue = "adequate", tissue_phenotype = "thick" }
+
+[[groups.speed_buttons]]
+label = "Width deficient, thin"
+values = { ridge_form = "Width deficient", keratinized_tissue = "limited", tissue_phenotype = "thin" }
+
+[[groups.fields]]
+key = "ridge_form"
+label = "Ridge form"
+type = "dropdown"
+default = "Adequate"
+options = [
+  { label = "Adequate", text = "ridge form adequate" },
+  { label = "Width deficient", text = "horizontal ridge deficiency" },
+  { label = "Height deficient", text = "vertical ridge deficiency" },
+  { label = "Combined", text = "combined horizontal and vertical ridge deficiency" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "keratinized_tissue"
+label = "Keratinized tissue"
+type = "dropdown"
+default = "adequate"
+options = ["adequate", "limited", "no", "***"]
+
+[[groups.fields]]
+key = "tissue_phenotype"
+label = "Tissue phenotype"
+type = "dropdown"
+default = "thick"
+options = ["thick", "thin", "***"]
+
+# ------------------------------------------------ one box per tooth present ---
+
+[[groups]]
+key = "imp_exam_teeth"
+label = "Tooth present"
+source = "imp_present"
+source_as = "tooth"
+section = "Exam"
+
+[[groups.fields]]
+key = "conditions"
+label = "Condition (describes the tooth; none = nonrestorable)"
+type = "multiselect"
+options = [
+  { label = "Heavily restored", text = "heavily restored" },
+  { label = "Fractured", text = "fractured" },
+  { label = "Carious", text = "carious" },
+  { label = "Mobile", text = "mobile" },
+  { label = "Perio compromised", text = "periodontally compromised" },
+  { label = "Failed endo", text = "endodontically failed" },
+  { label = "Nonrestorable", text = "nonrestorable" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "keratinized_tissue"
+label = "Keratinized tissue"
+type = "dropdown"
+default = "adequate"
+options = ["adequate", "limited", "no", "***"]
+
+[[groups.fields]]
+key = "tissue_phenotype"
+label = "Tissue phenotype"
+type = "dropdown"
+default = "thick"
+options = ["thick", "thin", "***"]
