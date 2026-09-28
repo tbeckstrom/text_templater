@@ -69,9 +69,24 @@ fn lookup(c: char) -> Option<(&'static str, &'static str)> {
 
 /// `text` with every listed character swapped for its keyboard equivalent.
 pub fn normalize(text: &str) -> String {
+    convert(text, false)
+}
+
+/// The replacement pass shared by [`normalize`] and the raw-source rewrite.
+/// An em dash set tight between two words ("techniques—including") becomes
+/// a spaced " - ", so the words don't run together as a hyphenated compound.
+/// With `escape_quotes`, a straight double quote comes out as `\"`, for use
+/// inside a TOML basic string.
+fn convert(text: &str, escape_quotes: bool) -> String {
+    let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
+    for (i, &c) in chars.iter().enumerate() {
+        let tight = |j: Option<usize>| j.and_then(|j| chars.get(j)).is_some_and(|n| n.is_alphanumeric());
         match lookup(c) {
+            Some(("\"", _)) if escape_quotes => out.push_str("\\\""),
+            Some(_) if c == '\u{2014}' && tight(i.checked_sub(1)) && tight(Some(i + 1)) => {
+                out.push_str(" - ")
+            }
             Some((to, _)) => out.push_str(to),
             None => out.push(c),
         }
@@ -132,15 +147,7 @@ fn rewritten(original: &Formatted<String>) -> Formatted<String> {
     let raw = original.as_repr().and_then(|r| r.as_raw().as_str());
     let mut result = raw
         .and_then(|raw| {
-            let basic = raw.starts_with('"');
-            let mut edited = String::with_capacity(raw.len());
-            for c in raw.chars() {
-                match lookup(c) {
-                    Some(("\"", _)) if basic => edited.push_str("\\\""),
-                    Some((to, _)) => edited.push_str(to),
-                    None => edited.push(c),
-                }
-            }
+            let edited = convert(raw, raw.starts_with('"'));
             match edited.parse::<Value>() {
                 Ok(Value::String(parsed)) if *parsed.value() == target => Some(parsed),
                 _ => None,
@@ -213,6 +220,15 @@ mod tests {
         assert_eq!(normalize("10\u{00A0}mm\u{200B}"), "10 mm");
         assert_eq!(normalize("• item"), "- item");
         assert_eq!(normalize("≥2 mm, ≤4 mm, 7 × 10, ±graft, ext → delayed"), ">=2 mm, <=4 mm, 7 x 10, +/-graft, ext -> delayed");
+    }
+
+    #[test]
+    fn an_em_dash_between_two_words_becomes_a_spaced_hyphen() {
+        assert_eq!(normalize("techniques—including blocks"), "techniques - including blocks");
+        assert_eq!(normalize("a — b"), "a - b");
+        assert_eq!(normalize("3–4 months"), "3-4 months");
+        let fixed = fix("text = \"techniques—including\"\n").unwrap();
+        assert_eq!(fixed, "text = \"techniques - including\"\n");
     }
 
     #[test]

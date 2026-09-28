@@ -5,13 +5,15 @@
 
 body = """
 {% for b in blocks %}
-{%- set each_word = "each" if b.multiple_teeth else "the" -%}
-{%- set s_word = "s" if b.multiple_teeth else "" -%}
+{%- set multiple = b.multiple_teeth or b.teeth | length > 1 -%}
+{%- set header = b.section_header if b.section_header else ((("Teeth " if b.teeth | length > 1 else "Tooth ") ~ b.teeth | join(sep=", ")) if b.teeth else "Tooth ***") -%}
+{%- set each_word = "each" if multiple else "the" -%}
+{%- set s_word = "s" if multiple else "" -%}
 {%- set converted = ["Using #9 periosteal elevator, PDL and dental gingival attachment was severed. Initial attempt at elevation with inadequate mobility for delivery"] if b.converted_surgical else [] -%}
 {%- set alveo = [b.alveoloplasty_tori_text | join(sep=" ")] if b.alveoloplasty_tori_text else [] -%}
 {%- set combined = [...converted, ...b.soft_tissue_text, ...b.ostectomy_sectioning_text, ...b.elevator_forcep_text, ...b.socket_text, ...alveo, ...b.closure_text] -%}
-{{ b.section_header }}:
-{% if b.multiple_teeth %}The above teeth were extracted in a similar manner as follows:
+{{ header }}:
+{% if multiple %}The above teeth were extracted in a similar manner as follows:
 {% endif %}{{ combined | join(sep=". ") | replace(from="[[each]]", to=each_word) | replace(from="[[s]]", to=s_word) }}.
 {% endfor %}
 """
@@ -52,14 +54,18 @@ values = { soft_tissue = ["Flap for alveoloplasty"], elevator_forcep = ["Luxated
 
 [[groups.fields]]
 key = "section_header"
-label = "Tooth / area"
+label = "Tooth / area (blank = the teeth charted below)"
 type = "text"
-default = "# ***"
-required = true
+default = ""
+
+[[groups.fields]]
+key = "teeth"
+label = "Teeth (optional)"
+type = "teeth"
 
 [[groups.fields]]
 key = "multiple_teeth"
-label = "Multiple teeth"
+label = "Multiple teeth (automatic when more than one is charted)"
 type = "checkbox"
 
 [[groups.fields]]
@@ -76,7 +82,7 @@ options = [
   { label = "Flap + DB release mand 3rds", text = "Raised full thickness mucoperiosteal flap with DB release to the external oblique ridge" },
   { label = "Severed PDL w/ #9", text = "Using #9 periosteal elevator, PDL and dental gingival attachment was severed" },
   { label = "Flap adjacent to tooth", text = "Using a 15 blade, sulcular incision made adjacent to the tooth and full thickness flap raised to the buccal using #9 periosteal elevator" },
-  { label = "Flap from tooth to tooth", text = "Using a 15 blade, crestal/sulcular incision made from # __ to # __. Full thickness flap raised to the buccal using #9 periosteal elevator" },
+  { label = "Flap from tooth to tooth", text = "Using a 15 blade, crestal/sulcular incision made from tooth __ to tooth __. Full thickness flap raised to the buccal using #9 periosteal elevator" },
   { label = "Flap for alveoloplasty", text = "Using a 15 blade, crestal incision made along the length of the alveolar ridge. Full thickness flap raised to the buccal and lingual using #9 periosteal elevator to expose the ridge" },
 ]
 

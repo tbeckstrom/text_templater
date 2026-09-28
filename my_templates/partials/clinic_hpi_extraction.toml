@@ -1,0 +1,100 @@
+# SNIPPET: clinic_hpi_extraction   PREFIX: ext_hpi
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# The one-liner is followed by short sentences that each drop out until
+# picked, starting with the surrogate decision-maker sentence.
+name = "Snippet: HPI - extraction consult"
+use_partials = ["common_extraction_case"]
+
+body = """
+{%- set details = [
+  (ext_dm_reason_phrase ~ ", and " ~ ext_dm_phrase ~ " is present as the legal decision-maker.") if ext_dm_reason else "",
+  ("Patient reports " ~ ((ext_hpi_symptoms[:-1] | join(sep=", ")) ~ " and " ~ ext_hpi_symptoms[-1] if ext_hpi_symptoms | length > 1 else ext_hpi_symptoms | first) ~ ".") if ext_hpi_symptoms else "",
+  ("Onset approximately " ~ ext_hpi_onset ~ ".") if ext_hpi_onset else "",
+  ext_hpi_prior_treatment_text | join(sep=" ") if ext_hpi_prior_treatment else "",
+  ext_hpi_replacement_interest_text if ext_hpi_replacement_interest else "",
+] -%}
+{%- set details = [d for d in details if d] -%}
+Reason for visit: {{ ext_hpi_visit_reason_text }}{% if ext_referring_provider %}
+Referring provider: {{ ext_referring_provider }}{% endif %}
+
+{{ ext_patient_age }}-year-old patient presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}{% if ext_hpi_additional_history and ext_hpi_additional_history_2 %}
+{{ ext_hpi_additional_history_2 }}{% endif %}
+"""
+
+[[fields]]
+key = "ext_hpi_visit_reason"
+label = "Reason for visit"
+section = "HPI - extraction consult"
+type = "dropdown"
+default = "Extraction consult"
+options = [
+  { label = "Extraction consult", text = "Extraction consultation" },
+  { label = "Tooth pain", text = "Evaluation of tooth pain" },
+  { label = "Infection", text = "Evaluation of dental infection" },
+  { label = "Dental clearance", text = "Dental clearance prior to medical treatment" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ext_hpi_symptoms"
+label = "Symptoms"
+section = "HPI - extraction consult"
+type = "multiselect"
+options = [
+  "pain",
+  "swelling",
+  "pain on biting",
+  "temperature sensitivity",
+  "a broken tooth",
+  "a loose tooth",
+  "drainage or bad taste",
+  "no symptoms",
+  "***",
+]
+
+[[fields]]
+key = "ext_hpi_onset"
+label = "Onset, e.g. 2 weeks ago (optional)"
+section = "HPI - extraction consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "ext_hpi_prior_treatment"
+label = "Prior treatment"
+section = "HPI - extraction consult"
+type = "multiselect"
+options = [
+  { label = "Antibiotics", text = "Antibiotics have been prescribed for this complaint." },
+  { label = "Prior root canal", text = "Prior endodontic therapy at the involved site." },
+  { label = "OTC analgesics", text = "Pain managed with over-the-counter analgesics." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ext_hpi_replacement_interest"
+label = "Replacement interest"
+section = "HPI - extraction consult"
+type = "dropdown"
+options = [
+  { label = "Implant", text = "Interested in implant replacement." },
+  { label = "Denture or bridge", text = "Interested in replacement with a denture or bridge." },
+  { label = "Undecided", text = "Undecided regarding tooth replacement." },
+  { label = "Not interested", text = "Not interested in tooth replacement." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ext_hpi_additional_history"
+label = "+ Additional history"
+section = "HPI - extraction consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "ext_hpi_additional_history_2"
+label = "Additional history"
+section = "HPI - extraction consult"
+type = "textarea"
+default = ""
+visible_if = "ext_hpi_additional_history"

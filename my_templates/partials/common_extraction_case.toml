@@ -1,0 +1,131 @@
+# SNIPPET: common_extraction_case   PREFIX: ext
+# The facts every extraction consult section shares, entered once at the top
+# of the form: age, teeth to extract, referring provider and who makes the
+# decisions. The hidden computed fields turn them into ready-made wording the
+# other snippets reuse.
+body = ""
+
+[[fields]]
+key = "ext_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "ext_extract_teeth"
+label = "Teeth to extract"
+section = "Case"
+type = "teeth"
+
+[[fields]]
+key = "ext_referring_provider"
+label = "Referring provider (blank = omitted)"
+section = "Case"
+type = "text"
+default = ""
+
+[[fields]]
+key = "ext_decision_maker"
+label = "Decision-maker"
+section = "Case"
+type = "dropdown"
+default = "Patient"
+options = [
+  { label = "Patient", text = "the patient" },
+  { label = "Parent", text = "the patient's parent, [[ext_dm_name]]" },
+  { label = "Legal guardian", text = "the patient's legal guardian, [[ext_dm_name]]" },
+  { label = "Healthcare POA", text = "the patient's healthcare power of attorney, [[ext_dm_name]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ext_dm_name"
+label = "Decision-maker name"
+section = "Case"
+type = "text"
+default = "***"
+visible_if = "ext_decision_maker in ['Parent', 'Legal guardian', 'Healthcare POA']"
+
+[[fields]]
+key = "ext_dm_reason"
+label = "Surrogate reason"
+section = "Case"
+type = "dropdown"
+options = [
+  { label = "Minor", text = "The patient is a minor" },
+  { label = "Lacks capacity", text = "The patient lacks decision-making capacity due to [[ext_capacity_reason]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ext_capacity_reason"
+label = "Capacity reason"
+section = "Case"
+type = "text"
+default = "***"
+visible_if = "ext_dm_reason == 'Lacks capacity'"
+
+[[speed_buttons]]
+label = "Minor with parent"
+section = "Case"
+values = { ext_decision_maker = "Parent", ext_dm_reason = "Minor" }
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "ext_teeth_list"
+label = "Teeth to extract"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(ext_extract_teeth[:-1] | join(sep=", ")) ~ " and " ~ ext_extract_teeth[-1] if ext_extract_teeth | length > 1 else (ext_extract_teeth | first if ext_extract_teeth else "***")'
+
+[[fields]]
+key = "ext_teeth_tooth_word"
+label = "tooth/teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if ext_extract_teeth | length > 1 else "tooth"'
+
+[[fields]]
+key = "ext_ref_name"
+label = "Referring provider name"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'ext_referring_provider if ext_referring_provider else "the referring dentist"'
+
+[[fields]]
+key = "ext_dm_phrase"
+label = "Decision-maker phrase"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'ext_decision_maker_text | replace(from="[[ext_dm_name]]", to=ext_dm_name) if ext_decision_maker else "the patient"'
+
+[[fields]]
+key = "ext_dm_reason_phrase"
+label = "Surrogate reason phrase"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'ext_dm_reason_text | replace(from="[[ext_capacity_reason]]", to=ext_capacity_reason) if ext_dm_reason else ""'
+
+[[fields]]
+key = "ext_mand_posterior"
+label = "Mandibular posterior tooth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in ext_extract_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 else ""'
+
+[[fields]]
+key = "ext_max_posterior"
+label = "Maxillary posterior tooth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in ext_extract_teeth if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 else ""'

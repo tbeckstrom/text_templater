@@ -1,3 +1,6 @@
+// Release builds on Windows open as a plain GUI app, without a console window behind it.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 use text_templater::{app::NoteTemplaterApp, storage};
 
 fn main() -> eframe::Result {

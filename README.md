@@ -10,9 +10,21 @@ then copy it to your clipboard. Templates are plain TOML files you can add or ed
 cargo run
 ```
 
+Supported platforms are macOS (Apple Silicon and Intel) and Windows x64. To build a release
+binary for a specific target:
+
+```
+cargo build --release --target aarch64-apple-darwin    # macOS, Apple Silicon
+cargo build --release --target x86_64-apple-darwin     # macOS, Intel
+cargo build --release --target x86_64-pc-windows-msvc  # Windows x64 (build on Windows)
+```
+
+CI (`.github/workflows/ci.yml`) tests and builds all three on every push to `master`.
+
 On first launch the app creates its data directory (on macOS:
-`~/Library/Application Support/note-templater/`) and seeds it with four example templates
-(`follow_up_visit.toml`, `initial_consult.toml`, `oral_surgery.toml`, `oms_procedure_note.toml`),
+`~/Library/Application Support/note-templater/`; on Windows:
+`%APPDATA%\note-templater\data\`) and seeds it with three example templates
+(`follow_up_visit.toml`, `initial_consult.toml`, `oral_surgery.toml`),
 `shared_fields.toml`, and a `partials/` directory. Edit these files, add your own `.toml` files alongside them, and click
 **Reload Templates** in the app to pick up changes without restarting.
 
@@ -397,7 +409,7 @@ source_as = "tooth"          # -> {{ t.tooth }} in the body
 Blocks keep whatever you've typed into them when unrelated choices are added or removed, and they
 survive a draft/history round-trip. Source-driven groups have no Add/Remove buttons.
 
-See `examples/templates/oms_procedure_note.toml` for a large template using all of this together.
+See `my_templates/oms_procedure_note.toml` for a large template using all of this together.
 
 ## Keyboard shortcuts
 

@@ -110,7 +110,7 @@ fn load_partials(
             continue;
         }
 
-        let contents = match fs::read_to_string(&path) {
+        let contents = match read_text(&path) {
             Ok(c) => c,
             Err(e) => {
                 errors.push((file_label, e.to_string()));
@@ -275,12 +275,18 @@ fn fill_implicit_options(fields: &mut [FieldDef], groups: &mut [GroupDef]) {
     }
 }
 
+/// Reads a template file with Windows (CRLF) line endings turned into plain
+/// newlines, so a file saved on Windows renders the same note as on macOS.
+fn read_text(path: &Path) -> std::io::Result<String> {
+    Ok(fs::read_to_string(path)?.replace("\r\n", "\n"))
+}
+
 fn load_shared_fields(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<FieldDef> {
     let path = dir.join("shared_fields.toml");
     if !path.exists() {
         return Vec::new();
     }
-    let result = fs::read_to_string(&path)
+    let result = read_text(&path)
         .map_err(|e| e.to_string())
         .and_then(|text| toml::from_str::<SharedFieldsFile>(&text).map_err(|e| e.to_string()));
     match result {
@@ -300,7 +306,7 @@ fn load_one(
     shared_fields: &[FieldDef],
     partials: &[PartialDef],
 ) -> Result<TemplateDef, String> {
-    let text = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let text = read_text(path).map_err(|e| e.to_string())?;
     let mut raw: RawTemplateFile = toml::from_str(&text).map_err(|e| e.to_string())?;
     fill_implicit_options(&mut raw.fields, &mut raw.groups);
 
@@ -364,6 +370,19 @@ mod tests {
             panic!("expected a list value, got {:?}", state.get("sites"));
         };
         assert_eq!(picked, &["12", "36", "47"]);
+    }
+
+    #[test]
+    fn windows_line_endings_do_not_leak_carriage_returns_into_the_note() {
+        let dir = std::env::temp_dir().join(format!("note_templater_crlf_{}", std::process::id()));
+        fs::create_dir_all(dir.join("partials")).unwrap();
+        write(&dir, "t.toml", "name = \"T\"\r\nbody = \"\"\"\r\nLine one\r\nLine two\r\n\"\"\"\r\n");
+        write(&dir, "partials/p.tera", "Partial one\r\nPartial two\r\n");
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        assert_eq!(result.templates[0].body, "Line one\nLine two\n");
+        assert_eq!(result.partials[0].body, "Partial one\nPartial two\n");
     }
 
     #[test]
@@ -855,7 +874,7 @@ mod tests {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
         let result = load_templates(&dir);
         assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
-        assert_eq!(result.templates.len(), 4);
+        assert_eq!(result.templates.len(), 3);
         assert!(
             result.partials.iter().any(|p| p.name == "header"),
             "expected the bundled `partials/header.tera` to load"
@@ -911,7 +930,7 @@ mod tests {
     /// two.
     #[test]
     fn oms_note_fields_are_grouped_into_contiguous_sections() {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("my_templates");
         let result = load_templates(&dir);
         let t = result
             .templates
@@ -949,7 +968,7 @@ mod tests {
         );
     }
 
-    /// The bundled OMS note's computed tally must actually evaluate against
+    /// The OMS note's computed tally must actually evaluate against
     /// real field values — a `compute` expression that silently yields blank
     /// would look like a working read-only field.
     #[test]
@@ -957,7 +976,7 @@ mod tests {
         use crate::field::*;
         use crate::visibility::{recompute_fields, ExprEvaluator};
 
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("my_templates");
         let result = load_templates(&dir);
         let t = result
             .templates
@@ -992,14 +1011,15 @@ mod tests {
         }
     }
 
-    /// The blanks a template author leaves for manual completion (`# __ to
-    /// # __`, `The ___ root`, the `# ***` block header) have to reach the
+    /// The blanks a template author leaves for manual completion (`tooth __
+    /// to tooth __`, `The ___ root`, the `Tooth ***` block header shown when
+    /// no teeth are charted) have to reach the
     /// rendered note intact — they're the cue to fill something in, so
     /// losing them to formatting markup would be silent data loss.
     #[test]
     fn fill_in_blanks_survive_into_the_rendered_note() {
         use crate::field::*;
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("my_templates");
         let result = load_templates(&dir);
         let t = result
             .templates
@@ -1033,7 +1053,7 @@ mod tests {
         let plain = crate::formatting::to_plain_text(&crate::formatting::parse(&note));
 
         assert!(
-            plain.contains("from # __ to # __"),
+            plain.contains("from tooth __ to tooth __"),
             "the tooth-to-tooth blanks were altered: {plain}"
         );
         assert!(
@@ -1041,7 +1061,7 @@ mod tests {
             "the root blank was altered: {plain}"
         );
         assert!(
-            plain.contains("# ***"),
+            plain.contains("Tooth ***:"),
             "the default block header blank was altered: {plain}"
         );
     }
@@ -1055,13 +1075,13 @@ mod tests {
     #[test]
     fn oms_procedure_note_renders_a_realistic_case() {
         use crate::field::*;
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/templates");
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("my_templates");
         let result = load_templates(&dir);
         let t = result
             .templates
             .iter()
             .find(|t| t.id == "oms_procedure_note")
-            .expect("oms_procedure_note.toml should be a bundled example");
+            .expect("my_templates/oms_procedure_note.toml should load");
 
         let mut state = build_form_state(&t.fields);
         for (k, v) in [
@@ -1070,10 +1090,9 @@ mod tests {
             ("pmh", FieldValue::Text("asthma\nanxiety".into())),
             (
                 "diagnosis_teeth",
-                FieldValue::MultiSelect(vec!["1".into(), "17".into()]),
+                FieldValue::MultiSelect(vec!["18".into(), "38".into()]),
             ),
-            ("ext", FieldValue::Bool(true)),
-            ("ext_teeth", FieldValue::Text("1, 17".into())),
+            ("ext", FieldValue::MultiSelect(vec!["18".into(), "38".into()])),
             ("ivga", FieldValue::Bool(true)),
             ("ga_time", FieldValue::Number(45.0)),
             (
@@ -1101,9 +1120,11 @@ mod tests {
         }
 
         let blocks = t.groups.iter().find(|g| g.key == "blocks").unwrap();
-        for (header, button, multiple) in [
-            ("#1, #16", "Mx 3rd Molar", true),
-            ("#17", "Md 3rd Molar, vertical section", false),
+        // Blocks chart their teeth; the header and singular/plural wording
+        // follow from how many are charted.
+        for (teeth, button) in [
+            (vec!["18", "28"], "Mx 3rd Molar"),
+            (vec!["38"], "Md 3rd Molar, vertical section"),
         ] {
             add_group_instance(&mut groups_state, blocks);
             let last = groups_state.get_mut("blocks").unwrap().last_mut().unwrap();
@@ -1113,10 +1134,10 @@ mod tests {
                 .find(|s| s.label == button)
                 .unwrap();
             apply_values(&blocks.fields, &sb.values, &mut last.values);
-            last.values
-                .insert("section_header".into(), FieldValue::Text(header.into()));
-            last.values
-                .insert("multiple_teeth".into(), FieldValue::Bool(multiple));
+            last.values.insert(
+                "teeth".into(),
+                FieldValue::MultiSelect(teeth.into_iter().map(String::from).collect()),
+            );
         }
 
         let note = crate::render::render_body(
@@ -1130,9 +1151,12 @@ mod tests {
         .expect("the OMS note should render");
 
         // One diagnosis line per tooth selected, and none for teeth that weren't.
-        assert!(note.contains("#1 - symptomatic, PBI"));
-        assert!(note.contains("#17 - symptomatic, PBI"));
-        assert!(!note.contains("#32 -"));
+        assert!(note.contains("Tooth 18 - symptomatic, PBI"));
+        assert!(note.contains("Tooth 38 - symptomatic, PBI"));
+        assert!(!note.contains("Tooth 48 -"));
+        assert!(note.contains("Extraction of teeth 18, 38"));
+        assert!(note.contains("Teeth 18, 28:"));
+        assert!(note.contains("Tooth 38:"));
 
         // Whole numbers read as counts, not floats.
         assert!(note.contains("total anesthesia time = 45 minutes"));
