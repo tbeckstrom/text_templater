@@ -1,5 +1,6 @@
-use std::fs;
 use std::path::Path;
+
+use crate::storage;
 
 use super::{
     FieldDef, FieldType, GroupDef, PartialDef, RawPartialFile, RawTemplateFile, SharedFieldsFile,
@@ -22,8 +23,8 @@ pub fn load_templates(dir: &Path) -> LoadResult {
     let shared_fields = load_shared_fields(dir, &mut errors);
     let partials = load_partials(dir, &shared_fields, &mut errors);
 
-    let mut paths: Vec<_> = match fs::read_dir(dir) {
-        Ok(entries) => entries.filter_map(|e| e.ok()).map(|e| e.path()).collect(),
+    let mut paths: Vec<_> = match storage::read_dir(dir) {
+        Ok(entries) => entries,
         Err(e) => {
             errors.push((dir.display().to_string(), e.to_string()));
             Vec::new()
@@ -77,12 +78,12 @@ fn load_partials(
     errors: &mut Vec<(String, String)>,
 ) -> Vec<PartialDef> {
     let partials_dir = dir.join("partials");
-    if !partials_dir.exists() {
+    if !storage::exists(&partials_dir) {
         return Vec::new();
     }
 
-    let mut paths: Vec<_> = match fs::read_dir(&partials_dir) {
-        Ok(entries) => entries.filter_map(|e| e.ok()).map(|e| e.path()).collect(),
+    let mut paths: Vec<_> = match storage::read_dir(&partials_dir) {
+        Ok(entries) => entries,
         Err(e) => {
             errors.push(("partials/".to_string(), e.to_string()));
             Vec::new()
@@ -278,12 +279,12 @@ fn fill_implicit_options(fields: &mut [FieldDef], groups: &mut [GroupDef]) {
 /// Reads a template file with Windows (CRLF) line endings turned into plain
 /// newlines, so a file saved on Windows renders the same note as on macOS.
 fn read_text(path: &Path) -> std::io::Result<String> {
-    Ok(fs::read_to_string(path)?.replace("\r\n", "\n"))
+    Ok(storage::read_to_string(path)?.replace("\r\n", "\n"))
 }
 
 fn load_shared_fields(dir: &Path, errors: &mut Vec<(String, String)>) -> Vec<FieldDef> {
     let path = dir.join("shared_fields.toml");
-    if !path.exists() {
+    if !storage::exists(&path) {
         return Vec::new();
     }
     let result = read_text(&path)
@@ -344,6 +345,8 @@ fn load_one(
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     fn write(dir: &Path, name: &str, contents: &str) {

@@ -1,5 +1,3 @@
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -18,7 +16,7 @@ pub struct HistoryEntry {
 }
 
 pub fn load_history(path: &Path) -> Vec<HistoryEntry> {
-    let Ok(text) = std::fs::read_to_string(path) else {
+    let Ok(text) = crate::storage::read_to_string(path) else {
         return Vec::new();
     };
     text.lines()
@@ -27,9 +25,8 @@ pub fn load_history(path: &Path) -> Vec<HistoryEntry> {
 }
 
 pub fn append_history(path: &Path, entry: &HistoryEntry) -> std::io::Result<()> {
-    let mut file = OpenOptions::new().create(true).append(true).open(path)?;
     let json = serde_json::to_string(entry).expect("HistoryEntry always serializes");
-    writeln!(file, "{json}")
+    crate::storage::append_line(path, &json)
 }
 
 pub fn now_timestamp() -> String {

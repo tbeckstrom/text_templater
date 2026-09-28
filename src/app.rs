@@ -64,7 +64,7 @@ impl NoteTemplaterApp {
     }
 
     fn select_template(&mut self, idx: usize) {
-        self.save_draft_for_current();
+        self.save_draft_for_current(true);
         if let Some(t) = self.templates.get(idx) {
             self.form_state = build_form_state(&t.fields);
             self.groups_state = build_groups_state(&t.groups);
@@ -74,7 +74,7 @@ impl NoteTemplaterApp {
     }
 
     fn reload_templates(&mut self) {
-        self.save_draft_for_current();
+        self.save_draft_for_current(true);
         let result = load_templates(&self.paths.templates_dir);
         self.templates = result.templates;
         self.partials = result.partials;
@@ -90,8 +90,9 @@ impl NoteTemplaterApp {
     /// Saves (or clears) the draft for whichever template is currently
     /// selected, using its current form state. Called whenever we're about to
     /// navigate away from it (switching templates, reloading, exiting) so
-    /// unsaved progress isn't lost.
-    fn save_draft_for_current(&mut self) {
+    /// unsaved progress isn't lost. With `may_discard` false, a form still at
+    /// its defaults leaves any existing draft alone instead of clearing it.
+    fn save_draft_for_current(&mut self, may_discard: bool) {
         let Some(idx) = self.selected else { return };
         let Some(template) = self.templates.get(idx) else {
             return;
@@ -109,6 +110,9 @@ impl NoteTemplaterApp {
             &build_groups_state(&template.groups),
         );
         let has_progress = current != defaults;
+        if !has_progress && !may_discard {
+            return;
+        }
         crate::drafts::upsert(
             &self.paths.drafts_file,
             &mut self.drafts,
@@ -145,7 +149,7 @@ impl NoteTemplaterApp {
             self.status = Some(format!("Template \"{template_name}\" no longer exists."));
             return false;
         };
-        self.save_draft_for_current();
+        self.save_draft_for_current(true);
         let template = &self.templates[idx];
         let (state, groups_state) = snapshot_from_json(&template.fields, &template.groups, field_values);
         self.form_state = state;
@@ -333,6 +337,11 @@ impl eframe::App for NoteTemplaterApp {
         });
         let focus_search = focus_search && ui.ctx().memory(|m| m.focused().is_none());
 
+        #[cfg(target_arch = "wasm32")]
+        if let Some(e) = web_clipboard::take_failure() {
+            self.status = Some(format!("Copy failed, nothing was copied: {e}"));
+        }
+
         egui::Panel::top("top_bar").show(ui, |ui| {
             ui.add_space(4.0);
             ui.horizontal(|ui| {
@@ -397,7 +406,7 @@ impl eframe::App for NoteTemplaterApp {
                 self.restore_from_history(i);
             }
             if let Some(text) = copy_again {
-                match copy_to_clipboard(&text) {
+                match copy_to_clipboard(ui.ctx(), &text) {
                     Ok(()) => self.status = Some("Copied from history!".into()),
                     Err(e) => self.status = Some(format!("Copy failed: {e}")),
                 }
@@ -652,7 +661,7 @@ impl eframe::App for NoteTemplaterApp {
                     {
                         let plain = formatting::to_plain_text(runs);
                         let html = formatting::to_html(runs);
-                        match copy_rich_to_clipboard(&html, &plain) {
+                        match copy_rich_to_clipboard(ui.ctx(), &html, &plain) {
                             Ok(()) => {
                                 self.status = Some("Copied!".to_string());
                                 copied = Some(plain);
@@ -667,7 +676,7 @@ impl eframe::App for NoteTemplaterApp {
                         && let Some(runs) = &runs
                     {
                         let plain = formatting::to_plain_text(runs);
-                        match copy_to_clipboard(&plain) {
+                        match copy_to_clipboard(ui.ctx(), &plain) {
                             Ok(()) => {
                                 self.status = Some("Copied (plain text)!".to_string());
                                 copied = Some(plain);
@@ -715,7 +724,36 @@ impl eframe::App for NoteTemplaterApp {
     }
 
     fn on_exit(&mut self) {
-        self.save_draft_for_current();
+        self.save_draft_for_current(true);
+    }
+
+    /// The browser never calls `on_exit`; eframe calls this instead, every 30
+    /// seconds and when the tab closes, so unfinished work still becomes a
+    /// draft. It never clears one: the template on screen may just be the one
+    /// selected at startup, untouched, while its draft waits to be resumed.
+    #[cfg(target_arch = "wasm32")]
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        self.save_draft_for_current(false);
+    }
+
+    /// Keeps egui's own UI state out of browser storage; only drafts and
+    /// history are saved there.
+    #[cfg(target_arch = "wasm32")]
+    fn persist_egui_memory(&self) -> bool {
+        false
+    }
+
+    /// Works around an eframe 0.35 web bug: a frame run while the tab is
+    /// hidden (e.g. the page was opened in a background tab) throws away its
+    /// texture uploads, and the next visible frame panics on the missing font
+    /// texture. Never reporting the page as hidden keeps every upload. Fixed
+    /// in eframe 0.36, so this can go when egui is upgraded.
+    #[cfg(target_arch = "wasm32")]
+    fn raw_input_hook(&mut self, _ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        if let Some(viewport) = raw_input.viewports.get_mut(&egui::ViewportId::ROOT) {
+            viewport.minimized = Some(false);
+            viewport.occluded = Some(false);
+        }
     }
 }
 
@@ -1236,7 +1274,8 @@ fn render_group(
     ui.add_space(4.0);
 }
 
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
+#[cfg(not(target_arch = "wasm32"))]
+fn copy_to_clipboard(_ctx: &egui::Context, text: &str) -> Result<(), String> {
     let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
     clipboard.set_text(text.to_string()).map_err(|e| e.to_string())
 }
@@ -1244,11 +1283,80 @@ fn copy_to_clipboard(text: &str) -> Result<(), String> {
 /// Puts both `html` and `plain` on the clipboard in one go — a rich-text
 /// target (Word, Notes, Mail, ...) picks up the HTML and its bold/italic/
 /// underline; anything that only understands plain text falls back to `plain`.
-fn copy_rich_to_clipboard(html: &str, plain: &str) -> Result<(), String> {
+#[cfg(not(target_arch = "wasm32"))]
+fn copy_rich_to_clipboard(_ctx: &egui::Context, html: &str, plain: &str) -> Result<(), String> {
     let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
     clipboard
         .set_html(html, Some(plain))
         .map_err(|e| e.to_string())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn copy_to_clipboard(ctx: &egui::Context, text: &str) -> Result<(), String> {
+    web_clipboard::write(ctx, None, text)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn copy_rich_to_clipboard(ctx: &egui::Context, html: &str, plain: &str) -> Result<(), String> {
+    web_clipboard::write(ctx, Some(html.to_string()), plain)
+}
+
+/// The browser's async clipboard API. eframe runs the app's logic inside the
+/// click/keypress handler, which is what lets this write succeed (Safari
+/// refuses clipboard writes outside one). The write finishes after this
+/// returns, so a late failure (e.g. permission denied) is parked in `FAILURE`
+/// for the next frame to show instead of the optimistic "Copied!" -- so a
+/// failed copy is never mistaken for a good one. A rich write that fails is
+/// retried as plain text first.
+#[cfg(target_arch = "wasm32")]
+mod web_clipboard {
+    use std::cell::RefCell;
+
+    use wasm_bindgen::prelude::*;
+    use wasm_bindgen_futures::{js_sys, JsFuture};
+
+    thread_local! {
+        static FAILURE: RefCell<Option<String>> = const { RefCell::new(None) };
+    }
+
+    #[wasm_bindgen(inline_js = r#"
+export function write_clipboard(html, plain) {
+  if (!navigator.clipboard) throw new Error("the clipboard is only available over HTTPS");
+  const writePlain = () => navigator.clipboard.writeText(plain);
+  if (html == null || typeof ClipboardItem === "undefined") return writePlain();
+  return navigator.clipboard.write([new ClipboardItem({
+    "text/html": new Blob([html], { type: "text/html" }),
+    "text/plain": new Blob([plain], { type: "text/plain" }),
+  })]).catch(writePlain);
+}
+"#)]
+    extern "C" {
+        #[wasm_bindgen(catch)]
+        fn write_clipboard(html: Option<String>, plain: &str) -> Result<js_sys::Promise, JsValue>;
+    }
+
+    pub fn write(ctx: &egui::Context, html: Option<String>, plain: &str) -> Result<(), String> {
+        let promise = write_clipboard(html, plain).map_err(describe)?;
+        let ctx = ctx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            if let Err(e) = JsFuture::from(promise).await {
+                FAILURE.with(|f| *f.borrow_mut() = Some(describe(e)));
+                ctx.request_repaint();
+            }
+        });
+        Ok(())
+    }
+
+    /// The error from a copy that failed after `write` returned, if any.
+    pub fn take_failure() -> Option<String> {
+        FAILURE.with(|f| f.borrow_mut().take())
+    }
+
+    fn describe(e: JsValue) -> String {
+        e.dyn_ref::<js_sys::Error>()
+            .map(|e| String::from(e.message()))
+            .unwrap_or_else(|| format!("{e:?}"))
+    }
 }
 
 /// Builds the preview's rich-text layout from parsed formatting runs. Bold

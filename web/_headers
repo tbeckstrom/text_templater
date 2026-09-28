@@ -1,0 +1,10 @@
+# Response headers for Cloudflare Pages (copied into dist/ by Trunk).
+# connect-src 'self' means the page can't send anything to another host, even
+# by mistake. 'wasm-unsafe-eval' lets the browser compile the app's
+# WebAssembly; 'unsafe-inline' covers the loader script Trunk writes into
+# index.html.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

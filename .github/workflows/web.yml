@@ -1,0 +1,43 @@
+name: Web
+
+# Builds the browser version (templates from my_templates/ compiled in) on every
+# push and pull request, and deploys pushes to master to Cloudflare Pages.
+# Setup: "Running in a browser" in the README.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm32
+      - name: Install Trunk
+        run: >
+          curl -sSfL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz
+          | tar -xz -C ~/.cargo/bin
+      - run: trunk build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: text_templater-web
+          path: dist
+          if-no-files-found: error
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=note-templater --branch=master

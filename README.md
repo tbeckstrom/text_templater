@@ -21,6 +21,61 @@ cargo build --release --target x86_64-pc-windows-msvc  # Windows x64 (build on W
 
 CI (`.github/workflows/ci.yml`) tests and builds all three on every push to `master`.
 
+## Running in a browser
+
+The same app also builds to WebAssembly and runs entirely in the browser: a static site with no
+server behind it, so nothing typed into a note ever leaves the machine. To try it locally:
+
+```
+rustup target add wasm32-unknown-unknown   # once
+brew install trunk                         # once (or: cargo install --locked trunk)
+trunk serve --open                         # http://127.0.0.1:8080, rebuilds on save
+```
+
+`trunk build --release` writes the deployable site to `dist/`.
+
+How the browser version differs from the desktop app:
+
+* **Templates are compiled in.** The build embeds everything in `my_templates/` (not the
+  desktop data directory), so changing a template means commit, push, and let CI redeploy.
+  They're read-only in the browser, and **Reload Templates** just re-reads the built-in copy.
+* **History and drafts live in the browser's `localStorage`**, under keys starting
+  `note-templater/`, for that browser profile on that computer only. They persist until
+  cleared, like the desktop app's files. On a shared workstation, clear them with the browser's
+  "clear site data" for the app's address. localStorage holds about 5 MB, so a very long
+  history can fill it; once it's full, new history entries stop being saved.
+* **Copying needs HTTPS** (or `localhost`); browsers only expose the clipboard to secure pages.
+  If the browser refuses a copy, the status line says "Copy failed, nothing was copied" rather
+  than "Copied!", so a stale clipboard is never mistaken for the new note.
+* Drafts are also saved every 30 seconds and when the tab closes (the browser has no "app
+  exit"), in addition to when you switch templates.
+
+### Hosting on Cloudflare Pages
+
+`.github/workflows/web.yml` builds the site on every push and pull request, and deploys each push
+to `master` to a Cloudflare Pages project named `note-templater`. One-time setup:
+
+1. In the Cloudflare dashboard, go to **Workers & Pages > Create > Pages > Direct Upload** and
+   create a project named `note-templater`, with production branch `master` (upload any
+   placeholder folder; CI replaces it). Or: `npx wrangler pages project create note-templater
+   --production-branch=master`.
+2. Create an API token (**My Profile > API Tokens > Create Token > Custom token**) with the
+   permission **Account > Cloudflare Pages > Edit**.
+3. In the GitHub repo, go to **Settings > Secrets and variables > Actions** and add
+   `CLOUDFLARE_API_TOKEN` (the token) and `CLOUDFLARE_ACCOUNT_ID` (shown on the dashboard's
+   Workers & Pages overview).
+4. Push to `master`. The app is then live at `https://note-templater.pages.dev`.
+5. Recommended: put a login in front of it. In **Zero Trust > Access > Applications > Add an
+   application > Self-hosted**, add `note-templater.pages.dev` (and `*.note-templater.pages.dev`
+   for preview deployments), with a policy that allows only your email address. Cloudflare
+   then asks for a one-time emailed code before the page loads (free for up to 50 users).
+
+`web/_headers` sets the response headers Cloudflare serves, including a Content-Security-Policy
+whose `connect-src 'self'` stops the page from sending data to any other host.
+
+The site is plain static files, so `dist/` also works on any other static host (Netlify, S3,
+GitHub Pages, ...). Those hosts ignore `_headers`, so set the same headers in their own config.
+
 On first launch the app creates its data directory (on macOS:
 `~/Library/Application Support/note-templater/`; on Windows:
 `%APPDATA%\note-templater\data\`) and seeds it with three example templates

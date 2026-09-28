@@ -18,7 +18,7 @@ pub struct DraftEntry {
 }
 
 pub fn load_drafts(path: &Path) -> Vec<DraftEntry> {
-    let Ok(text) = std::fs::read_to_string(path) else {
+    let Ok(text) = crate::storage::read_to_string(path) else {
         return Vec::new();
     };
     serde_json::from_str(&text).unwrap_or_default()
@@ -26,7 +26,7 @@ pub fn load_drafts(path: &Path) -> Vec<DraftEntry> {
 
 pub fn save_drafts(path: &Path, drafts: &[DraftEntry]) -> std::io::Result<()> {
     let json = serde_json::to_string(drafts).expect("Vec<DraftEntry> always serializes");
-    std::fs::write(path, json)
+    crate::storage::write(path, &json)
 }
 
 /// Replaces any existing draft for `template_id` with `field_values`, moving it

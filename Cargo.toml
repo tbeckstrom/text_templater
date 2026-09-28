@@ -5,8 +5,6 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
-arboard = "3.6.1"
-directories = "6.0.0"
 eframe = "0.35.0"
 egui = "0.35.0"
 egui_extras = { version = "0.35.0", features = ["datepicker"] }
@@ -16,3 +14,18 @@ serde_json = "1.0.151"
 tera = { version = "2.1.1", features = ["preserve_order"] }
 toml = "1.1.4"
 toml_edit = "0.25.15"
+
+# The desktop build keeps its data in files and uses the OS clipboard.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+arboard = "3.6.1"
+directories = "6.0.0"
+
+# The browser build (see "Running in a browser" in the README): localStorage
+# instead of files, the browser clipboard, and the browser's clock/time zone.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+eframe = { version = "0.35.0", features = ["persistence"] }
+egui_extras = { version = "0.35.0", features = ["serde"] }
+jiff = { version = "0.2.35", features = ["js"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Document", "Element", "HtmlCanvasElement", "Node", "Storage", "Window"] }
