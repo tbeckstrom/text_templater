@@ -212,6 +212,7 @@ key = "findings"
 label = "Tooth findings"
 type = "multiselect"
 options = [
+  { label = "Previous RCT", text = "previous root canal treatment" },
   { label = "Periapical radiolucency", text = "periapical radiolucency" },
   { label = "Root fracture", text = "root fracture" },
   { label = "Buccal plate dehiscence", text = "buccal plate dehiscence" },

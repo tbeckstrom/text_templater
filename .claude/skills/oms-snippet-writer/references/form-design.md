@@ -27,8 +27,7 @@ When in doubt, match it.
 - **Preselect the normal or common finding.** Examples: oral hygiene good, occlusion stable,
   opposing restored natural dentition, face symmetric, opening adequate, a charted tooth
   nonrestorable, CBCT sinuses clear, every risk factor "no", healing and integration times 4-6
-  months, decision "considering", and the usual plan choices (local anesthesia, fabricate surgical
-  guide).
+  months, decision "considering", and local anesthesia for the next visit.
 - **Leave a finding unpicked when it needs an active look**, so choosing it is a deliberate act.
   Examples: periodontal status, adjacent teeth, parafunction, lymph nodes, TMJ, deviation,
   muscles, tissue phenotype, current prosthesis, bone adequacy on CBCT, and allergies (give them an
@@ -112,9 +111,20 @@ When in doubt, match it.
     charted sites, and of the patient's risk factors, separated by semicolons.
 
   Close with the understanding and questions-answered sentence.
-- **Plan.** Summarized bullets, each dropping out until picked. "Next visit" chips (extraction,
-  socket preservation, implant placement, GBR, sinus lift, and so on) write the procedure bullet
-  with its sites, and drive the specific risks. The overall sequence is one short line.
+- **Plan.** Summarized bullets, each dropping out until picked, in this order:
+  - **Next visit.** Chips (extraction, socket preservation, implant placement, GBR, sinus lift, and
+    so on) write the procedure with its sites, followed by the anesthesia ("under local
+    anesthesia"). They drive the specific risks.
+  - **To do prior to next visit.** An indented sub-list of information to gather and prep:
+    pickable items (medical records, medical consult, labs, and so on) plus automatic ones
+    (surgical guide when the next visit places an implant, A1c for diabetes, anticoagulation,
+    sedation prep).
+  - **Overall sequence.** A numbered sub-list, one step per line, with each healing period on its
+    own line. A staged pathway adds a re-evaluation step before implant placement (repeat CBCT
+    and intraoral scan; fabricate the guide if the site is appropriate). The last step names the
+    restoring dentist.
+  - Then optional lines such as possible soft tissue grafting, antibiotics, interim prosthesis
+    and consent.
 
 ## Text
 
