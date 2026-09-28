@@ -1,0 +1,103 @@
+# SNIPPET: clinic_imaging_extraction   PREFIX: ext_img
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# One box per tooth to extract. Periapical status and bone level preselect
+# the normal finding; a vital structure is only mentioned once picked.
+name = "Snippet: Imaging - extraction consult"
+use_partials = ["common_extraction_case"]
+
+body = """
+{%- if ext_img_imaging_modality %}- Images reviewed: {% for v in ext_img_imaging_modality %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}
+{% endif %}
+{%- for b in ext_img_teeth %}
+{%- set parts = [
+  b.periapical_status_text | replace(from="[[lesion_size_mm]]", to=b.lesion_size_mm) if b.periapical_status else "",
+  b.bone_level_text if b.bone_level else "",
+  ((b.root_features[:-1] | join(sep=", ")) ~ " and " ~ b.root_features[-1] if b.root_features | length > 1 else b.root_features | first) if b.root_features else "",
+  ("roots " ~ b.proximity ~ " the " ~ b.vital_structure) if b.proximity and b.vital_structure else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- if ext_img_no_other_pathology %}- No other osseous pathology noted.
+{% endif %}"""
+
+[[fields]]
+key = "ext_img_imaging_modality"
+label = "Images reviewed"
+section = "Imaging - extraction consult"
+type = "multiselect"
+options = ["panoramic radiograph", "periapical radiographs", "CBCT", "***"]
+default = ["panoramic radiograph"]
+
+[[fields]]
+key = "ext_img_no_other_pathology"
+label = "No other pathology"
+section = "Imaging - extraction consult"
+type = "checkbox"
+default = true
+
+# ------------------------------------------------ one box per tooth ---
+
+[[groups]]
+key = "ext_img_teeth"
+label = "Tooth"
+source = "ext_extract_teeth"
+source_as = "tooth"
+section = "Imaging - extraction consult"
+
+[[groups.fields]]
+key = "periapical_status"
+label = "Periapical"
+type = "dropdown"
+default = "No PA pathology"
+options = [
+  { label = "No PA pathology", text = "no periapical pathology" },
+  { label = "PA radiolucency", text = "periapical radiolucency" },
+  { label = "Large PA lesion", text = "periapical radiolucency approximately [[lesion_size_mm]] mm" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "lesion_size_mm"
+label = "Lesion size mm"
+type = "text"
+default = "***"
+visible_if = "periapical_status == 'Large PA lesion'"
+
+[[groups.fields]]
+key = "bone_level"
+label = "Bone level"
+type = "dropdown"
+default = "Normal"
+options = [
+  { label = "Normal", text = "bone levels within normal limits" },
+  { label = "Moderate loss", text = "moderate alveolar bone loss" },
+  { label = "Severe loss", text = "severe alveolar bone loss" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "root_features"
+label = "Root features"
+type = "multiselect"
+options = [
+  "prior endodontic therapy",
+  "root fracture",
+  "dilacerated roots",
+  "divergent roots",
+  "hypercementosis",
+  "suspected ankylosis",
+  "***",
+]
+
+[[groups.fields]]
+key = "proximity"
+label = "Proximity"
+type = "dropdown"
+options = ["in close proximity to", "not in close proximity to", "***"]
+
+[[groups.fields]]
+key = "vital_structure"
+label = "Vital structure"
+type = "dropdown"
+options = ["maxillary sinus", "inferior alveolar canal", "mental foramen", "***"]
