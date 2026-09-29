@@ -48,40 +48,67 @@ impl ExprEvaluator {
             .unwrap_or(true)
     }
 
-    /// The value `expr` produces for `ctx`, as text. `None` if the expression
-    /// won't compile or errors — the caller shows that as an empty value
-    /// rather than failing the whole form.
-    pub fn value(&mut self, expr: &str, ctx: &Context) -> Option<String> {
+    /// The value `expr` produces for `ctx`: a list when it evaluates to an
+    /// array, otherwise its text. `None` if the expression won't compile or
+    /// errors — the caller shows that as an empty value rather than failing
+    /// the whole form.
+    pub fn value(&mut self, expr: &str, ctx: &Context) -> Option<FieldValue> {
         let name = format!("val:{expr}");
-        let source = format!("{{{{ {expr} }}}}");
+        // A plain value comes out behind SCALAR; each list item ends in ITEM.
+        let source = format!(
+            "{{% set v = {expr} %}}{{% if v is array %}}{{% for x in v %}}{{{{ x }}}}{ITEM}{{% endfor %}}\
+             {{% else %}}{SCALAR}{{{{ v }}}}{{% endif %}}"
+        );
         if !self.ensure(&name, &source) {
             return None;
         }
-        self.tera.render(&name, ctx).ok()
+        let out = self.tera.render(&name, ctx).ok()?;
+        Some(match out.strip_prefix(SCALAR) {
+            Some(text) => FieldValue::Text(text.to_string()),
+            None => FieldValue::MultiSelect(out.split_terminator(ITEM).map(str::to_owned).collect()),
+        })
     }
 }
 
+/// Markers [`ExprEvaluator::value`] frames its output with: control
+/// characters, so no value can contain them.
+const SCALAR: char = '\u{1e}';
+const ITEM: char = '\u{1f}';
+
 /// Recomputes every `computed` field in `fields`, writing each result into
-/// `state` and into `ctx` — so a later computed field, a `visible_if`, and the
-/// note body all see the fresh value. Evaluated in declared order, which is
-/// what lets one computed field build on an earlier one.
+/// `state` and into `ctx` — so another computed field, a `visible_if`, and the
+/// note body all see the fresh value. Fields are evaluated in declared order,
+/// and again while anything changed, so one can build on another declared
+/// before or after it (a partial used on its own lists its fields before
+/// those of the partials it pulls in).
 pub fn recompute_fields(
     fields: &[FieldDef],
     state: &mut FormState,
     ctx: &mut Context,
     evaluator: &mut ExprEvaluator,
 ) {
-    for field in fields {
-        if field.field_type != FieldType::Computed {
-            continue;
+    let computed: Vec<&FieldDef> = fields
+        .iter()
+        .filter(|f| f.field_type == FieldType::Computed)
+        .collect();
+    // A chain of n fields settles within n passes; the cap stops two fields
+    // that feed each other from looping forever.
+    for _ in 0..=computed.len() {
+        let mut changed = false;
+        for field in &computed {
+            let value = field
+                .compute
+                .as_deref()
+                .and_then(|expr| evaluator.value(expr, ctx))
+                .unwrap_or_else(|| FieldValue::Text(String::new()));
+            let json = value.to_json();
+            changed |= state.get(&field.key).map(FieldValue::to_json).as_ref() != Some(&json);
+            ctx.insert(field.key.clone(), &json);
+            state.insert(field.key.clone(), value);
         }
-        let value = field
-            .compute
-            .as_deref()
-            .and_then(|expr| evaluator.value(expr, ctx))
-            .unwrap_or_default();
-        ctx.insert(field.key.clone(), &value);
-        state.insert(field.key.clone(), FieldValue::Text(value));
+        if !changed {
+            break;
+        }
     }
 }
 
@@ -241,6 +268,37 @@ mod tests {
     }
 
     #[test]
+    fn a_computed_field_can_build_on_a_later_one() {
+        let fields = vec![computed("quadrupled", "doubled | int * 2"), computed("doubled", "n * 2")];
+        let mut state = FormState::new();
+        let mut ctx = ctx_with(&[("n", serde_json::json!(3))]);
+        let mut ev = ExprEvaluator::default();
+
+        recompute_fields(&fields, &mut state, &mut ctx, &mut ev);
+
+        match state.get("quadrupled").unwrap() {
+            FieldValue::Text(s) => assert_eq!(s, "12"),
+            other => panic!("expected Text, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_computed_list_stays_a_list() {
+        let fields = vec![computed("risks", r#"[r for r in ["nerve" if lower else "", "sinus"] if r]"#)];
+        let mut state = FormState::new();
+        let mut ctx = ctx_with(&[("lower", serde_json::json!(true))]);
+        let mut ev = ExprEvaluator::default();
+
+        recompute_fields(&fields, &mut state, &mut ctx, &mut ev);
+
+        match state.get("risks").unwrap() {
+            FieldValue::MultiSelect(v) => assert_eq!(v, &["nerve", "sinus"]),
+            other => panic!("expected a list, got {other:?}"),
+        }
+        assert!(ev.truthy(r#""nerve" in risks and risks | length == 2"#, &ctx));
+    }
+
+    #[test]
     fn a_computed_value_is_visible_to_later_conditions() {
         let fields = vec![computed("total", "a + b")];
         let mut state = FormState::new();
@@ -276,7 +334,7 @@ mod tests {
         let mut ev = ExprEvaluator::default();
         let ctx = ctx_with(&[("n", serde_json::json!(5))]);
         assert!(ev.truthy("n", &ctx));
-        assert_eq!(ev.value("n", &ctx).as_deref(), Some("5"));
+        assert!(matches!(ev.value("n", &ctx), Some(FieldValue::Text(s)) if s == "5"));
     }
 
     #[test]

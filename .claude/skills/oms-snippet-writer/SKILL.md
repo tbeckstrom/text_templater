@@ -54,6 +54,8 @@ syntactically exact.
    - each MULTILIST's and PARTS's join word matches how its items read in the sentence;
    - PRESET values name real options of the lists they set; pathway presets clear what they don't
      use (`= none`);
+   - a list covered out loud (the risks) is a `checklist` PARTS, and a NOTE whose sections are
+     read at the desk (imaging) names them on a PRINT SKIP line;
    - tooth numbers are FDI without "#", and the text uses plain keyboard characters.
 
    Fix anything that fails, then re-check.

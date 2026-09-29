@@ -4,34 +4,63 @@
 # those of each component picked under "Next procedure" in the plan, of the
 # charted teeth (sinus, nerves), of the history risk factors, and of sedation.
 # Anything missing can be added by checkbox.
+# The risk list is built once, in the hidden computed fields below, so the
+# note and the printed sheet read the same list.
 name = "Snippet: Risks - extraction"
 use_partials = ["common_extraction_case"]
 
 body = """
-{%- set np = ext_ap_next_procedure if ext_ap_next_procedure is defined else [] -%}
-{%- set added = ext_risk_added_risks -%}
-{%- set specific = [
-  "dry socket, damage to adjacent teeth or restorations, and root fracture with possible retained root fragments" if "simple extraction" in np or "surgical extraction" in np else "",
-  "oroantral communication that may require additional repair" if (np and ext_max_posterior) or "Sinus communication" in added else "",
-  "temporary or permanent altered sensation of the lip, chin, tongue, or gingiva from inferior alveolar, mental, or lingual nerve injury" if (np and ext_mand_posterior) or "Nerve injury" in added else "",
-  "jaw fracture" if "Jaw fracture" in added else "",
-  "irregular ridge contours that may require further recontouring" if "alveoloplasty" in np else "",
-  "partial graft loss that may require regrafting" if "socket preservation" in np else "",
-  "persistent or spreading infection that may require further drainage or hospitalization" if "incision and drainage" in np else "",
-  "further treatment depending on the histopathologic diagnosis" if "periapical biopsy" in np else "",
-  "medication-related osteonecrosis of the jaw" if (ext_hx_antiresorptive is defined and ext_hx_antiresorptive in ["Oral bisphosphonate", "IV BP / denosumab"]) or "MRONJ" in added else "",
-  "osteoradionecrosis" if ext_hx_hn_radiation is defined and ext_hx_hn_radiation == "Yes" else "",
-  "prolonged bleeding requiring additional hemostatic measures" if (ext_hx_anticoag_use is defined and ext_hx_anticoag_use == "Yes") or (ext_hx_bleeding_disorder is defined and ext_hx_bleeding_disorder == "Yes") else "",
-  "delayed healing and a higher risk of infection" if (ext_hx_diabetes_status is defined and ext_hx_diabetes_status == "Yes") or (ext_hx_other_risk_factors is defined and ext_hx_other_risk_factors and ("Immunosuppression" in ext_hx_other_risks or "Chemotherapy" in ext_hx_other_risks)) else "",
-  "a higher risk of dry socket with tobacco use" if ext_hx_tobacco_use is defined and ext_hx_tobacco_use in ["current", "vaping"] else "",
-  "a higher risk of dry socket with oral contraceptive use" if ext_hx_other_risk_factors is defined and ext_hx_other_risk_factors and "Oral contraceptives" in ext_hx_other_risks else "",
-  "risks of sedation or general anesthesia, including airway compromise, aspiration, and nausea" if ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] else "",
-] -%}
-{%- set specific = [p for p in specific if p] | unique -%}
+{%- set specific = ext_risk_specific -%}
 Risks, benefits, and alternatives were discussed with {{ ext_dm_phrase }}. Risks reviewed:
-- General surgical: bleeding, infection, pain, swelling, bruising, delayed healing, and the possible need for additional procedures.{% if specific %}
+- General surgical: {{ ext_risk_general }}.{% if specific %}
 - Specific to the planned procedure: {% if specific | length > 1 %}{{ specific[:-1] | join(sep="; ") }}; and {{ specific[-1] }}{% else %}{{ specific | first }}{% endif %}.{% endif %}
 It was explained that outcomes cannot be guaranteed. All questions were answered, and {{ ext_dm_phrase }} verbalized understanding.{% if ext_decision_maker in ["Parent", "Legal guardian", "Healthcare POA"] %} The patient participated in the discussion to the extent of their ability.{% endif %}"""
+
+# ------------------------------------------------------------ risk list ---
+# Built once here for both the note and the printed sheet (where each risk
+# is a tick-box). Hidden in the form (visible_if = "false").
+
+[[fields]]
+key = "ext_risk_next"
+label = "Next procedure components"
+section = "Risks - extraction"
+type = "computed"
+visible_if = "false"
+compute = 'ext_ap_next_procedure if ext_ap_next_procedure is defined else []'
+
+[[fields]]
+key = "ext_risk_general"
+label = "General surgical"
+section = "Risks - extraction"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '"bleeding, infection, pain, swelling, bruising, delayed healing, and the possible need for additional procedures"'
+
+[[fields]]
+key = "ext_risk_specific"
+label = "Specific to the planned procedure"
+section = "Risks - extraction"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '''[r for r in [
+  "dry socket, damage to adjacent teeth or restorations, and root fracture with possible retained root fragments" if "simple extraction" in ext_risk_next or "surgical extraction" in ext_risk_next else "",
+  "oroantral communication that may require additional repair" if (ext_risk_next and ext_max_posterior) or "Sinus communication" in ext_risk_added_risks else "",
+  "temporary or permanent altered sensation of the lip, chin, tongue, or gingiva from inferior alveolar, mental, or lingual nerve injury" if (ext_risk_next and ext_mand_posterior) or "Nerve injury" in ext_risk_added_risks else "",
+  "jaw fracture" if "Jaw fracture" in ext_risk_added_risks else "",
+  "irregular ridge contours that may require further recontouring" if "alveoloplasty" in ext_risk_next else "",
+  "partial graft loss that may require regrafting" if "socket preservation" in ext_risk_next else "",
+  "persistent or spreading infection that may require further drainage or hospitalization" if "incision and drainage" in ext_risk_next else "",
+  "further treatment depending on the histopathologic diagnosis" if "periapical biopsy" in ext_risk_next else "",
+  "medication-related osteonecrosis of the jaw" if (ext_hx_antiresorptive is defined and ext_hx_antiresorptive in ["Oral bisphosphonate", "IV BP / denosumab"]) or "MRONJ" in ext_risk_added_risks else "",
+  "osteoradionecrosis" if ext_hx_hn_radiation is defined and ext_hx_hn_radiation == "Yes" else "",
+  "prolonged bleeding requiring additional hemostatic measures" if (ext_hx_anticoag_use is defined and ext_hx_anticoag_use == "Yes") or (ext_hx_bleeding_disorder is defined and ext_hx_bleeding_disorder == "Yes") else "",
+  "delayed healing and a higher risk of infection" if (ext_hx_diabetes_status is defined and ext_hx_diabetes_status == "Yes") or (ext_hx_other_risk_factors is defined and ext_hx_other_risks is defined and ext_hx_other_risk_factors and ("Immunosuppression" in ext_hx_other_risks or "Chemotherapy" in ext_hx_other_risks)) else "",
+  "a higher risk of dry socket with tobacco use" if ext_hx_tobacco_use is defined and ext_hx_tobacco_use in ["current", "vaping"] else "",
+  "a higher risk of dry socket with oral contraceptive use" if ext_hx_other_risk_factors is defined and ext_hx_other_risks is defined and ext_hx_other_risk_factors and "Oral contraceptives" in ext_hx_other_risks else "",
+  "risks of sedation or general anesthesia, including airway compromise, aspiration, and nausea" if ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] else "",
+] if r] | unique'''
 
 [[fields]]
 key = "ext_risk_added_risks"

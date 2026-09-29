@@ -187,6 +187,7 @@ fn partial_as_template(partial: &PartialDef, partials: &[PartialDef]) -> Result<
         fields,
         groups,
         speed_buttons,
+        print_skip: Vec::new(),
         body: format!("{{% include \"{}\" %}}", partial.name),
     })
 }
@@ -339,6 +340,7 @@ fn load_one(
         fields,
         groups,
         speed_buttons,
+        print_skip: raw.print_skip,
         body: raw.body,
     })
 }
@@ -1266,5 +1268,48 @@ mod tests {
             runs.iter().any(|r| r.bold && r.text.contains("Patient:")),
             "expected the included header partial's \"Patient:\" label to render bold"
         );
+    }
+
+    #[test]
+    fn print_hints_load_on_fields_groups_and_the_note() {
+        let dir = scratch_dir("print_hints");
+        write(
+            &dir,
+            "note.toml",
+            r#"
+            name = "Note"
+            print_skip = ["CBCT"]
+            body = "{{ notes }}{% for s in sites %}{{ s.x }}{% endfor %}"
+
+            [[fields]]
+            key = "notes"
+            label = "Additional notes"
+            type = "textarea"
+            print_label = "Notes"
+            print_lines = 2
+
+            [[groups]]
+            key = "sites"
+            label = "Site"
+            print = false
+
+            [[groups.fields]]
+            key = "x"
+            label = "X"
+            type = "text"
+            print = false
+            "#,
+        );
+        let result = load_templates(&dir);
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
+        let t = &result.templates[0];
+        assert_eq!(t.print_skip, vec!["CBCT"]);
+        assert_eq!(t.fields[0].sheet_label(), "Notes");
+        assert_eq!(t.fields[0].print_lines, Some(2));
+        assert!(t.fields[0].prints());
+        assert!(!t.groups[0].prints());
+        assert!(!t.groups[0].fields[0].prints());
+        assert_eq!(t.groups[0].sheet_label(), "Site");
     }
 }

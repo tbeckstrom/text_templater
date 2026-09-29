@@ -186,10 +186,23 @@ compute = "(lidocaine_carpules + bupivacaine_carpules) * 1.7"
 ```
 
 It's recalculated whenever the form changes, and the result is available to the body, to
-`visible_if` conditions, and to later computed fields (they're evaluated in declared order, so one
-can build on another). A computed field never blocks the Copy button, and isn't stored in
+`visible_if` conditions, and to other computed fields (one can build on another, whichever is
+declared first). A computed field never blocks the Copy button, and isn't stored in
 history/drafts — it's derived again from the saved inputs. An expression that won't compile shows
 as blank rather than breaking the form.
+
+An expression that produces a list gives a list, so the body can loop over it. That's how one list
+serves both the note and the printed sheet (see [Printed sheet](#printed-sheet)):
+
+```toml
+[[fields]]
+key = "risk_list"
+label = "Specific to the planned procedure"
+type = "computed"
+visible_if = "false"   # only the note and the sheet need it
+print = true           # tick-boxes on the printed sheet
+compute = '[r for r in ["nerve injury" if lower_molar else "", "sinus perforation" if upper_molar else ""] if r]'
+```
 
 #### Grouping fields into collapsible sections
 
@@ -466,6 +479,39 @@ survive a draft/history round-trip. Source-driven groups have no Add/Remove butt
 
 See `my_templates/oms_procedure_note.toml` for a large template using all of this together.
 
+### Printed sheet
+
+In the browser version, **Print sheet** prints the current template as a paper form: fill it in
+by hand in the room, then enter it afterwards by reading down the sheet while clicking down the
+form. It opens the browser's print dialog, where "Save as PDF" also works. The sheet stays on the
+page, so nothing leaves the machine.
+
+The sheet mirrors the form, with the same sections, labels and order, pre-filled from what's
+entered so far:
+
+* A default choice prints **bold and underlined** but unmarked, meaning "assumed unless marked".
+  A choice already made that differs from the default prints filled (● ■ ☑). A checkbox prints as
+  it stands.
+* Fields with a `visible_if` always print, indented under the field before them, since the answer
+  they depend on can change in the room.
+* A group driven by a `teeth` field prints one box per charted tooth or span. With nothing charted
+  yet, it prints blank boxes to write the site in: two for `spans = true`, one otherwise.
+* Speed buttons print as tick-boxes, the top-row ones in a row above the form.
+* Computed fields don't print, unless marked `print = true` (below).
+* The sheet ends with lines for notes and the patient's questions.
+
+These keys trim or adjust the sheet without changing the form:
+
+| Key | On | Effect |
+|---|---|---|
+| `print_skip = ["CBCT"]` | the template | leaves those form sections off the sheet (e.g. imaging read at the desk) |
+| `print = false` | a field or group | leaves it off the sheet |
+| `print = true` | a computed field | prints its value as tick-boxes, one per item of a list |
+| `print_label = "..."` | a field or group | a shorter label for the sheet |
+| `print_lines = 3` | a text/textarea field | write-in lines on the sheet (default 1 for text, 3 for textarea) |
+
+`print_skip` goes with the template's other top-level keys, before any `[[fields]]`.
+
 ## Keyboard shortcuts
 
 | Key | Action |
@@ -490,9 +536,11 @@ you intended:
 
 * a field nothing reads (counting `<key>_text` expansions and `source`-driven groups as reads)
 * a `visible_if` or `compute` naming a field that doesn't exist — usually a rename left behind
+  (a name tested with `is defined` is expected to be missing from some notes, so it's skipped)
 * a speed button setting a key no field has, so the button silently does nothing
 * a group driven by a `source` that isn't a multiselect/dropdown
 * a `computed` field with no `compute` expression
+* a `print_skip` naming a section no field uses, or `print_lines` on a field that isn't text
 * a partial no template includes
 
 Lints are warnings — they don't fail the run.

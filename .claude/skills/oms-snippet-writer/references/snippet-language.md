@@ -173,7 +173,11 @@ A phrase prints only when every control in it has a value. The picked phrases ar
 
 ?- THIS_SITE.Site THIS_SITE: SPAN_CBCT
 
-A phrase may instead carry a condition, printed when the condition holds: `- injury to adjacent teeth (when NEXT_PROCEDURE is set)`. This is how risk lists are built. PARTS is not a control, so the controls inside it don't count toward the one-level nesting limit; a PARTS inside an OPTIONAL add is fine.
+A phrase may instead carry a condition, printed when the condition holds: `- injury to adjacent teeth (when NEXT_PROCEDURE is set)`. This is how risk lists are built. A list the surgeon covers out loud is marked checklist, with a label, so the printed sheet shows each phrase as its own tick-box (outside a REPEAT only):
+
+PARTS(semicolon): SPECIFIC_RISKS (checklist; label: Specific to the planned procedure)
+
+PARTS is not a control, so the controls inside it don't count toward the one-level nesting limit; a PARTS inside an OPTIONAL add is fine.
 
 ------------------------------------------------
 
@@ -234,10 +238,24 @@ SECTION: starts a new form heading for the definitions after it (e.g. separate "
 
 ------------------------------------------------
 
+PRINTED SHEET
+
+The app prints a note as a paper form that mirrors its form, so most snippets need nothing extra. These modifiers go in a definition's parentheses, after any others:
+- print: no - leaves the control (or a whole REPEAT) off the sheet: LIST: SMILE_LINE (print: no)
+- print label: X - a shorter label for the sheet
+- print lines: N - write-in lines for a blank on the sheet (default 1, or 3 for a paragraph): ***(Past medical history; paragraph, optional, print lines: 2)
+
+A NOTE leaves whole sections off with a PRINT SKIP line after NAME, naming section titles (TITLE or SECTION names):
+
+PRINT SKIP: CBCT
+
+------------------------------------------------
+
 NOTE: a full note assembled from snippets
 
 NOTE: op_note_mandible_orif
 NAME: Op Note - Mandible ORIF
+PRINT SKIP: ...            (optional line; see PRINTED SHEET)
 TEXT:
 **INDICATIONS:**
 @op_indications_mandible_fracture@

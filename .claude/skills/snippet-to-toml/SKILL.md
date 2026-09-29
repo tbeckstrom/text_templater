@@ -71,6 +71,16 @@ Defaults: `(default)` on a LIST option → `default = "<option label>"`; on MULT
 pick. Every other unpicked control is valid and prints nothing: its `?` line or PARTS phrase drops
 out.
 
+Printed-sheet modifiers (see "Printed sheet" in the README):
+
+| Language | TOML |
+|---|---|
+| `print: no` | `print = false` on the field, or on the `[[groups]]` for a REPEAT |
+| `print label: X` | `print_label = "X"` |
+| `print lines: N` | `print_lines = N` (blanks only) |
+| `PRINT SKIP: A, B` in a NOTE | `print_skip = ["A", "B"]` among the note's top-level keys, before `body` |
+| `PARTS(...): NAME (checklist; label: X)` | hidden computed list with `print = true`, see `references/tera-patterns.md` |
+
 ## Body
 
 Placeholder → Tera, in place:

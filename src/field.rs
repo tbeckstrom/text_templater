@@ -121,7 +121,7 @@ impl FieldValue {
         }
     }
 
-    fn to_json(&self) -> Value {
+    pub(crate) fn to_json(&self) -> Value {
         match self {
             FieldValue::Text(s) => Value::String(s.clone()),
             FieldValue::Number(n) => Value::from(*n),

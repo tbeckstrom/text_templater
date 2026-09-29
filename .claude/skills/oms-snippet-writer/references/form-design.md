@@ -126,6 +126,26 @@ When in doubt, match it.
   - Then optional lines such as possible soft tissue grafting, antibiotics, interim prosthesis
     and consent.
 
+## Printed sheet
+
+The web app prints any note as a paper form the surgeon fills in by hand in the room and enters
+afterwards. The sheet mirrors the form (same sections, labels and order), so every form rule above
+is also a sheet rule. On top of them:
+
+- **Defaults do the work on paper too.** A preselected normal finding prints bold and unmarked,
+  "assumed unless marked", so the surgeon inks only the exceptions. Good defaults mean less ink.
+- **Leave desk-only sections off.** Imaging read from the CBCT at the desk goes in the NOTE's
+  PRINT SKIP, so the sheet holds what happens in the room: history, exam and the discussion.
+- **Build talking points once, as a checklist.** A list the surgeon covers out loud, such as the
+  risks, is a PARTS marked `checklist`. The note joins it into its sentence, and the sheet prints
+  each item as its own tick-box, so both read the same list. The risks snippet has two: the
+  general line and the specific risks.
+- **Fit one sheet, front and back.** Give a long form label a short `print label` rather than
+  shortening the form. Trim a paragraph blank with `print lines` when it rarely needs three lines,
+  and use `print: no` for anything never filled in by hand.
+
+The implant consult is the reference: it prints on one sheet with the CBCT skipped.
+
 ## Text
 
 - **FDI notation:** "tooth 36", "site 46", "sites 35-37". No "#".

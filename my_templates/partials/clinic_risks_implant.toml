@@ -3,43 +3,84 @@
 # procedure: those of each component picked under "Next visit" in the
 # plan, of the charted sites (nerve, sinus, esthetic zone), and of the risk
 # factors in the history. Anything missing can be added by checkbox.
+# The risk list is built once, in the hidden computed fields below, so the
+# note and the printed sheet (where each risk is a tick-box) read the same list.
 name = "Snippet: Risks - dental implants"
 use_partials = ["common_implant_case"]
 
 body = """
-{%- set np = imp_ap_next_procedure if imp_ap_next_procedure is defined else [] -%}
-{%- set extraction = "Extraction" in np or "Immediate implant" in np -%}
-{%- set implant = "Implant placement" in np or "Immediate implant" in np or "Crestal sinus lift" in np -%}
-{%- set sinus_lift = "Crestal sinus lift" in np or "Lateral sinus lift" in np -%}
-{%- set surgery = extraction or implant or sinus_lift or "GBR" in np or "Socket preservation" in np -%}
-{%- set manual = imp_risk_manual -%}
-{%- set specific = [
-  "fracture of the alveolar bone or retained root fragments" if extraction else "",
-  "partial graft resorption or loss requiring regrafting" if "Socket preservation" in np else "",
-  "failure of osseointegration requiring implant removal and replacement" if implant else "",
-  "inadequate primary stability requiring grafting and delayed placement" if "Immediate implant" in np else "",
-  "soft tissue recession" if "Immediate implant" in np and not imp_esthetic and "Esthetic zone" not in manual else "",
-  "provisional loosening or fracture and implant failure from premature loading" if "Immediate provisional" in np else "",
-  "membrane exposure, wound dehiscence, or incomplete regeneration" if "GBR" in np else "",
-  "sinus membrane perforation and postoperative sinusitis" if sinus_lift else "",
-  "graft infection and oroantral communication" if "Lateral sinus lift" in np else "",
-  "injury to adjacent teeth" if surgery else "",
-  "temporary or permanent altered sensation of the lip, chin, tongue, or gingiva from inferior alveolar, mental, or lingual nerve injury" if (imp_mand_posterior and surgery) or "IAN / lingual nerve" in manual else "",
-  "sinus perforation or oroantral communication" if (imp_max_posterior and surgery and not sinus_lift) or "Maxillary sinus" in manual else "",
-  "soft tissue recession and esthetic compromise" if (imp_esthetic and surgery) or "Esthetic zone" in manual else "",
-  "sedation-related respiratory depression and airway compromise" if (imp_ap_anesthesia_plan is defined and imp_ap_anesthesia_plan == "IV sedation") or "IV sedation" in manual else "",
-  "higher failure and complication rates with tobacco use" if (imp_hx_tobacco_use is defined and imp_hx_tobacco_use in ["Current", "Vaping"]) or "Tobacco" in manual else "",
-  "higher infection and failure rates with suboptimal glycemic control" if (imp_hx_diabetes_status is defined and imp_hx_diabetes_status == "Yes") or "Diabetes" in manual else "",
-  "medication-related osteonecrosis of the jaw" if (imp_hx_antiresorptive_history is defined and imp_hx_antiresorptive_history not in ["No", ""]) or "Antiresorptive / MRONJ" in manual else "",
-  "osteoradionecrosis" if (imp_hx_head_neck_radiation is defined and imp_hx_head_neck_radiation == "Yes") or "Head & neck radiation" in manual else "",
-  "implant overload from parafunction" if (imp_hx_bruxism_history is defined and imp_hx_bruxism_history == "Reports") or (imp_exam_parafunction_signs is defined and imp_exam_parafunction_signs == "Present") or "Bruxism" in manual else "",
-  "***" if "***" in manual else "",
-] -%}
-{%- set specific = [p for p in specific if p] | unique -%}
+{%- set specific = imp_risk_specific -%}
 Risks, benefits, and alternatives were discussed. Risks reviewed:
-- General surgical: bleeding, infection, pain, swelling, bruising, delayed healing, and the possible need for additional procedures.{% if specific %}
+- General surgical: {{ imp_risk_general }}.{% if specific %}
 - Specific to the planned procedure: {% if specific | length > 1 %}{{ specific[:-1] | join(sep="; ") }}; and {{ specific[-1] }}{% else %}{{ specific | first }}{% endif %}.{% endif %}
 The patient understands that success cannot be guaranteed. All questions were answered, and the patient verbalized understanding."""
+
+# ------------------------------------------------------------ risk list ---
+# Hidden in the form (visible_if = "false"); the two with print = true are
+# the tick-boxes on the printed sheet.
+
+[[fields]]
+key = "imp_risk_next"
+label = "Next visit components"
+section = "Risks"
+type = "computed"
+visible_if = "false"
+compute = 'imp_ap_next_procedure if imp_ap_next_procedure is defined else []'
+
+[[fields]]
+key = "imp_risk_surgery"
+label = "Next visit is surgical"
+section = "Risks"
+type = "computed"
+visible_if = "false"
+compute = '"1" if [p for p in imp_risk_next if p in ["Extraction", "Immediate implant", "Implant placement", "Crestal sinus lift", "Lateral sinus lift", "GBR", "Socket preservation"]] else ""'
+
+[[fields]]
+key = "imp_risk_sinus_lift"
+label = "Next visit includes a sinus lift"
+section = "Risks"
+type = "computed"
+visible_if = "false"
+compute = '"1" if "Crestal sinus lift" in imp_risk_next or "Lateral sinus lift" in imp_risk_next else ""'
+
+[[fields]]
+key = "imp_risk_general"
+label = "General surgical"
+section = "Risks"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '"bleeding, infection, pain, swelling, bruising, delayed healing, and the possible need for additional procedures"'
+
+[[fields]]
+key = "imp_risk_specific"
+label = "Specific to the planned procedure"
+section = "Risks"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '''[r for r in [
+  "fracture of the alveolar bone or retained root fragments" if "Extraction" in imp_risk_next or "Immediate implant" in imp_risk_next else "",
+  "partial graft resorption or loss requiring regrafting" if "Socket preservation" in imp_risk_next else "",
+  "failure of osseointegration requiring implant removal and replacement" if "Implant placement" in imp_risk_next or "Immediate implant" in imp_risk_next or "Crestal sinus lift" in imp_risk_next else "",
+  "inadequate primary stability requiring grafting and delayed placement" if "Immediate implant" in imp_risk_next else "",
+  "soft tissue recession" if "Immediate implant" in imp_risk_next and not imp_esthetic and "Esthetic zone" not in imp_risk_manual else "",
+  "provisional loosening or fracture and implant failure from premature loading" if "Immediate provisional" in imp_risk_next else "",
+  "membrane exposure, wound dehiscence, or incomplete regeneration" if "GBR" in imp_risk_next else "",
+  "sinus membrane perforation and postoperative sinusitis" if imp_risk_sinus_lift else "",
+  "graft infection and oroantral communication" if "Lateral sinus lift" in imp_risk_next else "",
+  "injury to adjacent teeth" if imp_risk_surgery else "",
+  "temporary or permanent altered sensation of the lip, chin, tongue, or gingiva from inferior alveolar, mental, or lingual nerve injury" if (imp_mand_posterior and imp_risk_surgery) or "IAN / lingual nerve" in imp_risk_manual else "",
+  "sinus perforation or oroantral communication" if (imp_max_posterior and imp_risk_surgery and not imp_risk_sinus_lift) or "Maxillary sinus" in imp_risk_manual else "",
+  "soft tissue recession and esthetic compromise" if (imp_esthetic and imp_risk_surgery) or "Esthetic zone" in imp_risk_manual else "",
+  "sedation-related respiratory depression and airway compromise" if (imp_ap_anesthesia_plan is defined and imp_ap_anesthesia_plan == "IV sedation") or "IV sedation" in imp_risk_manual else "",
+  "higher failure and complication rates with tobacco use" if (imp_hx_tobacco_use is defined and imp_hx_tobacco_use in ["Current", "Vaping"]) or "Tobacco" in imp_risk_manual else "",
+  "higher infection and failure rates with suboptimal glycemic control" if (imp_hx_diabetes_status is defined and imp_hx_diabetes_status == "Yes") or "Diabetes" in imp_risk_manual else "",
+  "medication-related osteonecrosis of the jaw" if (imp_hx_antiresorptive_history is defined and imp_hx_antiresorptive_history not in ["No", ""]) or "Antiresorptive / MRONJ" in imp_risk_manual else "",
+  "osteoradionecrosis" if (imp_hx_head_neck_radiation is defined and imp_hx_head_neck_radiation == "Yes") or "Head & neck radiation" in imp_risk_manual else "",
+  "implant overload from parafunction" if (imp_hx_bruxism_history is defined and imp_hx_bruxism_history == "Reports") or (imp_exam_parafunction_signs is defined and imp_exam_parafunction_signs == "Present") or "Bruxism" in imp_risk_manual else "",
+  "***" if "***" in imp_risk_manual else "",
+] if r] | unique'''
 
 [[fields]]
 key = "imp_risk_manual"

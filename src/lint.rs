@@ -29,13 +29,15 @@ const TERA_WORDS: &[&str] = &[
     "group_by", "upper", "lower", "title", "capitalize", "truncate", "indent", "default", "safe",
     "wordcount", "nth", "range", "throw", "pluralize", "escape_html", "escape_xml",
     "newlines_to_br", "sep", "pat", "from", "to", "with", "start", "end", "count", "step_by",
-    "attribute", "case_sensitive", "n", "d", "s",
+    "attribute", "case_sensitive", "n", "d", "s", "defined", "undefined",
 ];
 
 /// Pulls the identifier-looking words out of a Tera expression, ignoring the
 /// contents of string literals (so `'Lidocaine 2% w/ epi' in local_used`
-/// reports only `local_used`) and the loop variable of a list comprehension
-/// (so `[t for t in teeth if t in ["36"]]` reports only `teeth`).
+/// reports only `local_used`), the loop variable of a list comprehension
+/// (so `[t for t in teeth if t in ["36"]]` reports only `teeth`), and any name
+/// the expression tests with `is defined` (`x is defined and x == "Yes"`),
+/// which says the field is expected to be missing from some notes.
 fn identifiers(expr: &str) -> Vec<String> {
     let mut words = Vec::new();
     let mut current = String::new();
@@ -72,9 +74,19 @@ fn identifiers(expr: &str) -> Vec<String> {
         .filter(|pair| pair[0] == "for")
         .map(|pair| pair[1].clone())
         .collect();
+    let guarded: Vec<String> = words
+        .windows(4)
+        .chain(words.windows(3))
+        .filter(|w| {
+            w[1] == "is"
+                && (matches!(w[2].as_str(), "defined" | "undefined")
+                    || (w[2] == "not" && w.get(3).is_some_and(|d| d == "defined")))
+        })
+        .map(|w| w[0].clone())
+        .collect();
     words
         .into_iter()
-        .filter(|w| !TERA_WORDS.contains(&w.as_str()) && !bound.contains(w))
+        .filter(|w| !TERA_WORDS.contains(&w.as_str()) && !bound.contains(w) && !guarded.contains(w))
         .collect()
 }
 
@@ -293,6 +305,30 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
             }
         }
 
+        // Same for the sections the printed sheet leaves out: a typo'd name
+        // quietly prints the section after all.
+        for name in &t.print_skip {
+            if !has_section(name) {
+                lints.push(Lint {
+                    subject: t.id.clone(),
+                    message: format!("print_skip names section '{name}', which no field uses"),
+                });
+            }
+        }
+        for f in t.fields.iter().chain(t.groups.iter().flat_map(|g| &g.fields)) {
+            if f.print_lines.is_some()
+                && !matches!(f.field_type, FieldType::Text | FieldType::Textarea)
+            {
+                lints.push(Lint {
+                    subject: t.id.clone(),
+                    message: format!(
+                        "field '{}' sets print_lines, which only text and textarea fields use",
+                        f.key
+                    ),
+                });
+            }
+        }
+
         // A speed button that sets a key no field has does nothing at all.
         for sb in &t.speed_buttons {
             for key in sb.values.keys() {
@@ -412,6 +448,7 @@ mod tests {
             fields,
             groups: vec![],
             speed_buttons: vec![],
+            print_skip: vec![],
             body: body.to_string(),
         }
     }
@@ -426,6 +463,14 @@ mod tests {
     fn identifiers_skip_a_list_comprehension_loop_variable() {
         let names = identifiers(r#""1" if [t for t in sites if t in ["36", "46"]] | length > 0 else """#);
         assert_eq!(names, vec!["sites".to_string()]);
+    }
+
+    #[test]
+    fn identifiers_skip_a_name_guarded_by_is_defined() {
+        let names = identifiers(
+            r#""x" if (hx_tobacco is defined and hx_tobacco == "Current") or ap is not defined or "T" in manual else """#,
+        );
+        assert_eq!(names, vec!["manual".to_string()]);
     }
 
     #[test]
@@ -643,5 +688,23 @@ mod tests {
         );
         let lints = lint(&[t], &[outer, inner]);
         assert!(lints.is_empty(), "unexpected lints: {lints:?}");
+    }
+
+    #[test]
+    fn print_skip_naming_no_section_and_misplaced_print_lines_are_flagged() {
+        let mut sectioned = field("hygiene", FieldType::Text);
+        sectioned.section = Some("Exam".to_string());
+        let mut picky = field("occlusion", FieldType::Dropdown);
+        picky.print_lines = Some(2);
+        let mut t = template("{{ hygiene }} {{ occlusion }}", vec![sectioned, picky]);
+        t.print_skip = vec!["Exam".to_string(), "Imaging".to_string()];
+        let messages: Vec<_> = lint(&[t], &[]).into_iter().map(|l| l.message).collect();
+        assert_eq!(
+            messages,
+            vec![
+                "print_skip names section 'Imaging', which no field uses",
+                "field 'occlusion' sets print_lines, which only text and textarea fields use",
+            ]
+        );
     }
 }

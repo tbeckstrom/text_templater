@@ -9,6 +9,7 @@ pub mod field;
 pub mod formatting;
 pub mod history;
 pub mod lint;
+pub mod print;
 pub mod render;
 pub mod storage;
 pub mod template;

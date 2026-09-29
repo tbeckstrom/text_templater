@@ -46,7 +46,7 @@ pub fn is_primary_tooth(fdi: &str) -> bool {
 
 /// Each arch in chart order, patient's right to left. Neighbours in one of
 /// these lists are adjacent teeth, including across the midline (11 and 21).
-const ARCHES: [&[&str]; 4] = [
+pub(crate) const ARCHES: [&[&str]; 4] = [
     &["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"],
     &["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"],
     &["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"],
@@ -150,6 +150,18 @@ pub struct FieldDef {
     /// field isn't drawn separately.
     #[serde(default)]
     pub linked: Option<String>,
+    /// `print = false` leaves the field off the printed sheet. A computed
+    /// field is off it unless `print = true`, which prints its value as
+    /// tick-boxes (one per item of a list).
+    #[serde(default)]
+    pub print: Option<bool>,
+    /// A shorter label for the printed sheet, where space is tight.
+    #[serde(default)]
+    pub print_label: Option<String>,
+    /// For a `text`/`textarea` field: how many write-in lines it gets on the
+    /// printed sheet (default 1 for text, 3 for textarea).
+    #[serde(default)]
+    pub print_lines: Option<u32>,
 }
 
 impl FieldDef {
@@ -172,6 +184,16 @@ impl FieldDef {
             .iter()
             .find(|o| o.label == label)
             .map(|o| o.text.as_deref().unwrap_or(o.label.as_str()))
+    }
+
+    /// Whether the field goes on the printed sheet.
+    pub fn prints(&self) -> bool {
+        self.print != Some(false)
+    }
+
+    /// What the printed sheet calls the field.
+    pub fn sheet_label(&self) -> &str {
+        self.print_label.as_deref().unwrap_or(&self.label)
     }
 }
 
@@ -243,12 +265,28 @@ pub struct GroupDef {
     /// [`contiguous_spans`]) instead of one per tooth.
     #[serde(default)]
     pub spans: bool,
+    /// `print = false` leaves the whole group off the printed sheet.
+    #[serde(default)]
+    pub print: Option<bool>,
+    /// A shorter label for the printed sheet.
+    #[serde(default)]
+    pub print_label: Option<String>,
 }
 
 impl GroupDef {
     /// What the driving choice is called inside each instance.
     pub fn source_as_key(&self) -> &str {
         self.source_as.as_deref().unwrap_or("item")
+    }
+
+    /// Whether the group goes on the printed sheet.
+    pub fn prints(&self) -> bool {
+        self.print != Some(false)
+    }
+
+    /// What the printed sheet calls the group.
+    pub fn sheet_label(&self) -> &str {
+        self.print_label.as_deref().unwrap_or(&self.label)
     }
 }
 
@@ -272,6 +310,9 @@ pub struct RawTemplateFile {
     pub groups: Vec<GroupDef>,
     #[serde(default)]
     pub speed_buttons: Vec<SpeedButtonDef>,
+    /// Form sections to leave off the printed sheet, e.g. `["CBCT"]`.
+    #[serde(default)]
+    pub print_skip: Vec<String>,
     pub body: String,
 }
 
@@ -330,6 +371,8 @@ pub struct TemplateDef {
     pub fields: Vec<FieldDef>,
     pub groups: Vec<GroupDef>,
     pub speed_buttons: Vec<SpeedButtonDef>,
+    /// Form sections left off the printed sheet.
+    pub print_skip: Vec<String>,
     pub body: String,
 }
 

@@ -3,6 +3,8 @@
 # facts they share (age, sites, site status, referring provider).
 name = "Clinic - Implant Consult"
 use_partials = ["common_implant_case", "clinic_hpi_implant", "clinic_history_implant", "clinic_exam_implant", "clinic_imaging_implant", "clinic_assessment_plan_implant"]
+# The CBCT is read at the desk, so the printed sheet leaves it off.
+print_skip = ["CBCT"]
 
 body = """
 {% include "common_implant_case" %}{% include "clinic_hpi_implant" %}

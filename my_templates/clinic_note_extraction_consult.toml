@@ -3,6 +3,8 @@
 # the facts they share (age, teeth, referring provider, decision-maker).
 name = "Clinic - Extraction Consult"
 use_partials = ["common_extraction_case", "clinic_hpi_extraction", "clinic_history_extraction", "clinic_exam_extraction", "clinic_imaging_extraction", "clinic_assessment_plan_extraction"]
+# Imaging is read at the desk, so the printed sheet leaves it off.
+print_skip = ["Imaging - extraction consult"]
 
 body = """
 {% include "common_extraction_case" %}{% include "clinic_hpi_extraction" %}

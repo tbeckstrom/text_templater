@@ -614,11 +614,19 @@ impl eframe::App for NoteTemplaterApp {
                 });
 
             let rendered = {
-                let ctx = build_context(
+                let mut ctx = build_context(
                     &template.fields,
                     &self.form_state,
                     &template.groups,
                     &self.groups_state,
+                );
+                // Again, after this frame's clicks, so derived wording (such
+                // as the risk list) is never a frame behind the fields.
+                recompute_fields(
+                    &template.fields,
+                    &mut self.form_state,
+                    &mut ctx,
+                    &mut self.expr_eval,
                 );
                 render_body_with_context(&template.body, &self.partials, &ctx)
             };
@@ -682,6 +690,25 @@ impl eframe::App for NoteTemplaterApp {
                                 copied = Some(plain);
                             }
                             Err(e) => self.status = Some(format!("Copy failed: {e}")),
+                        }
+                    }
+                    // Paper doesn't need the required fields filled in, so
+                    // this is always available.
+                    #[cfg(target_arch = "wasm32")]
+                    if ui
+                        .button("Print sheet")
+                        .on_hover_text("A paper copy of this form, with what's entered so far, to fill in by hand in the room.")
+                        .clicked()
+                    {
+                        let body = crate::print::sheet_body(
+                            &template,
+                            &self.form_state,
+                            &self.groups_state,
+                            crate::field::today(),
+                        );
+                        let title = format!("{} sheet", template.name);
+                        if let Err(e) = web_print::print(crate::print::STYLE, &body, &title) {
+                            self.status = Some(format!("Print failed: {e}"));
                         }
                     }
 
@@ -1084,6 +1111,7 @@ fn render_field(
             // Read-only: the value comes from `compute`, not from typing.
             let shown = match state.get(&field.key) {
                 Some(FieldValue::Text(s)) if !s.is_empty() => s.clone(),
+                Some(FieldValue::MultiSelect(v)) if !v.is_empty() => v.join("; "),
                 _ => "—".to_string(),
             };
             ui.add_enabled(false, egui::Label::new(shown));
@@ -1359,6 +1387,52 @@ export function write_clipboard(html, plain) {
     }
 }
 
+/// Prints the sheet from the app's own page: the sheet goes into a hidden
+/// element, and print-only CSS hides the app and shows it. Staying on this
+/// page (no new window or frame) keeps printing inside the site's
+/// Content-Security-Policy. The page title is the PDF's suggested file name,
+/// so it names the sheet until the print dialog closes.
+#[cfg(target_arch = "wasm32")]
+mod web_print {
+    use wasm_bindgen::prelude::*;
+    use wasm_bindgen_futures::js_sys;
+
+    #[wasm_bindgen(inline_js = r#"
+export function print_sheet(style, body, title) {
+  let sheet = document.getElementById("print-sheet");
+  let css = document.getElementById("print-sheet-style");
+  if (!sheet) {
+    sheet = document.body.appendChild(document.createElement("div"));
+    sheet.id = "print-sheet";
+    css = document.head.appendChild(document.createElement("style"));
+    css.id = "print-sheet-style";
+  }
+  css.textContent = "@media screen { #print-sheet { display: none; } }\n"
+    + "@media print {\n"
+    + "html, body { height: auto !important; overflow: visible !important; background: #fff !important; }\n"
+    + "body > :not(#print-sheet) { display: none !important; }\n"
+    + style + "\n}";
+  sheet.innerHTML = body;
+  const appTitle = document.title;
+  document.title = title;
+  window.addEventListener("afterprint", () => { document.title = appTitle; }, { once: true });
+  window.print();
+}
+"#)]
+    extern "C" {
+        #[wasm_bindgen(catch)]
+        fn print_sheet(style: &str, body: &str, title: &str) -> Result<(), JsValue>;
+    }
+
+    pub fn print(style: &str, body: &str, title: &str) -> Result<(), String> {
+        print_sheet(style, body, title).map_err(|e| {
+            e.dyn_ref::<js_sys::Error>()
+                .map(|e| String::from(e.message()))
+                .unwrap_or_else(|| format!("{e:?}"))
+        })
+    }
+}
+
 /// Builds the preview's rich-text layout from parsed formatting runs. Bold
 /// renders as the theme's "strong" color rather than a heavier font weight —
 /// egui doesn't bundle a bold font face — while italic and underline use
@@ -1451,6 +1525,7 @@ mod tests {
             fields: vec![],
             groups: vec![group.clone()],
             speed_buttons: vec![],
+            print_skip: vec![],
             body: String::new(),
         };
         let (mut app, template) = app_with_template(template);
@@ -1494,6 +1569,7 @@ mod tests {
             fields: vec![],
             groups: vec![group.clone()],
             speed_buttons: vec![],
+            print_skip: vec![],
             body: String::new(),
         };
         let (mut app, template) = app_with_template(template);

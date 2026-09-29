@@ -4,7 +4,8 @@ The TOML and Tera each snippet-language construct becomes, beyond the simple pla
 SKILL.md. The implant consult is the working reference for every pattern here:
 `my_templates/partials/common_implant_case.toml` (TEETH helpers, regions),
 `clinic_exam_implant.toml` (lean lines, PARTS, span/tooth REPEATs, optional add),
-`clinic_imaging_implant.toml`, `clinic_risks_implant.toml` (PARTS with conditions, USES optional),
+`clinic_imaging_implant.toml`, `clinic_risks_implant.toml` (checklist PARTS with conditions, USES
+optional),
 and `clinic_assessment_plan_implant.toml` (plan lines, AUTO bullets, pathway presets).
 
 ## `***` flag options
@@ -50,6 +51,34 @@ Join words:
 - comma: `join(sep=", ")`.
 
 A `?` line holding the PARTS tests `parts` (non-empty).
+
+### Checklist PARTS
+
+A PARTS marked `checklist` is built once, in a hidden computed field, so the note and the printed
+sheet read the same list. The field gets the PARTS's `label`, `print = true` and the section it
+was defined in. `compute` is the same phrase list as a comprehension. A computed expression can't
+use `set`, so write helper values inline, or as more hidden computed fields (a list can be one):
+
+```toml
+[[fields]]
+key = "imp_risk_specific"
+label = "Specific to the planned procedure"
+section = "Risks"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '''[r for r in [
+  "injury to adjacent teeth" if imp_risk_surgery else "",
+  "***" if "***" in imp_risk_manual else "",
+] if r] | unique'''
+```
+
+The body reads the field instead of building its own list, then joins it as usual:
+`{%- set specific = imp_risk_specific -%}`. A checklist with one phrase and no condition (the
+general risks line) is a computed string: `compute = '"bleeding, infection, ..."'`. Reads of a
+snippet that may be absent keep their `is defined` guard; name every field the guard protects
+(`a is defined and b is defined and ...`), or the lint reports the unguarded one.
+`clinic_risks_implant.toml` and `clinic_risks_extraction.toml` are the worked examples.
 
 ## TEETH
 
@@ -133,7 +162,8 @@ list as `"text" if <condition> else ""`.
 ## Tera gotchas
 
 - **Arrays have no `+`.** Build separate lists, or use a comprehension.
-- **Computed values are strings.** Compare numbers with `| int`, e.g. `imp_site_count | int > 1`.
+- **Computed values are strings** unless the expression gives a list. Compare numbers with `| int`,
+  e.g. `imp_site_count | int > 1`.
 - **Precedence:** filters bind tighter than `~`, and `a ~ b if c else d` means `(a ~ b) if c else d`.
 - **Slicing:** `list[:-1]` and `list[-1]` work; the `slice` filter doesn't.
 - **Newlines:** TOML drops the newline straight after `"""`. When a body's last line already ends
