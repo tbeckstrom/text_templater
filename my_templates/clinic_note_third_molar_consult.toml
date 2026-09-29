@@ -1,0 +1,35 @@
+# NOTE: clinic_note_third_molar_consult
+# Assembled from the third molar consult snippets, with the shared case facts
+# (age, teeth, referring provider, decision-maker) and the history reused from
+# the extraction consult.
+name = "Clinic - Third Molar Consult"
+use_partials = ["common_extraction_case", "clinic_hpi_third_molar", "clinic_history_extraction", "clinic_exam_third_molar", "clinic_imaging_third_molar", "clinic_assessment_plan_third_molar"]
+# Imaging is read at the desk, so the printed sheet leaves it off.
+print_skip = ["Imaging - third molar consult"]
+
+body = """
+{% include "common_extraction_case" %}{% include "clinic_hpi_third_molar" %}
+{% include "clinic_history_extraction" %}
+**EXAMINATION:**
+{% include "clinic_exam_third_molar" %}
+**IMAGING:**
+{% include "clinic_imaging_third_molar" %}
+{% include "clinic_assessment_plan_third_molar" %}
+"""
+
+# ---------------------------------------------------------- pathway presets ---
+# Top row of the form. Each sets the assessment and plan pathway, replacing
+# whatever an earlier preset picked. Analgesia and the work note are
+# independent picks, so a preset leaves them alone.
+
+[[speed_buttons]]
+label = "Prophylactic - IV sedation"
+values = { tm_ap_problems = ["Impaction"], tm_ap_extraction_rec = true, tm_ap_rationale = ["Prophylactic"], tm_ap_alternatives = ["Observation", "No treatment"], tm_ap_next_procedure = ["surgical extraction"], tm_ap_anesthesia_plan = "IV sedation", tm_ap_antibiotics = "", tm_ap_chlorhexidine_bullet = false }
+
+[[speed_buttons]]
+label = "Symptomatic pericoronitis"
+values = { tm_ap_problems = ["Impaction", "Pericoronitis"], tm_ap_extraction_rec = true, tm_ap_rationale = ["Pericoronitis"], tm_ap_alternatives = ["Observation", "No treatment"], tm_ap_next_procedure = ["surgical extraction"], tm_ap_anesthesia_plan = "IV sedation", tm_ap_antibiotics = "", tm_ap_chlorhexidine_bullet = true }
+
+[[speed_buttons]]
+label = "Canal close - coronectomy"
+values = { tm_ap_problems = ["Impaction"], tm_ap_extraction_rec = false, tm_ap_rationale = [], tm_ap_alternatives = ["Observation", "Complete removal", "No treatment"], tm_ap_next_procedure = ["coronectomy"], tm_ap_anesthesia_plan = "IV sedation", tm_ap_antibiotics = "", tm_ap_chlorhexidine_bullet = false }

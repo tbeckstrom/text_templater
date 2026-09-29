@@ -1,0 +1,199 @@
+# SNIPPET: clinic_exam_third_molar   PREFIX: tm_exam
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# Every line is left out of the note until something is picked; "***" is a
+# deliberate choice, never the fallback. One box per tooth to extract. The
+# sedation evaluation is always shown, and its lines drop out until picked.
+name = "Snippet: Exam - third molar consult"
+use_partials = ["common_extraction_case"]
+
+body = """
+{%- set eo = [
+  ("face " ~ tm_exam_face_status_text | replace(from="[[tm_exam_swelling_region_e_g_left_buccal_space]]", to=tm_exam_swelling_region_e_g_left_buccal_space)) if tm_exam_face_status else "",
+  ("cervical lymph nodes " ~ tm_exam_lymph_nodes) if tm_exam_lymph_nodes else "",
+  ("TMJs " ~ tm_exam_tmj_status) if tm_exam_tmj_status else "",
+] -%}
+{%- set eo = [p for p in eo if p] -%}
+{%- set airway = [
+  ("Mallampati " ~ tm_exam_mallampati) if tm_exam_mallampati else "",
+  ("BMI " ~ tm_exam_bmi) if tm_exam_bmi else "",
+  ("neck " ~ tm_exam_neck_mobility) if tm_exam_neck_mobility else "",
+] -%}
+{%- set airway = [p for p in airway if p] -%}
+{%- set lines = [
+  ("Oral hygiene: " ~ tm_exam_oral_hygiene) if tm_exam_oral_hygiene else "",
+  ("Soft tissues: " ~ tm_exam_soft_tissues_text) if tm_exam_soft_tissues else "",
+  ("Opening: " ~ tm_exam_mouth_opening_text | replace(from="[[tm_exam_mio_mm]]", to=tm_exam_mio_mm)) if tm_exam_mouth_opening else "",
+  ("Extraoral/TMJ: " ~ eo | join(sep="; ")) if tm_exam_extraoral_exam and eo else "",
+] -%}
+{%- set sedation = [
+  ("ASA class: " ~ tm_exam_asa_class) if tm_exam_asa_class else "",
+  ("Airway: " ~ airway | join(sep="; ")) if airway else "",
+] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}
+{%- for b in tm_exam_teeth %}
+{%- set parts = [
+  b.eruption if b.eruption else "",
+  (b.tooth_findings_text[:-1] | join(sep=", ") ~ " and " ~ b.tooth_findings_text[-1] if b.tooth_findings_text | length > 1 else b.tooth_findings_text | first) if b.tooth_findings else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- for l in sedation %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+# ---------------------------------------------------------- general exam ---
+
+[[fields]]
+key = "tm_exam_oral_hygiene"
+label = "Oral hygiene"
+section = "Exam - third molar consult"
+type = "dropdown"
+default = "good"
+options = ["good", "fair", "poor", "***"]
+
+[[fields]]
+key = "tm_exam_soft_tissues"
+label = "Soft tissues"
+section = "Exam - third molar consult"
+type = "dropdown"
+default = "WNL"
+options = [
+  { label = "WNL", text = "within normal limits, without masses or lesions" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tm_exam_mouth_opening"
+label = "Opening"
+section = "Exam - third molar consult"
+type = "dropdown"
+default = "Adequate"
+options = [
+  { label = "Adequate", text = "adequate" },
+  { label = "Limited", text = "limited, maximal interincisal opening [[tm_exam_mio_mm]] mm" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tm_exam_mio_mm"
+label = "MIO mm"
+section = "Exam - third molar consult"
+type = "text"
+default = "***"
+visible_if = "tm_exam_mouth_opening == 'Limited'"
+
+# ------------------------------------------------ extraoral / TMJ (add-on) ---
+
+[[fields]]
+key = "tm_exam_extraoral_exam"
+label = "+ Extraoral/TMJ exam"
+section = "Exam - third molar consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "tm_exam_face_status"
+label = "Face"
+section = "Exam - third molar consult"
+type = "dropdown"
+default = "Symmetric"
+options = [
+  { label = "Symmetric", text = "symmetric without swelling" },
+  { label = "Swelling", text = "swelling of the [[tm_exam_swelling_region_e_g_left_buccal_space]]" },
+  { label = "***", text = "***" },
+]
+visible_if = "tm_exam_extraoral_exam"
+
+[[fields]]
+key = "tm_exam_swelling_region_e_g_left_buccal_space"
+label = "Swelling region, e.g. left buccal space"
+section = "Exam - third molar consult"
+type = "text"
+default = "***"
+visible_if = "tm_exam_extraoral_exam and tm_exam_face_status == 'Swelling'"
+
+[[fields]]
+key = "tm_exam_lymph_nodes"
+label = "Cervical lymph nodes"
+section = "Exam - third molar consult"
+type = "dropdown"
+default = "nonpalpable"
+options = ["nonpalpable", "palpable and tender", "***"]
+visible_if = "tm_exam_extraoral_exam"
+
+[[fields]]
+key = "tm_exam_tmj_status"
+label = "TMJs"
+section = "Exam - third molar consult"
+type = "dropdown"
+default = "non-tender without clicking or crepitus"
+options = ["non-tender without clicking or crepitus", "with clicking", "with crepitus", "***"]
+visible_if = "tm_exam_extraoral_exam"
+
+# ------------------------------------------------ one box per tooth ---
+
+[[groups]]
+key = "tm_exam_teeth"
+label = "Tooth"
+source = "ext_extract_teeth"
+source_as = "tooth"
+section = "Exam - third molar consult"
+
+[[groups.speed_buttons]]
+label = "Partial, pericoronitis"
+values = { eruption = "partially erupted", tooth_findings = ["Pericoronitis", "Operculum inflamed"] }
+
+[[groups.speed_buttons]]
+label = "Gingiva-covered"
+values = { eruption = "gingiva-covered", tooth_findings = [] }
+
+[[groups.fields]]
+key = "eruption"
+label = "Eruption"
+type = "dropdown"
+options = ["fully erupted", "partially erupted", "gingiva-covered", "not visible", "***"]
+
+[[groups.fields]]
+key = "tooth_findings"
+label = "Findings"
+type = "multiselect"
+options = [
+  { label = "Pericoronitis", text = "pericoronitis" },
+  { label = "Operculum inflamed", text = "inflamed operculum" },
+  { label = "Carious", text = "carious" },
+  { label = "Tender", text = "tender to percussion" },
+  { label = "Opposing trauma", text = "opposing tooth traumatizing tissue" },
+  { label = "Distal 2nd molar defect", text = "distal defect of the adjacent second molar" },
+  { label = "***", text = "***" },
+]
+
+# ------------------------------------------------ sedation evaluation ---
+
+[[fields]]
+key = "tm_exam_asa_class"
+label = "ASA class"
+section = "Sedation evaluation"
+type = "dropdown"
+options = ["I", "II", "III", "IV", "***"]
+
+[[fields]]
+key = "tm_exam_mallampati"
+label = "Mallampati"
+section = "Sedation evaluation"
+type = "dropdown"
+options = ["I", "II", "III", "IV", "***"]
+
+[[fields]]
+key = "tm_exam_bmi"
+label = "BMI (optional)"
+section = "Sedation evaluation"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tm_exam_neck_mobility"
+label = "Neck"
+section = "Sedation evaluation"
+type = "dropdown"
+options = ["full range of motion", "limited extension", "***"]

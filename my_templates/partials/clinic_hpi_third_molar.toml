@@ -1,0 +1,61 @@
+# SNIPPET: clinic_hpi_third_molar   PREFIX: tm_hpi
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# The one-liner is followed by short sentences that each drop out until
+# picked, starting with the surrogate decision-maker sentence.
+name = "Snippet: HPI - third molar consult"
+use_partials = ["common_extraction_case"]
+
+body = """
+{%- set details = [
+  (ext_dm_reason_phrase ~ ", and " ~ ext_dm_phrase ~ " is present as the legal decision-maker.") if ext_dm_reason else "",
+  ("Patient reports " ~ ((tm_hpi_symptoms[:-1] | join(sep=", ")) ~ " and " ~ tm_hpi_symptoms[-1] if tm_hpi_symptoms | length > 1 else tm_hpi_symptoms | first) ~ ".") if tm_hpi_symptoms else "",
+  tm_hpi_prior_treatment_text | join(sep=" ") if tm_hpi_prior_treatment else "",
+] -%}
+{%- set details = [d for d in details if d] -%}
+Reason for visit: {{ tm_hpi_reason_for_visit_text }}{% if ext_referring_provider %}
+Referring provider: {{ ext_referring_provider }}{% endif %}
+**HPI:**
+{{ ext_pt_intro }} presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}
+"""
+
+[[fields]]
+key = "tm_hpi_reason_for_visit"
+label = "Reason for visit"
+section = "HPI - third molar consult"
+type = "dropdown"
+default = "Third molar consult"
+options = [
+  { label = "Third molar consult", text = "Third molar evaluation" },
+  { label = "Wisdom tooth pain", text = "Evaluation of wisdom tooth pain" },
+  { label = "Recurrent pericoronitis", text = "Evaluation of recurrent pericoronitis" },
+  { label = "Orthodontic planning", text = "Third molar evaluation for orthodontic planning" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tm_hpi_symptoms"
+label = "Symptoms"
+section = "HPI - third molar consult"
+type = "multiselect"
+options = [
+  "pain",
+  "swelling",
+  "gum swelling or bad taste",
+  "food impaction",
+  "pain on biting",
+  "jaw or ear pain",
+  "no symptoms",
+  "***",
+]
+
+[[fields]]
+key = "tm_hpi_prior_treatment"
+label = "Prior treatment"
+section = "HPI - third molar consult"
+type = "multiselect"
+options = [
+  { label = "Antibiotics", text = "Antibiotics have been prescribed for this complaint." },
+  { label = "Irrigation by dentist", text = "Pericoronal irrigation was performed by the referring dentist." },
+  { label = "OTC analgesics", text = "Pain managed with over-the-counter analgesics." },
+  { label = "***", text = "***" },
+]

@@ -1,0 +1,129 @@
+# SNIPPET: clinic_imaging_third_molar   PREFIX: tm_img
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# One box per tooth to extract. Pericoronal status preselects the normal
+# finding; every other descriptor drops out until picked, and a vital
+# structure is only mentioned once picked (its proximity defaults to "in
+# close proximity to").
+name = "Snippet: Imaging - third molar consult"
+use_partials = ["common_extraction_case"]
+
+body = """
+{%- if tm_img_imaging_modality %}- Images reviewed: {% for v in tm_img_imaging_modality %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}
+{% endif %}
+{%- for b in tm_img_teeth %}
+{%- set parts = [
+  (b.angulation ~ " angulation") if b.angulation else "",
+  b.coverage_text if b.coverage else "",
+  ((b.root_form[:-1] | join(sep=", ")) ~ " and " ~ b.root_form[-1] if b.root_form | length > 1 else b.root_form | first) ~ " roots" if b.root_form else "",
+  b.pericoronal_text if b.pericoronal else "",
+  b.second_molar_text if b.second_molar else "",
+  ("roots " ~ b.proximity ~ " the " ~ b.vital_structure) if b.proximity and b.vital_structure else "",
+  ((b.canal_findings[:-1] | join(sep=", ")) ~ " and " ~ b.canal_findings[-1] if b.canal_findings | length > 1 else b.canal_findings | first) if b.canal_findings else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- if tm_img_no_other_pathology %}- No other osseous pathology noted.
+{% endif %}"""
+
+[[fields]]
+key = "tm_img_imaging_modality"
+label = "Images reviewed"
+section = "Imaging - third molar consult"
+type = "multiselect"
+options = ["panoramic radiograph", "CBCT", "***"]
+default = ["panoramic radiograph"]
+
+[[fields]]
+key = "tm_img_no_other_pathology"
+label = "No other pathology"
+section = "Imaging - third molar consult"
+type = "checkbox"
+default = true
+
+# ------------------------------------------------ one box per tooth ---
+
+[[groups]]
+key = "tm_img_teeth"
+label = "Tooth"
+source = "ext_extract_teeth"
+source_as = "tooth"
+section = "Imaging - third molar consult"
+
+[[groups.speed_buttons]]
+label = "Canal close"
+values = { vital_structure = "inferior alveolar canal", proximity = "in close proximity to" }
+
+[[groups.speed_buttons]]
+label = "Sinus close"
+values = { vital_structure = "maxillary sinus", proximity = "in close proximity to" }
+
+[[groups.fields]]
+key = "angulation"
+label = "Angulation"
+type = "dropdown"
+options = ["mesioangular", "distoangular", "vertical", "horizontal", "***"]
+
+[[groups.fields]]
+key = "coverage"
+label = "Coverage"
+type = "dropdown"
+options = [
+  { label = "Soft tissue", text = "soft tissue impaction" },
+  { label = "Partial bony", text = "partial bony impaction" },
+  { label = "Complete bony", text = "complete bony impaction" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "root_form"
+label = "Root form"
+type = "multiselect"
+options = ["fused", "curved or dilacerated", "divergent", "hooked", "ankylosed", "***"]
+
+[[groups.fields]]
+key = "pericoronal"
+label = "Pericoronal"
+type = "dropdown"
+default = "None"
+options = [
+  { label = "None", text = "no pericoronal pathology" },
+  { label = "Widened follicle", text = "widened pericoronal follicle" },
+  { label = "Suspicious lucency", text = "pericoronal radiolucency suspicious for cyst" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "second_molar"
+label = "Second molar"
+type = "dropdown"
+options = [
+  { label = "Distal caries", text = "distal caries of the second molar" },
+  { label = "Distal resorption", text = "distal root resorption of the second molar" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "vital_structure"
+label = "Vital structure"
+type = "dropdown"
+options = ["inferior alveolar canal", "maxillary sinus", "***"]
+
+[[groups.fields]]
+key = "proximity"
+label = "Proximity"
+type = "dropdown"
+default = "in close proximity to"
+options = ["in close proximity to", "not in close proximity to", "***"]
+
+[[groups.fields]]
+key = "canal_findings"
+label = "Canal findings"
+type = "multiselect"
+options = [
+  "loss of canal cortication",
+  "darkening of the roots",
+  "deflection of the canal",
+  "narrowing of the canal",
+  "***",
+]
