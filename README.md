@@ -19,7 +19,7 @@ cargo build --release --target x86_64-apple-darwin     # macOS, Intel
 cargo build --release --target x86_64-pc-windows-msvc  # Windows x64 (build on Windows)
 ```
 
-CI (`.github/workflows/ci.yml`) tests and builds all three on every push to `master`.
+CI builds only the web version (`.github/workflows/web.yml`); desktop binaries are built locally.
 
 ## Running in a browser
 
