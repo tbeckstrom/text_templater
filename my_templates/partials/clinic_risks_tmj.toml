@@ -1,0 +1,60 @@
+# SNIPPET: clinic_risks_tmj   PREFIX: tmj_risk
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# The whole risks discussion prints only when a next-visit procedure
+# (arthrocentesis or arthroscopy) is picked in the plan, or when
+# "+ Risks discussion" is ticked, so conservative-only notes stay lean.
+# The risk lists are built once, in the hidden computed fields below, so the
+# note and the printed sheet (where each risk is a tick-box) read the same list.
+name = "Snippet: Risks - TMJ procedure"
+
+body = """
+{%- set specific = tmj_risk_specific -%}
+{% if tmj_risk_next or tmj_risk_discussion %}Risks, benefits, and alternatives of the planned procedure were discussed. Risks reviewed:
+- General surgical: {{ tmj_risk_general }}.{% if specific %}
+- Specific to the planned procedure: {% if specific | length > 1 %}{{ specific[:-1] | join(sep="; ") }}; and {{ specific[-1] }}{% else %}{{ specific | first }}{% endif %}.{% endif %}
+The patient understands that symptom relief cannot be guaranteed. All questions were answered, and the patient verbalized understanding.
+{% endif %}"""
+
+[[fields]]
+key = "tmj_risk_discussion"
+label = "+ Risks discussion"
+section = "Risks - TMJ procedure"
+type = "checkbox"
+default = false
+
+# ------------------------------------------------------------ risk list ---
+# Hidden in the form (visible_if = "false"); the two with print = true are
+# the tick-boxes on the printed sheet.
+
+[[fields]]
+key = "tmj_risk_next"
+label = "Next visit procedure"
+section = "Risks - TMJ procedure"
+type = "computed"
+visible_if = "false"
+compute = 'tmj_ap_next_procedure if tmj_ap_next_procedure is defined else ""'
+
+[[fields]]
+key = "tmj_risk_general"
+label = "General surgical"
+section = "Risks - TMJ procedure"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '"bleeding, infection, pain, swelling, bruising and the possible need for additional procedures"'
+
+[[fields]]
+key = "tmj_risk_specific"
+label = "Specific to the planned procedure"
+section = "Risks - TMJ procedure"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '''[r for r in [
+  "temporary or permanent facial nerve weakness, particularly of the forehead or eyelid" if tmj_risk_next else "",
+  "injury to the external auditory canal or middle ear with altered hearing" if tmj_risk_next else "",
+  "temporary preauricular swelling from fluid extravasation" if tmj_risk_next else "",
+  "temporary change in the bite" if tmj_risk_next else "",
+  "injury to the articular surfaces and instrument breakage" if tmj_risk_next == "Arthroscopy" else "",
+  "persistent or recurrent pain or limited opening, with possible need for further treatment including open joint surgery" if tmj_risk_next else "",
+] if r]'''

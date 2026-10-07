@@ -1,0 +1,297 @@
+# SNIPPET: clinic_exam_tmj   PREFIX: tmj_exam
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# Every line is left out of the note until something is picked; "***" is a
+# deliberate choice, never the fallback. Each joint has its own bullet so
+# asymmetric findings chart cleanly.
+name = "Snippet: Exam - TMJ consult"
+
+body = """
+{%- set opening = [
+  ("maximal interincisal opening " ~ tmj_exam_mio_mm ~ " mm") if tmj_exam_mio_mm else "",
+  ("assisted " ~ tmj_exam_assisted_opening_mm ~ " mm") if tmj_exam_assisted_opening_mm else "",
+  tmj_exam_opening_pain if tmj_exam_opening_pain else "",
+  tmj_exam_opening_path_text if tmj_exam_opening_path else "",
+] -%}
+{%- set opening = [p for p in opening if p] -%}
+{%- set excursions = [
+  ("right lateral " ~ tmj_exam_right_lateral_mm ~ " mm") if tmj_exam_right_lateral_mm else "",
+  ("left lateral " ~ tmj_exam_left_lateral_mm ~ " mm") if tmj_exam_left_lateral_mm else "",
+  ("protrusive " ~ tmj_exam_protrusive_mm ~ " mm") if tmj_exam_protrusive_mm else "",
+  tmj_exam_excursion_pain if tmj_exam_excursion_pain else "",
+] -%}
+{%- set excursions = [p for p in excursions if p] -%}
+{%- set rtmj = [
+  tmj_exam_r_joint_sounds_text if tmj_exam_r_joint_sounds else "",
+  tmj_exam_r_joint_palpation_text if tmj_exam_r_joint_palpation else "",
+  tmj_exam_r_joint_loading_text if tmj_exam_r_joint_loading else "",
+] -%}
+{%- set rtmj = [p for p in rtmj if p] -%}
+{%- set ltmj = [
+  tmj_exam_l_joint_sounds_text if tmj_exam_l_joint_sounds else "",
+  tmj_exam_l_joint_palpation_text if tmj_exam_l_joint_palpation else "",
+  tmj_exam_l_joint_loading_text if tmj_exam_l_joint_loading else "",
+] -%}
+{%- set ltmj = [p for p in ltmj if p] -%}
+{%- set tender_muscles_joined %}{% for v in tmj_exam_tender_muscles_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% endset -%}
+{%- set muscles = [
+  tmj_exam_muscle_status_text | replace(from="[[tmj_exam_tender_muscles]]", to=tender_muscles_joined) if tmj_exam_muscle_status else "",
+  "reproducing the patient's familiar pain" if tmj_exam_familiar_pain else "",
+] -%}
+{%- set muscles = [p for p in muscles if p] -%}
+{%- set lines = [
+  ("Face: " ~ tmj_exam_face_findings) if tmj_exam_face_findings else "",
+  ("Mouth opening: " ~ opening | join(sep=", ")) if opening else "",
+  ("Excursions: " ~ excursions | join(sep=", ")) if excursions else "",
+  ("Right TMJ: " ~ (rtmj[:-1] | join(sep="; ") ~ "; and " ~ rtmj[-1] if rtmj | length > 1 else rtmj | first)) if rtmj else "",
+  ("Left TMJ: " ~ (ltmj[:-1] | join(sep="; ") ~ "; and " ~ ltmj[-1] if ltmj | length > 1 else ltmj | first)) if ltmj else "",
+  ("Muscles of mastication: " ~ muscles | join(sep=", ")) if muscles else "",
+  ("Occlusion: " ~ tmj_exam_occlusion_status_text | replace(from="[[tmj_exam_side]]", to=tmj_exam_side) | replace(from="[[tmj_exam_side_2]]", to=tmj_exam_side_2)) if tmj_exam_occlusion_status else "",
+  ("Signs of parafunction: " ~ ((tmj_exam_parafunction_signs[:-1] | join(sep=", ")) ~ " and " ~ tmj_exam_parafunction_signs[-1] if tmj_exam_parafunction_signs | length > 1 else tmj_exam_parafunction_signs | first)) if tmj_exam_parafunction_signs else "",
+  ("Cranial nerves: " ~ tmj_exam_cranial_nerves_text) if tmj_exam_cranial_nerves else "",
+] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+[[fields]]
+key = "tmj_exam_face_findings"
+label = "Face"
+section = "Exam - TMJ consult"
+type = "dropdown"
+default = "symmetric"
+options = ["symmetric", "bilateral masseteric hypertrophy", "asymmetric", "***"]
+
+# ----------------------------------------------------------- jaw motion ---
+
+[[fields]]
+key = "tmj_exam_mio_mm"
+label = "MIO mm"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tmj_exam_assisted_opening_mm"
+label = "Assisted opening mm"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tmj_exam_opening_pain"
+label = "Pain on opening"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = ["without pain", "with pain", "***"]
+
+[[fields]]
+key = "tmj_exam_opening_path"
+label = "Opening path"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Straight", text = "straight opening path" },
+  { label = "Deviation R", text = "deviation to the right with return to midline" },
+  { label = "Deviation L", text = "deviation to the left with return to midline" },
+  { label = "Deflection R", text = "deflection to the right without correction" },
+  { label = "Deflection L", text = "deflection to the left without correction" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_right_lateral_mm"
+label = "Right lateral mm"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tmj_exam_left_lateral_mm"
+label = "Left lateral mm"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tmj_exam_protrusive_mm"
+label = "Protrusive mm"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tmj_exam_excursion_pain"
+label = "Pain on excursion"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = ["without pain", "with pain", "***"]
+
+# --------------------------------------------------------------- joints ---
+
+[[fields]]
+key = "tmj_exam_r_joint_sounds"
+label = "Right TMJ sounds"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "No sounds", text = "no clicking or crepitus" },
+  { label = "Reciprocal click", text = "reciprocal click on opening and closing" },
+  { label = "Opening click", text = "click on opening" },
+  { label = "Crepitus", text = "crepitus" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_r_joint_palpation"
+label = "Right TMJ palpation"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Non-tender", text = "non-tender to lateral palpation" },
+  { label = "Tender", text = "tender to lateral palpation" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_r_joint_loading"
+label = "Right TMJ loading"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "No pain on loading", text = "no pain on dynamic loading" },
+  { label = "Pain on loading", text = "pain on dynamic loading" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_l_joint_sounds"
+label = "Left TMJ sounds"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "No sounds", text = "no clicking or crepitus" },
+  { label = "Reciprocal click", text = "reciprocal click on opening and closing" },
+  { label = "Opening click", text = "click on opening" },
+  { label = "Crepitus", text = "crepitus" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_l_joint_palpation"
+label = "Left TMJ palpation"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Non-tender", text = "non-tender to lateral palpation" },
+  { label = "Tender", text = "tender to lateral palpation" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_l_joint_loading"
+label = "Left TMJ loading"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "No pain on loading", text = "no pain on dynamic loading" },
+  { label = "Pain on loading", text = "pain on dynamic loading" },
+  { label = "***", text = "***" },
+]
+
+# -------------------------------------------------------------- muscles ---
+
+[[fields]]
+key = "tmj_exam_muscle_status"
+label = "Muscles of mastication"
+section = "Exam - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Non-tender", text = "non-tender to palpation" },
+  { label = "Tender", text = "tender to palpation of [[tmj_exam_tender_muscles]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_tender_muscles"
+label = "Tender muscles"
+section = "Exam - TMJ consult"
+type = "multiselect"
+visible_if = "tmj_exam_muscle_status == 'Tender'"
+options = [
+  { label = "R masseter", text = "right masseter" },
+  { label = "L masseter", text = "left masseter" },
+  { label = "R temporalis", text = "right temporalis" },
+  { label = "L temporalis", text = "left temporalis" },
+  { label = "R lat pterygoid area", text = "right lateral pterygoid region" },
+  { label = "L lat pterygoid area", text = "left lateral pterygoid region" },
+  { label = "R medial pterygoid", text = "right medial pterygoid" },
+  { label = "L medial pterygoid", text = "left medial pterygoid" },
+  { label = "Cervical", text = "the cervical musculature" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_familiar_pain"
+label = "Reproduces familiar pain"
+section = "Exam - TMJ consult"
+type = "checkbox"
+default = false
+
+# ------------------------------------------------ occlusion and dentition ---
+
+[[fields]]
+key = "tmj_exam_occlusion_status"
+label = "Occlusion"
+section = "Exam - TMJ consult"
+type = "dropdown"
+default = "Stable"
+options = [
+  { label = "Stable", text = "stable and reproducible" },
+  { label = "Posterior open bite", text = "posterior open bite, [[tmj_exam_side]]" },
+  { label = "Anterior open bite", text = "anterior open bite" },
+  { label = "Midline shift", text = "mandibular midline shift to the [[tmj_exam_side_2]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_exam_side"
+label = "Side"
+section = "Exam - TMJ consult"
+type = "text"
+default = "***"
+visible_if = "tmj_exam_occlusion_status == 'Posterior open bite'"
+
+[[fields]]
+key = "tmj_exam_side_2"
+label = "Side"
+section = "Exam - TMJ consult"
+type = "text"
+default = "***"
+visible_if = "tmj_exam_occlusion_status == 'Midline shift'"
+
+[[fields]]
+key = "tmj_exam_parafunction_signs"
+label = "Signs of parafunction"
+section = "Exam - TMJ consult"
+type = "multiselect"
+options = ["attritional wear", "linea alba", "tongue scalloping", "abfraction lesions", "***"]
+
+[[fields]]
+key = "tmj_exam_cranial_nerves"
+label = "Cranial nerves"
+section = "Exam - TMJ consult"
+type = "dropdown"
+default = "Intact"
+options = [
+  { label = "Intact", text = "CN V and VII grossly intact bilaterally" },
+  { label = "***", text = "***" },
+]
+
+[[speed_buttons]]
+label = "Both joints normal"
+section = "Exam - TMJ consult"
+values = { tmj_exam_r_joint_sounds = "No sounds", tmj_exam_r_joint_palpation = "Non-tender", tmj_exam_r_joint_loading = "No pain on loading", tmj_exam_l_joint_sounds = "No sounds", tmj_exam_l_joint_palpation = "Non-tender", tmj_exam_l_joint_loading = "No pain on loading" }
+
+[[speed_buttons]]
+label = "Pain-free motion, muscles non-tender"
+section = "Exam - TMJ consult"
+values = { tmj_exam_opening_pain = "without pain", tmj_exam_opening_path = "Straight", tmj_exam_excursion_pain = "without pain", tmj_exam_muscle_status = "Non-tender" }

@@ -1,0 +1,38 @@
+# NOTE: clinic_note_tmj_consult
+# Assembled from the TMJ consult snippets; common_tmj_case holds the facts
+# they share (age, side of complaint, referring provider).
+name = "Clinic - TMJ Consult"
+use_partials = ["common_tmj_case", "clinic_hpi_tmj", "clinic_history_tmj", "clinic_exam_tmj", "clinic_imaging_tmj", "clinic_assessment_plan_tmj"]
+# Imaging is read at the desk, so the printed sheet leaves it off.
+print_skip = ["Imaging - TMJ consult"]
+
+body = """
+{% include "common_tmj_case" %}{% include "clinic_hpi_tmj" %}
+{% include "clinic_history_tmj" %}
+**EXAMINATION:**
+{% include "clinic_exam_tmj" %}
+**IMAGING:**
+{% include "clinic_imaging_tmj" %}
+{% include "clinic_assessment_plan_tmj" %}
+"""
+
+# ---------------------------------------------------------- pathway presets ---
+# Top row of the form. Each sets the diagnoses and the plan pathway, replacing
+# whatever an earlier preset picked. The side of each diagnosis is left for
+# the surgeon to pick.
+
+[[speed_buttons]]
+label = "Myofascial - conservative"
+values = { tmj_ap_tmd_diagnoses = ["Myalgia"], tmj_ap_recommendation = "Conservative", tmj_ap_conservative_care = true, tmj_ap_nsaid_regimen = "Ibuprofen", tmj_ap_muscle_relaxant = "Cyclobenzaprine", tmj_ap_splint_plan = "Referring dentist", tmj_ap_pt_bullet = false, tmj_ap_injections = "", tmj_ap_imaging_orders = [], tmj_ap_next_procedure = "", tmj_ap_alternatives = ["observation", "physical therapy", "injection therapy", "no treatment"], tmj_ap_follow_up = "6-8 weeks", tmj_ap_escalation = false }
+
+[[speed_buttons]]
+label = "DDwR - conservative"
+values = { tmj_ap_tmd_diagnoses = ["Arthralgia", "DDwR"], tmj_ap_recommendation = "Conservative", tmj_ap_conservative_care = true, tmj_ap_nsaid_regimen = "Ibuprofen", tmj_ap_muscle_relaxant = "", tmj_ap_splint_plan = "Referring dentist", tmj_ap_pt_bullet = false, tmj_ap_injections = "", tmj_ap_imaging_orders = [], tmj_ap_next_procedure = "", tmj_ap_alternatives = ["observation", "physical therapy", "arthrocentesis", "no treatment"], tmj_ap_follow_up = "6-8 weeks", tmj_ap_escalation = true }
+
+[[speed_buttons]]
+label = "Closed lock - MRI"
+values = { tmj_ap_tmd_diagnoses = ["Arthralgia", "DDwoR, limited opening"], tmj_ap_recommendation = "Conservative", tmj_ap_conservative_care = true, tmj_ap_nsaid_regimen = "Ibuprofen", tmj_ap_muscle_relaxant = "", tmj_ap_splint_plan = "Referring dentist", tmj_ap_pt_bullet = true, tmj_ap_injections = "", tmj_ap_imaging_orders = ["MRI TMJ"], tmj_ap_next_procedure = "", tmj_ap_alternatives = ["observation", "continued conservative care", "arthrocentesis", "arthroscopy"], tmj_ap_follow_up = "After MRI", tmj_ap_escalation = true }
+
+[[speed_buttons]]
+label = "DJD - conservative"
+values = { tmj_ap_tmd_diagnoses = ["Arthralgia", "DJD"], tmj_ap_recommendation = "Conservative", tmj_ap_conservative_care = true, tmj_ap_nsaid_regimen = "Naproxen", tmj_ap_muscle_relaxant = "", tmj_ap_splint_plan = "Referring dentist", tmj_ap_pt_bullet = false, tmj_ap_injections = "", tmj_ap_imaging_orders = ["CBCT"], tmj_ap_next_procedure = "", tmj_ap_alternatives = ["observation", "physical therapy", "arthrocentesis", "arthroscopy"], tmj_ap_follow_up = "6-8 weeks", tmj_ap_escalation = true }

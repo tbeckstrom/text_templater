@@ -1,0 +1,46 @@
+# SNIPPET: common_tmj_case   PREFIX: tmj
+# The facts every TMJ consult section shares, entered once at the top of the
+# form: age, side of the complaint and referring provider. The hidden computed
+# fields turn them into ready-made wording the other snippets reuse.
+body = ""
+
+[[fields]]
+key = "tmj_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "tmj_complaint_side"
+label = "Side of complaint"
+section = "Case"
+type = "dropdown"
+required = true
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_referring_provider"
+label = "Referring provider (blank = omitted)"
+section = "Case"
+type = "text"
+default = ""
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "tmj_ref_name"
+label = "Referring provider name"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'tmj_referring_provider if tmj_referring_provider else "the referring dentist"'
+
+[[fields]]
+key = "tmj_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'tmj_patient_age ~ "-year-old patient"'

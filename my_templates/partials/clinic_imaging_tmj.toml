@@ -1,0 +1,154 @@
+# SNIPPET: clinic_imaging_tmj   PREFIX: tmj_img
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# Panoramic findings per condyle, with optional CBCT and MRI adds. Every
+# descriptor is left out until picked ("***" is a deliberate choice).
+name = "Snippet: Imaging - TMJ consult"
+
+body = """
+{%- set pano = [
+  ("right condyle with " ~ ((tmj_img_r_pano_condyle[:-1] | join(sep=", ")) ~ " and " ~ tmj_img_r_pano_condyle[-1] if tmj_img_r_pano_condyle | length > 1 else tmj_img_r_pano_condyle | first)) if tmj_img_r_pano_condyle else "",
+  ("left condyle with " ~ ((tmj_img_l_pano_condyle[:-1] | join(sep=", ")) ~ " and " ~ tmj_img_l_pano_condyle[-1] if tmj_img_l_pano_condyle | length > 1 else tmj_img_l_pano_condyle | first)) if tmj_img_l_pano_condyle else "",
+  tmj_img_pano_other_text if tmj_img_pano_other else "",
+] -%}
+{%- set pano = [p for p in pano if p] -%}
+{%- set cbct = [
+  ("right condyle with " ~ ((tmj_img_r_cbct_condyle[:-1] | join(sep=", ")) ~ " and " ~ tmj_img_r_cbct_condyle[-1] if tmj_img_r_cbct_condyle | length > 1 else tmj_img_r_cbct_condyle | first)) if tmj_img_r_cbct_condyle else "",
+  ("left condyle with " ~ ((tmj_img_l_cbct_condyle[:-1] | join(sep=", ")) ~ " and " ~ tmj_img_l_cbct_condyle[-1] if tmj_img_l_cbct_condyle | length > 1 else tmj_img_l_cbct_condyle | first)) if tmj_img_l_cbct_condyle else "",
+  tmj_img_other_cbct_findings if tmj_img_other_cbct_findings else "",
+] -%}
+{%- set cbct = [p for p in cbct if p] -%}
+{%- set mri = [
+  ("right disc " ~ tmj_img_r_disc_text) if tmj_img_r_disc else "",
+  ("left disc " ~ tmj_img_l_disc_text) if tmj_img_l_disc else "",
+  tmj_img_effusion_text if tmj_img_effusion else "",
+  tmj_img_other_mri_findings if tmj_img_other_mri_findings else "",
+] -%}
+{%- set mri = [p for p in mri if p] -%}
+{%- set lines = [
+  ("Panoramic radiograph: " ~ (pano[:-1] | join(sep="; ") ~ "; and " ~ pano[-1] if pano | length > 1 else pano | first)) if pano else "",
+  ("CBCT: " ~ (cbct[:-1] | join(sep="; ") ~ "; and " ~ cbct[-1] if cbct | length > 1 else cbct | first)) if tmj_img_cbct_add and cbct else "",
+  ("MRI: " ~ (mri[:-1] | join(sep="; ") ~ "; and " ~ mri[-1] if mri | length > 1 else mri | first)) if tmj_img_mri_add and mri else "",
+] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+# ------------------------------------------------------------ panoramic ---
+
+[[fields]]
+key = "tmj_img_r_pano_condyle"
+label = "Pano - right condyle"
+section = "Imaging - TMJ consult"
+type = "multiselect"
+options = ["normal morphology", "flattening", "erosion", "osteophyte formation", "***"]
+
+[[fields]]
+key = "tmj_img_l_pano_condyle"
+label = "Pano - left condyle"
+section = "Imaging - TMJ consult"
+type = "multiselect"
+options = ["normal morphology", "flattening", "erosion", "osteophyte formation", "***"]
+
+[[fields]]
+key = "tmj_img_pano_other"
+label = "Pano - other"
+section = "Imaging - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "No other pathology", text = "no other osseous pathology noted" },
+  { label = "***", text = "***" },
+]
+
+# ----------------------------------------------------------------- CBCT ---
+
+[[fields]]
+key = "tmj_img_cbct_add"
+label = "+ CBCT"
+section = "Imaging - TMJ consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "tmj_img_r_cbct_condyle"
+label = "CBCT - right condyle"
+section = "Imaging - TMJ consult"
+type = "multiselect"
+visible_if = "tmj_img_cbct_add"
+options = ["normal morphology", "flattening", "erosion", "osteophyte formation", "subchondral sclerosis", "subchondral cyst", "reduced joint space", "***"]
+
+[[fields]]
+key = "tmj_img_l_cbct_condyle"
+label = "CBCT - left condyle"
+section = "Imaging - TMJ consult"
+type = "multiselect"
+visible_if = "tmj_img_cbct_add"
+options = ["normal morphology", "flattening", "erosion", "osteophyte formation", "subchondral sclerosis", "subchondral cyst", "reduced joint space", "***"]
+
+[[fields]]
+key = "tmj_img_other_cbct_findings"
+label = "Other CBCT findings"
+section = "Imaging - TMJ consult"
+type = "text"
+default = ""
+visible_if = "tmj_img_cbct_add"
+
+# ------------------------------------------------------------------ MRI ---
+
+[[fields]]
+key = "tmj_img_mri_add"
+label = "+ MRI"
+section = "Imaging - TMJ consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "tmj_img_r_disc"
+label = "MRI - right disc"
+section = "Imaging - TMJ consult"
+type = "dropdown"
+visible_if = "tmj_img_mri_add"
+options = [
+  { label = "Normal", text = "normally positioned" },
+  { label = "DDwR", text = "anteriorly displaced with reduction" },
+  { label = "DDwoR", text = "anteriorly displaced without reduction" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_img_l_disc"
+label = "MRI - left disc"
+section = "Imaging - TMJ consult"
+type = "dropdown"
+visible_if = "tmj_img_mri_add"
+options = [
+  { label = "Normal", text = "normally positioned" },
+  { label = "DDwR", text = "anteriorly displaced with reduction" },
+  { label = "DDwoR", text = "anteriorly displaced without reduction" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_img_effusion"
+label = "MRI - effusion"
+section = "Imaging - TMJ consult"
+type = "dropdown"
+visible_if = "tmj_img_mri_add"
+options = [
+  { label = "No effusion", text = "no joint effusion" },
+  { label = "Right", text = "right joint effusion" },
+  { label = "Left", text = "left joint effusion" },
+  { label = "Bilateral", text = "bilateral joint effusions" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_img_other_mri_findings"
+label = "Other MRI findings"
+section = "Imaging - TMJ consult"
+type = "text"
+default = ""
+visible_if = "tmj_img_mri_add"
+
+[[speed_buttons]]
+label = "Pano WNL"
+section = "Imaging - TMJ consult"
+values = { tmj_img_r_pano_condyle = ["normal morphology"], tmj_img_l_pano_condyle = ["normal morphology"], tmj_img_pano_other = "No other pathology" }

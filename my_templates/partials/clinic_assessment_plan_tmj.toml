@@ -1,0 +1,328 @@
+# SNIPPET: clinic_assessment_plan_tmj   PREFIX: tmj_ap
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# DC/TMD diagnoses each carry their own side. Contributing factors come from
+# the TMD-related history automatically (each can also be ticked by hand).
+# Plan picks bring in their one-line rationale; "Next visit" drives the
+# risks discussion. Plan lines are left out until picked ("***" is a
+# deliberate choice). The pathway presets that fill this section live in the
+# note.
+name = "Snippet: Assessment & plan - TMJ consult"
+use_partials = ["common_tmj_case", "clinic_risks_tmj"]
+
+body = """
+{%- set dx %}{% for t in tmj_ap_tmd_diagnoses_text %}{% if not loop.first %}{% if loop.last %}; and {% else %}; {% endif %}{% endif %}{{ t | replace(from="[[tmj_ap_arthralgia_side]]", to=tmj_ap_arthralgia_side) | replace(from="[[tmj_ap_ddwr_side]]", to=tmj_ap_ddwr_side) | replace(from="[[tmj_ap_ddwr_lock_side]]", to=tmj_ap_ddwr_lock_side) | replace(from="[[tmj_ap_ddwor_lim_side]]", to=tmj_ap_ddwor_lim_side) | replace(from="[[tmj_ap_ddwor_nolim_side]]", to=tmj_ap_ddwor_nolim_side) | replace(from="[[tmj_ap_djd_side]]", to=tmj_ap_djd_side) | replace(from="[[tmj_ap_sublux_side]]", to=tmj_ap_sublux_side) }}{% endfor %}{% endset -%}
+{%- set added = tmj_ap_added_contributors -%}
+{%- set contrib = [
+  "parafunctional clenching or bruxism" if (tmj_hx_parafunction_hx is defined and tmj_hx_parafunction_hx in ["Clenching", "Bruxism", "Both"]) or "Parafunction" in added else "",
+  "psychosocial stress" if (tmj_hx_psych_hx is defined and tmj_hx_psych_hx in ["Anxiety", "Depression", "Anxiety + depression", "High stress"]) or "Stress" in added else "",
+  "sleep-disordered breathing" if (tmj_hx_sleep_apnea_hx is defined and tmj_hx_sleep_apnea_hx in ["OSA", "OSA on CPAP"]) or "Sleep apnea" in added else "",
+  "prior jaw trauma" if (tmj_hx_trauma_hx is defined and tmj_hx_trauma_hx == "Yes") or "Trauma" in added else "",
+  "inflammatory arthritis" if (tmj_hx_arthritis_hx is defined and tmj_hx_arthritis_hx in ["Rheumatoid", "Psoriatic", "Other"]) or "Arthritis" in added else "",
+] -%}
+{%- set contrib = [c for c in contrib if c] -%}
+{%- set rationale = [
+  "An occlusal splint was recommended to reduce joint loading and muscle activity from nocturnal parafunction." if tmj_ap_splint_plan in ["Our office", "Referring dentist"] else "",
+  "A short course of a nighttime muscle relaxant was recommended for masticatory muscle pain and sleep-related clenching." if tmj_ap_muscle_relaxant else "",
+  "Physical therapy was recommended to restore range of motion and address cervical and postural contributors." if tmj_ap_pt_bullet else "",
+  "MRI was recommended to evaluate disc position and joint effusion, which will guide further management." if "MRI TMJ" in tmj_ap_imaging_orders else "",
+  "Arthrocentesis was recommended to lavage inflammatory mediators from the joint space, release adhesions and improve mobility." if tmj_ap_next_procedure == "Arthrocentesis" else "",
+  "Arthroscopy was recommended to directly evaluate and treat intra-articular pathology." if tmj_ap_next_procedure == "Arthroscopy" else "",
+] -%}
+{%- set rationale = [r for r in rationale if r] -%}
+{%- set alts = tmj_ap_alternatives -%}
+{%- set refs = tmj_ap_referrals -%}
+{%- set imaging = tmj_ap_imaging_orders_text -%}
+{%- set lines = [
+  "Conservative care reviewed: soft diet, jaw rest, avoiding gum chewing and wide opening, moist heat or ice to the affected area, parafunction awareness, scheduled over-the-counter NSAIDs as tolerated, and home jaw exercises." if tmj_ap_conservative_care else "",
+  ("NSAID: " ~ tmj_ap_nsaid_regimen_text ~ ".") if tmj_ap_nsaid_regimen else "",
+  ("Muscle relaxant: " ~ tmj_ap_muscle_relaxant_text ~ ".") if tmj_ap_muscle_relaxant else "",
+  ("Occlusal splint: " ~ tmj_ap_splint_plan_text | replace(from="[[tmj_ref_name]]", to=tmj_ref_name) ~ ".") if tmj_ap_splint_plan else "",
+  "Referral to physical therapy for jaw and cervical exercises, manual therapy and posture training." if tmj_ap_pt_bullet else "",
+  ("Consider " ~ tmj_ap_injections_text ~ " if symptoms persist.") if tmj_ap_injections else "",
+  ("Referral to " ~ ((refs[:-1] | join(sep=", ")) ~ " and " ~ refs[-1] if refs | length > 1 else refs | first) ~ ".") if refs else "",
+  ("Imaging ordered: " ~ ((imaging[:-1] | join(sep=", ")) ~ " and " ~ imaging[-1] if imaging | length > 1 else imaging | first) ~ ".") if imaging else "",
+  ("Next visit: " ~ tmj_ap_next_procedure_text | replace(from="[[tmj_ap_arthrocentesis_side]]", to=tmj_ap_arthrocentesis_side) | replace(from="[[tmj_ap_arthroscopy_side]]", to=tmj_ap_arthroscopy_side) ~ " under " ~ tmj_ap_proc_anesthesia ~ ".") if tmj_ap_next_procedure and tmj_ap_proc_anesthesia else "",
+  ("Follow-up " ~ tmj_ap_follow_up_text ~ "; sooner if symptoms worsen.") if tmj_ap_follow_up else "",
+  "If symptoms persist despite 3-6 months of conservative care, further imaging and minimally invasive joint procedures such as arthrocentesis will be considered." if tmj_ap_escalation else "",
+  ("Consult note sent to " ~ tmj_ref_name ~ ".") if tmj_ap_consult_letter else "",
+] -%}
+**ASSESSMENT:**
+{{ tmj_pt_intro }} presenting with {{ tmj_complaint_side }} TMJ region pain.{% if dx %}
+Findings are consistent with {{ dx }}.{% endif %}{% if contrib %}
+Contributing factors include {{ (contrib[:-1] | join(sep=", ")) ~ " and " ~ contrib[-1] if contrib | length > 1 else contrib | first }}.{% endif %}{% if tmj_ap_recommendation or rationale %}
+{{ tmj_ap_recommendation_text }}{% if tmj_ap_recommendation and rationale %} {% endif %}{{ rationale | join(sep=" ") }}{% endif %}{% if alts %}
+Alternatives discussed included {{ (alts[:-1] | join(sep=", ")) ~ " and " ~ alts[-1] if alts | length > 1 else alts | first }}.{% endif %}
+Treatment options and the expected course were discussed as outlined in the plan below.
+{% include "clinic_risks_tmj" %}After shared decision making, the patient {{ tmj_ap_patient_decision_text if tmj_ap_patient_decision else "***" }}
+
+**PLAN:**
+{%- for l in lines %}{% if l %}
+- {{ l }}{% endif %}{% endfor %}"""
+
+# ------------------------------------------------------------- assessment ---
+
+[[fields]]
+key = "tmj_ap_tmd_diagnoses"
+label = "Diagnoses (DC/TMD)"
+section = "Assessment & plan - TMJ consult"
+type = "multiselect"
+options = [
+  { label = "Myalgia", text = "myalgia of the masticatory muscles" },
+  { label = "Myofascial w/ referral", text = "myofascial pain with referral" },
+  { label = "Arthralgia", text = "[[tmj_ap_arthralgia_side]] TMJ arthralgia" },
+  { label = "DDwR", text = "[[tmj_ap_ddwr_side]] TMJ disc displacement with reduction" },
+  { label = "DDwR, intermittent lock", text = "[[tmj_ap_ddwr_lock_side]] TMJ disc displacement with reduction with intermittent locking" },
+  { label = "DDwoR, limited opening", text = "[[tmj_ap_ddwor_lim_side]] TMJ disc displacement without reduction with limited opening" },
+  { label = "DDwoR, no limitation", text = "[[tmj_ap_ddwor_nolim_side]] TMJ disc displacement without reduction without limited opening" },
+  { label = "DJD", text = "[[tmj_ap_djd_side]] TMJ degenerative joint disease" },
+  { label = "Subluxation", text = "[[tmj_ap_sublux_side]] TMJ subluxation" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_arthralgia_side"
+label = "Arthralgia side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'Arthralgia' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_ddwr_side"
+label = "DDwR side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'DDwR' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_ddwr_lock_side"
+label = "DDwR, intermittent lock side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'DDwR, intermittent lock' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_ddwor_lim_side"
+label = "DDwoR, limited opening side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'DDwoR, limited opening' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_ddwor_nolim_side"
+label = "DDwoR, no limitation side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'DDwoR, no limitation' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_djd_side"
+label = "DJD side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'DJD' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_sublux_side"
+label = "Subluxation side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "'Subluxation' in tmj_ap_tmd_diagnoses"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_added_contributors"
+label = "Add contributing factors"
+section = "Assessment & plan - TMJ consult"
+type = "multiselect"
+options = ["Parafunction", "Stress", "Sleep apnea", "Trauma", "Arthritis"]
+
+[[fields]]
+key = "tmj_ap_recommendation"
+label = "Recommendation"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+default = "Conservative"
+options = [
+  { label = "Conservative", text = "Conservative, reversible therapy was recommended as first-line management, as most temporomandibular disorders improve without surgical intervention." },
+  { label = "Procedure", text = "Given persistent symptoms and functional limitation despite an adequate trial of conservative therapy, a minimally invasive joint procedure was recommended." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_alternatives"
+label = "Alternatives"
+section = "Assessment & plan - TMJ consult"
+type = "multiselect"
+options = ["observation", "continued conservative care", "occlusal splint therapy", "physical therapy", "injection therapy", "arthrocentesis", "arthroscopy", "open joint surgery", "no treatment", "***"]
+
+[[fields]]
+key = "tmj_ap_patient_decision"
+label = "Patient decision"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+default = "Proceed"
+options = [
+  { label = "Proceed", text = "elected to proceed with the plan outlined below." },
+  { label = "Considering", text = "will consider the options discussed and contact our office." },
+  { label = "***", text = "***" },
+]
+
+# ------------------------------------------------------------------- plan ---
+
+[[fields]]
+key = "tmj_ap_conservative_care"
+label = "+ Conservative care"
+section = "Assessment & plan - TMJ consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "tmj_ap_nsaid_regimen"
+label = "NSAID"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Ibuprofen", text = "ibuprofen 600 mg PO TID with food for 2 weeks, then as needed" },
+  { label = "Naproxen", text = "naproxen 500 mg PO BID with food for 2 weeks, then as needed" },
+  { label = "Meloxicam", text = "meloxicam 15 mg PO daily for 2 weeks" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_muscle_relaxant"
+label = "Muscle relaxant"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Cyclobenzaprine", text = "cyclobenzaprine 5 mg PO at bedtime as needed for 2-4 weeks; sedation precautions reviewed" },
+  { label = "Tizanidine", text = "tizanidine 2 mg PO at bedtime as needed for 2-4 weeks; sedation precautions reviewed" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_splint_plan"
+label = "Occlusal splint"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Our office", text = "full-coverage hard acrylic maxillary splint for nighttime wear, to be fabricated in our office" },
+  { label = "Referring dentist", text = "full-coverage hard acrylic splint for nighttime wear, to be fabricated by [[tmj_ref_name]]" },
+  { label = "Continue existing", text = "continue existing night guard; fit and wear pattern to be reassessed" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_pt_bullet"
+label = "+ Physical therapy"
+section = "Assessment & plan - TMJ consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "tmj_ap_injections"
+label = "Injections"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Trigger point", text = "trigger point injections to the masticatory muscles" },
+  { label = "Botulinum toxin", text = "botulinum toxin injection to the masseter and temporalis muscles (off-label use discussed)" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_referrals"
+label = "Referrals"
+section = "Assessment & plan - TMJ consult"
+type = "multiselect"
+options = ["orofacial pain", "sleep medicine", "rheumatology", "otolaryngology", "behavioral health", "***"]
+
+[[fields]]
+key = "tmj_ap_imaging_orders"
+label = "Imaging ordered"
+section = "Assessment & plan - TMJ consult"
+type = "multiselect"
+options = [
+  { label = "MRI TMJ", text = "MRI of the bilateral TMJs (open and closed mouth)" },
+  { label = "CBCT", text = "CBCT of the TMJs" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_next_procedure"
+label = "Next visit"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+options = [
+  { label = "Arthrocentesis", text = "[[tmj_ap_arthrocentesis_side]] TMJ arthrocentesis" },
+  { label = "Arthroscopy", text = "[[tmj_ap_arthroscopy_side]] TMJ arthroscopy" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_arthrocentesis_side"
+label = "Arthrocentesis side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "tmj_ap_next_procedure == 'Arthrocentesis'"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_arthroscopy_side"
+label = "Arthroscopy side"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+required = true
+visible_if = "tmj_ap_next_procedure == 'Arthroscopy'"
+options = ["right", "left", "bilateral"]
+
+[[fields]]
+key = "tmj_ap_proc_anesthesia"
+label = "Anesthesia"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+default = "local anesthesia"
+visible_if = "tmj_ap_next_procedure"
+options = ["local anesthesia", "IV sedation", "general anesthesia", "***"]
+
+[[fields]]
+key = "tmj_ap_follow_up"
+label = "Follow-up"
+section = "Assessment & plan - TMJ consult"
+type = "dropdown"
+default = "6-8 weeks"
+options = [
+  { label = "2 weeks", text = "in 2 weeks" },
+  { label = "4-6 weeks", text = "in 4-6 weeks to assess response to therapy" },
+  { label = "6-8 weeks", text = "in 6-8 weeks to assess response to conservative therapy" },
+  { label = "3 months", text = "in 3 months" },
+  { label = "After MRI", text = "after MRI to review results and discuss further management" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_ap_escalation"
+label = "+ Escalation discussed"
+section = "Assessment & plan - TMJ consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "tmj_ap_consult_letter"
+label = "+ Letter to referring"
+section = "Assessment & plan - TMJ consult"
+type = "checkbox"
+default = false

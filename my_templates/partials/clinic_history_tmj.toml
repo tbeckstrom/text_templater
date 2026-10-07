@@ -1,0 +1,210 @@
+# SNIPPET: clinic_history_tmj   PREFIX: tmj_hx
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# TMD-related history defaults to "no" except clenching/bruxism, which is
+# left unpicked so it is asked deliberately. Each item feeds the contributing
+# factors sentence in the assessment.
+name = "Snippet: History - TMJ consult"
+
+body = """
+**PAST MEDICAL HISTORY:**
+{{ tmj_hx_pmh }}
+
+**MEDICATIONS:**
+{{ tmj_hx_meds }}
+
+**ALLERGIES:**
+{{ tmj_hx_allergy }}
+
+**TMD-RELATED HISTORY:**
+{%- set lines = [
+  ("Jaw or facial trauma: " ~ tmj_hx_trauma_hx_text | replace(from="[[tmj_hx_trauma_details]]", to=tmj_hx_trauma_details)) if tmj_hx_trauma_hx else "",
+  ("Clenching / bruxism: " ~ tmj_hx_parafunction_hx_text) if tmj_hx_parafunction_hx else "",
+  ("Inflammatory arthritis: " ~ tmj_hx_arthritis_hx_text | replace(from="[[tmj_hx_type_of_arthritis]]", to=tmj_hx_type_of_arthritis)) if tmj_hx_arthritis_hx else "",
+  ("Sleep apnea: " ~ tmj_hx_sleep_apnea_hx_text) if tmj_hx_sleep_apnea_hx else "",
+  ("Headaches: " ~ tmj_hx_headache_hx_text) if tmj_hx_headache_hx else "",
+  ("Anxiety / depression / stress: " ~ tmj_hx_psych_hx_text) if tmj_hx_psych_hx else "",
+  ("Prior TMJ procedure: " ~ tmj_hx_tmj_surgery_hx_text | replace(from="[[tmj_hx_side_and_date]]", to=tmj_hx_side_and_date) | replace(from="[[tmj_hx_side_and_date_2]]", to=tmj_hx_side_and_date_2) | replace(from="[[tmj_hx_procedure_side_and_date]]", to=tmj_hx_procedure_side_and_date)) if tmj_hx_tmj_surgery_hx else "",
+] -%}
+{% for l in lines %}{% if l %}
+- {{ l }}{% endif %}{% endfor %}
+"""
+
+[[fields]]
+key = "tmj_hx_pmh"
+label = "Past medical history"
+section = "Past medical history"
+type = "textarea"
+default = "***"
+
+[[fields]]
+key = "tmj_hx_meds"
+label = "Medications"
+section = "Medications"
+type = "textarea"
+default = "***"
+
+[[fields]]
+key = "tmj_hx_allergy"
+label = "Allergies"
+section = "Allergies"
+type = "textarea"
+default = "***"
+
+[[fields]]
+key = "tmj_hx_trauma_hx"
+label = "Jaw or facial trauma"
+section = "TMD-related history"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "[[tmj_hx_trauma_details]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_trauma_details"
+label = "Trauma details"
+section = "TMD-related history"
+type = "text"
+default = "***"
+visible_if = "tmj_hx_trauma_hx == 'Yes'"
+
+[[fields]]
+key = "tmj_hx_parafunction_hx"
+label = "Clenching / bruxism"
+section = "TMD-related history"
+type = "dropdown"
+options = [
+  { label = "No", text = "no" },
+  { label = "Clenching", text = "daytime clenching" },
+  { label = "Bruxism", text = "nocturnal bruxism" },
+  { label = "Both", text = "daytime clenching and nocturnal bruxism" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_arthritis_hx"
+label = "Inflammatory arthritis"
+section = "TMD-related history"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Rheumatoid", text = "rheumatoid arthritis" },
+  { label = "Psoriatic", text = "psoriatic arthritis" },
+  { label = "Other", text = "[[tmj_hx_type_of_arthritis]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_type_of_arthritis"
+label = "Type of arthritis"
+section = "TMD-related history"
+type = "text"
+default = "***"
+visible_if = "tmj_hx_arthritis_hx == 'Other'"
+
+[[fields]]
+key = "tmj_hx_sleep_apnea_hx"
+label = "Sleep apnea"
+section = "TMD-related history"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "OSA", text = "obstructive sleep apnea" },
+  { label = "OSA on CPAP", text = "obstructive sleep apnea on CPAP" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_headache_hx"
+label = "Headaches"
+section = "TMD-related history"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Tension-type", text = "tension-type headaches" },
+  { label = "Migraine", text = "migraine" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_psych_hx"
+label = "Anxiety / depression / stress"
+section = "TMD-related history"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Anxiety", text = "anxiety" },
+  { label = "Depression", text = "depression" },
+  { label = "Anxiety + depression", text = "anxiety and depression" },
+  { label = "High stress", text = "high current life stress" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_tmj_surgery_hx"
+label = "Prior TMJ procedure"
+section = "TMD-related history"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Arthrocentesis", text = "arthrocentesis, [[tmj_hx_side_and_date]]" },
+  { label = "Arthroscopy", text = "arthroscopy, [[tmj_hx_side_and_date_2]]" },
+  { label = "Open joint surgery", text = "open joint surgery, [[tmj_hx_procedure_side_and_date]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "tmj_hx_side_and_date"
+label = "Side and date"
+section = "TMD-related history"
+type = "text"
+default = "***"
+visible_if = "tmj_hx_tmj_surgery_hx == 'Arthrocentesis'"
+
+[[fields]]
+key = "tmj_hx_side_and_date_2"
+label = "Side and date"
+section = "TMD-related history"
+type = "text"
+default = "***"
+visible_if = "tmj_hx_tmj_surgery_hx == 'Arthroscopy'"
+
+[[fields]]
+key = "tmj_hx_procedure_side_and_date"
+label = "Procedure, side and date"
+section = "TMD-related history"
+type = "text"
+default = "***"
+visible_if = "tmj_hx_tmj_surgery_hx == 'Open joint surgery'"
+
+[[speed_buttons]]
+label = "Healthy: noncontributory / none / NKDA"
+section = "Past medical history"
+values = { tmj_hx_pmh = "Noncontributory", tmj_hx_meds = "None", tmj_hx_allergy = "NKDA" }
+
+[[speed_buttons]]
+label = "Noncontributory"
+section = "Past medical history"
+values = { tmj_hx_pmh = "Noncontributory" }
+
+[[speed_buttons]]
+label = "None"
+section = "Medications"
+values = { tmj_hx_meds = "None" }
+
+[[speed_buttons]]
+label = "NKDA"
+section = "Allergies"
+values = { tmj_hx_allergy = "NKDA" }
+
+[[speed_buttons]]
+label = "Penicillin"
+section = "Allergies"
+values = { tmj_hx_allergy = "Penicillin (***)" }
