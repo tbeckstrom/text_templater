@@ -1,0 +1,122 @@
+(GLOBAL INSTRUCTIONS: This is an oral and maxillofacial surgery consultation for third molars. Always follow the structure, order and wording of this template exactly. Write in a concise clinical style with short sentences and no narrative padding. Never add sections that are not in this template. Never use the patient's name; refer to them as "the patient". Use only plain keyboard characters: a hyphen instead of any dash, straight quotes, and no special symbols. Write every bullet as a plain text line that begins with a hyphen and a space; never use formatted list items.)
+
+(CLINICAL TERMINOLOGY: The surgeon explains findings to the patient in plain English. Always translate these explanations back into clinical terminology in the note. For example: a gum flap over a tooth = operculum; a tooth stuck in the bone = bony impaction; fully in the bone = complete bony impaction; partly in the bone = partial bony impaction; covered only by gum = soft tissue impaction; tilted forward = mesioangular; tilted back = distoangular; lying sideways = horizontal; upright = vertical; the nerve = the inferior alveolar canal; roots still forming = incomplete root development; not enough room = insufficient space for eruption; infection around the tooth = pericoronitis; deep gum pockets = increased probing depths. Include findings the surgeon calls minor or not concerning, written as a short clinical phrase.)
+
+(TOOTH NUMBERING: Always use FDI two-digit tooth numbers and never Universal numbers or the "#" symbol. Write "tooth 38", never "#17". Convert spoken descriptions: upper right wisdom tooth = 18, upper left = 28, lower left = 38, lower right = 48, upper right second molar = 17, upper left = 27, lower left = 37, lower right = 47. "8s" means third molars and "7s" means second molars. If the surgeon speaks Universal numbers, convert them: 1 = 18, 16 = 28, 17 = 38, 32 = 48, 2 = 17, 15 = 27, 18 = 37, 31 = 47. "All four wisdom teeth" means teeth 18, 28, 38 and 48.)
+
+(TRANSCRIPT QUALITY: The transcript is often incomplete and poorly transcribed. Infer the intended clinical meaning from context, such as misheard drug names or dental terms, and make reasonable assumptions about what was discussed when the conversation clearly implies it. Never invent findings, medications, diagnoses or values that have no basis in the transcript, contextual notes or clinical note. Wherever this template says to print "***", print exactly three asterisks so the surgeon can complete it.)
+
+(RADIOGRAPH READ: The surgeon may dictate a radiograph read in clinical terms before or after the patient is in the room, or type it into the contextual notes. That read is the authoritative source for the IMAGING section and for imaging-based statements in the ASSESSMENT, and it overrides anything said to the patient. If there is more than one read, the later one wins.)
+
+(WORDING TOKENS: In the quoted wording below, replace these capitalized tokens. AGE = the patient's age in years, taken from the transcript, contextual notes or patient details; never drop it, and print *** in its place if it is not available, giving "***-year-old patient". TEETH = the third molars being evaluated and recommended for treatment, in ascending FDI order, written as "tooth 38" for one tooth or "teeth 38 and 48", "teeth 18, 28 and 38" for several. DECISION-MAKER = "the patient" by default; if a minor is accompanied by a parent, write "the patient's parent" followed by the parent's name in parentheses; if a legal guardian or healthcare power of attorney makes decisions, write "the patient's legal guardian" or "the patient's healthcare power of attorney" followed by their name in parentheses; use *** for any name not stated.)
+
+Reason for visit: [Reason for visit] (Always print exactly one of these, choosing the best match: "Third molar evaluation", "Evaluation of wisdom tooth pain", "Evaluation of recurrent pericoronitis", "Third molar evaluation for orthodontic planning". Default to "Third molar evaluation" when unclear.)
+Referring provider: [Referring provider name] (Only include if a referring dentist, orthodontist or provider is named in the transcript, contextual notes or clinical note, else omit this line entirely.)
+
+HPI:
+[History of present illness] (Write as one short paragraph built from these sentences in this order. Sentence 1, always: "AGE-year-old patient presenting for evaluation of TEETH." Sentence 2, only if a surrogate decision-maker is present: "The patient is a minor, and DECISION-MAKER is present as the legal decision-maker." or "The patient lacks decision-making capacity due to REASON, and DECISION-MAKER is present as the legal decision-maker." with REASON replaced by the stated reason or ***; else omit. Sentence 3: if the patient has current symptoms, "Patient reports " followed by the symptoms joined with commas and "and", using these terms where they fit: pain, swelling, gum swelling or bad taste, food impaction, pain on biting, jaw or ear pain; if the patient has no current symptoms, print "Patient reports no symptoms currently."; if symptoms were not discussed, omit. Then only if mentioned, print each that applies verbatim: "Antibiotics have been prescribed for this complaint." "Pericoronal irrigation was performed by the referring dentist." "Pain managed with over-the-counter analgesics." Then, only if clinically relevant context was explicitly mentioned, such as symptom duration, number of episodes, side, or timing constraints like upcoming travel or orthodontic treatment, add at most two short factual sentences; else add nothing.)
+[Pertinent negatives] (Only include if the patient denied any past symptoms, else omit entirely. Print as a separate paragraph after a blank line: "No hx of " followed by the denied symptoms joined with commas and "or", using these terms where they fit: facial swelling, food trapping, pain, bad taste, infection, then " associated with these sites.")
+
+PAST MEDICAL HISTORY:
+[Past medical history] (Write as a brief comma-separated list of conditions. If the patient states they have no medical problems, print "No chronic medical conditions". If past medical history was not discussed, print "***".)
+
+MEDICATIONS:
+[Current medications] (Write as a brief comma-separated list with doses if stated. If the patient states they take no medications, print "None". If medications were not discussed, print "***".)
+
+ALLERGIES:
+[Allergies] (Write each allergy with its reaction in parentheses if stated. If the patient states no allergies, print "NKDA". If allergies were not discussed, print "***".)
+
+EXTRACTION RISK FACTORS:
+[Extraction risk factors] (Always print these six lines as bullets in this order, using the wording shown. For each line: if the factor is present, print the positive wording; if the medical history or medications were discussed and the factor was not mentioned, print "no"; if neither medical history nor medications were discussed at all, print "***".
+"- Anticoagulant/antiplatelet: " then "no" or the agent name.
+"- Bleeding disorder: " then "no" or the disorder name.
+"- Antiresorptive therapy: " then "no", or "oral bisphosphonate, " or "parenteral antiresorptive therapy, " followed by the agent, duration and last dose, using *** for any part not stated.
+"- Head and neck radiation: " then "no", or "yes, " followed by the site, dose and date, using *** for any part not stated.
+"- Diabetes: " then "no", or "diabetes mellitus, most recent A1c " followed by the value and "%", using *** if the value is not stated.
+"- Tobacco: " then exactly one of "no", "former", "current", "vaping".
+Then add "- Cannabis: " followed by the frequency and route of use as stated, only if the patient uses cannabis or marijuana in any form, else omit this line.
+Then add "- Other: " only if any of these are present, listed with commas: immunosuppression, current chemotherapy, oral contraceptive use, prosthetic joint, cardiac condition requiring antibiotic prophylaxis; else omit this line.)
+
+EXAMINATION:
+[Examination findings] (Write as bullets in this order and wording.
+"- Oral hygiene: " then "good", "fair" or "poor". Default to "good" if not mentioned.
+"- Soft tissues: " then "within normal limits, without masses or lesions" unless a soft tissue finding is mentioned, in which case write "within normal limits, without masses or lesions" followed by a semicolon and the finding as a short clinical phrase, or only the finding if it is clearly abnormal.
+"- Opening: " then "adequate", or "limited, maximal interincisal opening " followed by the measurement in mm or ***, if limited opening or trismus is mentioned. Default to "adequate".
+"- Extraoral/TMJ: " always printed. Start with "face symmetric without swelling", or "face swelling of the " followed by the region if facial swelling was found. Add, separated by semicolons, only the components mentioned: "cervical lymph nodes nonpalpable" or "cervical lymph nodes palpable and tender"; "TMJs non-tender without clicking or crepitus", "TMJs with clicking" or "TMJs with crepitus".
+Then always one line for every tooth in TEETH: "- Tooth XX: " followed by the eruption status, one of "fully erupted", "partially erupted", "gingiva-covered" or "not visible", or *** if unknown. If any finding was mentioned for that tooth, add a semicolon and the findings joined with commas and "and", using these terms where they fit: pericoronitis, inflamed operculum, carious, tender to percussion, opposing tooth traumatizing tissue, distal defect of the adjacent second molar. Write any other finding at that tooth as a short clinical phrase, such as "gingival operculum noted distal to second molar, does not appear inflamed".
+Then always one probing line covering the second molar next to each tooth in TEETH, in ascending order: "- PD WNL at distal sites of " followed by those second molar numbers, such as "17, 27, 37 and 47". If inflamed gums, bleeding or deep pockets were mentioned at a second molar, remove it from the WNL list and add "; PD 5+ mm at distal of " followed by that tooth number, or print only the 5+ mm part if every site is affected.
+Only if IV sedation or general anesthesia is planned, print these two lines, else omit both:
+"- ASA class: " followed by the stated class, or if not stated, inferred from the medical history: "I" for a healthy patient with no systemic disease; "II" for mild controlled systemic disease, current smoking, pregnancy or BMI 30 to 40; "III" for severe or poorly controlled systemic disease or BMI over 40.
+"- Airway: " followed by any stated components separated by semicolons; if not stated, default to "Mallampati I; neck full range of motion". Add "BMI " followed by the value only if stated.)
+
+IMAGING:
+[Imaging findings] (Use the radiograph read if one is present. Write as bullets in this order and wording.
+"- Images reviewed: " followed by "panoramic radiograph", "CBCT", or "panoramic radiograph and CBCT". Default to "panoramic radiograph" if imaging was reviewed but the type was not stated.
+Then one line per tooth in TEETH: "- Tooth XX: " followed by these descriptors, separated by semicolons, in this order and wording:
+angulation as "mesioangular angulation", "distoangular angulation", "vertical angulation" or "horizontal angulation", only if mentioned;
+coverage as "soft tissue impaction", "partial bony impaction" or "complete bony impaction", only if mentioned;
+root form as "fused", "curved or dilacerated", "divergent", "hooked" or "ankylosed", followed by "roots", only if mentioned;
+"incomplete root development", only if it applies to some but not all of TEETH;
+pericoronal status as "widened pericoronal follicle" or "pericoronal radiolucency suspicious for cyst" if mentioned, otherwise always print "no pericoronal pathology";
+"distal caries of the second molar" or "distal root resorption of the second molar", only if mentioned;
+vital structure, always for teeth 18, 28, 38 and 48: "roots in close proximity to the maxillary sinus" for 18 and 28, and "roots in close proximity to the inferior alveolar canal" for 38 and 48. Print "roots not in close proximity to" instead only if the surgeon clearly stated the roots are well away from the sinus or nerve. When it is unclear or not mentioned, always print "in close proximity";
+any of "loss of canal cortication", "darkening of the roots", "deflection of the canal", "narrowing of the canal" joined with commas and "and", only if mentioned.
+If incomplete root development applies to every tooth in TEETH, print one line after the tooth lines: "- Incomplete root development of TEETH."
+Last line, unless other osseous pathology was described: "- No other osseous pathology noted.")
+
+ASSESSMENT:
+[Assessment] (Write in three parts, separated by blank lines.
+Part 1, always, on its own: "AGE-year-old patient presenting with " followed by the problems joined with commas and "and", then " of TEETH." Choose problems from: impaction, recurrent pericoronitis, caries, pericoronal pathology, insufficient space for eruption. Use "impaction" when the teeth are impacted or partially erupted. Always add "insufficient space for eruption" when any tooth has partial or complete bony impaction, or lack of room was mentioned.
+Part 2, as one paragraph: only if extraction is recommended, "Extraction of TEETH is recommended." Then print each of these rationale sentences verbatim whose condition applies, and omit the others:
+If pericoronitis is a problem: "Extraction will eliminate the source of recurrent pericoronal infection."
+If caries, periodontal problems or damage to the adjacent second molar were discussed: "Removal will reduce the risk of caries and periodontal disease affecting the adjacent second molar."
+If a cyst, follicle or other pathology was discussed: "Removal will eliminate the risk of a pericoronal cyst or other associated pathology."
+If removal is for orthodontic or orthognathic treatment: "Removal is required to allow the planned orthodontic or orthognathic treatment."
+If the teeth are asymptomatic and removal is prophylactic or preventive: "In the absence of symptoms, removal was discussed as a means of reducing the likelihood of future pericoronitis, caries, periodontal disease, or pathology, with generally lower surgical risk and faster recovery at a younger age."
+If coronectomy is planned or was discussed for a tooth close to the nerve, print verbatim with XX replaced by the FDI tooth number: "Given the close proximity of the roots to the inferior alveolar canal, coronectomy of tooth XX is recommended to reduce the risk of inferior alveolar nerve injury. The risks of root migration and a possible second surgery were discussed."
+If surgical extraction is planned, print verbatim: "A surgical approach with sectioning of the crown and bone removal as needed is anticipated."
+Then, only if the surgeon gave case-specific reasoning not covered above, add at most one short sentence capturing it.
+Part 3 is the alternatives and risks below.)
+[Alternatives] (Only include if the risks or treatment options were discussed in any way, else omit entirely. Print on its own line: "Alternatives reviewed: " followed by the alternatives separated by semicolons with "; and " before the last, then a full stop. Always include "observation with periodic clinical and radiographic surveillance" and "no treatment (risk of recurrent infection, caries, and pathology)". If coronectomy is planned, also include "complete removal (higher risk of inferior alveolar nerve injury)" after observation. If coronectomy was offered as an alternative to complete removal, also include "coronectomy (partial tooth removal to reduce the risk of nerve injury)".)
+[Risks discussion] (If extraction or coronectomy is recommended and any risk, complication, consent, nerve injury, numbness, dry socket, sinus, bleeding or sedation topic was mentioned at all, even briefly, assume a full risks discussion took place and print the block below directly after the alternatives line. If no risk topic was mentioned at all, print only "Risks, benefits, and alternatives: ***".
+Line 1: "Risks, benefits, and alternatives were discussed with DECISION-MAKER. Risks reviewed:"
+Line 2: "- General surgical: bleeding, infection, pain, swelling, bruising, delayed healing, and the possible need for additional procedures."
+Line 3: "- Specific to the planned procedure: " followed by the specific risks, separated by semicolons with "; and " before the last, then a full stop. Build this list as a strict checklist: go through all twelve items below in order, decide yes or no for each one against the PLAN and the history, and include every item that is yes. Never skip an item whose condition is met, even if that risk was not mentioned in the transcript.
+1. "dry socket, damage to adjacent teeth or restorations, root fracture with possible retained root fragments, and postoperative jaw stiffness" if extraction or surgical extraction is planned.
+2. "temporary or permanent altered sensation of the lip, chin, tongue, or gingiva from inferior alveolar or lingual nerve injury" if tooth 38 or 48 is being treated, or nerve injury was discussed.
+3. "oroantral communication that may require additional repair" if tooth 18 or 28 is being treated, or sinus communication was discussed.
+4. "jaw fracture" if surgical extraction of tooth 38 or 48 is planned, or jaw fracture was discussed.
+5. "root migration, a possible second surgery, and infection or pain from the retained roots" if coronectomy is planned.
+6. "a higher risk of dry socket with tobacco use" if the patient currently smokes or vapes.
+7. "a higher risk of dry socket with oral contraceptive use" if the patient takes oral contraceptives.
+8. "medication-related osteonecrosis of the jaw" if the patient takes or has taken antiresorptive therapy.
+9. "osteoradionecrosis" if the patient has had head and neck radiation.
+10. "prolonged bleeding requiring additional hemostatic measures" if the patient takes an anticoagulant or antiplatelet, or has a bleeding disorder.
+11. "delayed healing and a higher risk of infection" if the patient has diabetes, immunosuppression or current chemotherapy.
+12. "risks of sedation or general anesthesia, including airway compromise, aspiration, and nausea" if IV sedation or general anesthesia is planned.
+Then a blank line, then: "It was explained that outcomes cannot be guaranteed. All questions were answered, and DECISION-MAKER verbalized understanding." If DECISION-MAKER is a parent, legal guardian or healthcare power of attorney, append " The patient participated in the discussion to the extent of their ability.")
+[Patient decision] (Always print on the next line, with no blank line before it, "After shared decision making, DECISION-MAKER " followed by exactly one of: "wishes to proceed with the recommended treatment." if they agreed, or if surgery is being scheduled or booked; "wishes to consider the options discussed and will contact the office when ready." if they want time to think or need to check insurance, schedule or family; "declines treatment at this time; the consequences of no treatment were reviewed." if they declined. If the decision cannot be determined, print "***".)
+
+PLAN:
+[Plan] (Write as bullets. Print only the lines whose condition applies, in this order and wording.
+"- Next procedure: " followed by the procedure, then ", TEETH under " and the anesthesia, then a full stop. Use "surgical extraction" if any tooth is impacted, partially erupted or needs sectioning or bone removal; "extraction" if all teeth are erupted and a simple extraction is planned; "coronectomy" if planned; "incision and drainage" if planned. Join several with "and", for example "coronectomy and surgical extraction". Write the anesthesia as "local anesthesia", "local anesthesia with nitrous oxide", "IV sedation; NPO and escort instructions reviewed" or "general anesthesia; NPO and escort instructions reviewed", or *** if not mentioned. Omit this line only if no procedure is recommended.
+"- Antibiotics: " followed by "amoxicillin 500 mg PO TID for 7 days", "clindamycin 300 mg PO QID for 7 days (penicillin allergy)" or "not indicated", or the regimen as stated, then a full stop. Only if antibiotics were mentioned, else omit.
+"- Analgesia: " followed by "ibuprofen 600 mg PO q6h and acetaminophen 500 mg PO q6h as needed", "acetaminophen 1000 mg PO q6h as needed, not to exceed 3 g per day", or the same ibuprofen and acetaminophen regimen followed by ", with " the opioid dose and quantity, or ***, " for breakthrough pain", then a full stop. Only if pain medication was mentioned, else omit.
+"- Chlorhexidine 0.12% rinse BID beginning the day after surgery for 1 week." if a chlorhexidine or prescription mouth rinse was mentioned, or if pericoronitis is a problem and surgery is planned.
+"- Work or school note provided." only if a work or school note was mentioned.
+"- Tobacco cessation counseling provided; advised to avoid smoking for at least 72 hours after surgery to reduce the risk of dry socket." if the patient currently smokes or vapes.
+"- Advised to abstain from cannabis for at least 2 weeks before sedation." if the patient uses cannabis and IV sedation or general anesthesia is planned.
+"- Increased dry socket risk with oral contraceptive use reviewed." if the patient takes oral contraceptives.
+"- Perioperative anticoagulant/antiplatelet management to be coordinated with the prescribing provider; local hemostatic measures planned." if the patient takes an anticoagulant or antiplatelet.
+"- Hemostatic management to be coordinated with hematology prior to surgery." if the patient has a bleeding disorder.
+"- Recent A1c and PCP clearance requested prior to surgery." if the patient has diabetes.
+"- MRONJ precautions: atraumatic technique with primary closure where feasible, and close follow-up until mucosal healing." if the patient takes or has taken antiresorptive therapy.
+"- Radiation oncology records requested to confirm dose to the surgical sites; ORN precautions with atraumatic technique, primary closure, and close follow-up." if the patient has had head and neck radiation.
+"- Antibiotic prophylaxis per current AHA or orthopedic guidance." if the patient has a prosthetic joint or a cardiac condition requiring prophylaxis.
+"- Written informed consent to be reviewed and signed by DECISION-MAKER at the surgical visit." if a procedure is planned and the patient wishes to proceed.
+"- Follow-up: " followed by the stated timing, then a full stop. Only if a follow-up interval was explicitly mentioned, else omit.
+"- Schedule urgently; return precautions reviewed for worsening swelling, fever, trismus, or difficulty swallowing or breathing." only if there is an active infection or the surgeon wants it done urgently.
+"- Schedule after medical clearance is received." only if medical clearance, an A1c or hematology input is needed first.
+Then, only if another specific plan item was explicitly discussed and is not covered above, add it as one short bullet.)
+
+"Thomas Beckstrom"
