@@ -1,14 +1,18 @@
 # SNIPPET: clinic_hpi_extraction   PREFIX: ext_hpi
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # The one-liner is followed by short sentences that each drop out until
-# picked, starting with the surrogate decision-maker sentence.
+# picked, starting with the surrogate decision-maker sentence. Pertinent
+# negatives get their own paragraph.
 name = "Snippet: HPI - extraction consult"
 use_partials = ["common_extraction_case"]
 
 body = """
+{%- set symptoms = [v for v in ext_hpi_symptoms if v != "no symptoms"] -%}
+{%- set denied = ext_hpi_denied -%}
 {%- set details = [
   (ext_dm_reason_phrase ~ ", and " ~ ext_dm_phrase ~ " is present as the legal decision-maker.") if ext_dm_reason else "",
-  ("Patient reports " ~ ((ext_hpi_symptoms[:-1] | join(sep=", ")) ~ " and " ~ ext_hpi_symptoms[-1] if ext_hpi_symptoms | length > 1 else ext_hpi_symptoms | first) ~ ".") if ext_hpi_symptoms else "",
+  "Patient reports no symptoms currently." if "no symptoms" in ext_hpi_symptoms else "",
+  ("Patient reports " ~ ((symptoms[:-1] | join(sep=", ")) ~ " and " ~ symptoms[-1] if symptoms | length > 1 else symptoms | first) ~ ".") if symptoms else "",
   ("Onset approximately " ~ ext_hpi_onset ~ ".") if ext_hpi_onset else "",
   ext_hpi_prior_treatment_text | join(sep=" ") if ext_hpi_prior_treatment else "",
   ext_hpi_replacement_interest_text if ext_hpi_replacement_interest else "",
@@ -16,10 +20,11 @@ body = """
 {%- set details = [d for d in details if d] -%}
 Reason for visit: {{ ext_hpi_visit_reason_text }}{% if ext_referring_provider %}
 Referring provider: {{ ext_referring_provider }}{% endif %}
-
 **HPI:**
 {{ ext_pt_intro }} presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}{% if ext_hpi_additional_history and ext_hpi_additional_history_2 %}
-{{ ext_hpi_additional_history_2 }}{% endif %}
+{{ ext_hpi_additional_history_2 }}{% endif %}{% if denied %}
+
+No hx of {% for v in denied %}{% if not loop.first %}{% if loop.last %} or {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %} associated with {{ "these sites" if ext_extract_teeth | length > 1 else "this site" }}.{% endif %}
 """
 
 [[fields]]
@@ -52,6 +57,13 @@ options = [
   "no symptoms",
   "***",
 ]
+
+[[fields]]
+key = "ext_hpi_denied"
+label = "Denies (no hx of)"
+section = "HPI - extraction consult"
+type = "multiselect"
+options = ["facial swelling", "pain", "drainage or bad taste", "fever or chills", "food trapping", "pain on biting", "***"]
 
 [[fields]]
 key = "ext_hpi_onset"
@@ -99,3 +111,8 @@ section = "HPI - extraction consult"
 type = "textarea"
 default = ""
 visible_if = "ext_hpi_additional_history"
+
+[[speed_buttons]]
+label = "Asymptomatic"
+section = "HPI - extraction consult"
+values = { ext_hpi_symptoms = ["no symptoms"], ext_hpi_denied = ["facial swelling", "pain", "drainage or bad taste"] }

@@ -1,8 +1,9 @@
 # NOTE: clinic_note_extraction_consult
 # Assembled from the extraction consult snippets; common_extraction_case holds
-# the facts they share (age, teeth, referring provider, decision-maker).
+# the facts they share (age, teeth, referring provider, decision-maker). The
+# history adds past surgical and social history.
 name = "Clinic - Extraction Consult"
-use_partials = ["common_extraction_case", "clinic_hpi_extraction", "clinic_history_extraction", "clinic_exam_extraction", "clinic_imaging_extraction", "clinic_assessment_plan_extraction"]
+use_partials = ["common_extraction_case", "clinic_hpi_extraction", "clinic_history_extraction", "clinic_history_surgical", "clinic_history_social", "clinic_exam_extraction", "clinic_imaging_extraction", "clinic_assessment_plan_extraction"]
 # Imaging is read at the desk, so the printed sheet leaves it off.
 print_skip = ["Imaging - extraction consult"]
 
@@ -14,4 +15,32 @@ body = """
 **IMAGING:**
 {% include "clinic_imaging_extraction" %}
 {% include "clinic_assessment_plan_extraction" %}
+
+Thomas Beckstrom
 """
+
+# ---------------------------------------------------------- pathway presets ---
+# Top row of the form. Each sets the conditions of every charted tooth
+# (`each`; chart the teeth first) and the assessment and plan pathway,
+# replacing whatever an earlier preset picked. Medical clearance leaves the
+# tooth boxes as charted. Analgesia is an independent pick, so a preset
+# leaves it alone.
+
+[[speed_buttons]]
+label = "Nonrestorable, local"
+values = { ext_ap_problems = [], ext_ap_indication_rationale = ["Nonrestorable"], ext_ap_alternatives = ["No treatment", "Restorative/endo"], ext_ap_next_procedure = ["simple extraction"], ext_ap_anesthesia_plan = "Local", ext_ap_antibiotics = "", ext_ap_chlorhexidine_bullet = false, ext_ap_replacement_plan = "", ext_ap_clearance_timing = false, ext_ap_follow_up = "", ext_ap_next_step = "" }
+each.ext_exam_teeth = { conditions = ["grossly carious"] }
+
+[[speed_buttons]]
+label = "Odontogenic infection"
+values = { ext_ap_problems = ["Periapical infection"], ext_ap_indication_rationale = ["Nonrestorable", "Infection"], ext_ap_alternatives = ["No treatment", "Restorative/endo"], ext_ap_next_procedure = ["simple extraction", "incision and drainage"], ext_ap_anesthesia_plan = "Local", ext_ap_antibiotics = "Amoxicillin", ext_ap_chlorhexidine_bullet = true, ext_ap_replacement_plan = "", ext_ap_clearance_timing = false, ext_ap_follow_up = "24-48 hours", ext_ap_next_step = "Urgent" }
+each.ext_exam_teeth = { conditions = ["grossly carious", "tender to percussion", "with vestibular swelling"] }
+
+[[speed_buttons]]
+label = "Preprosthetic clearance"
+values = { ext_ap_problems = [], ext_ap_indication_rationale = ["Preprosthetic"], ext_ap_alternatives = ["No treatment", "Periodontal therapy"], ext_ap_next_procedure = ["surgical extraction", "alveoloplasty"], ext_ap_anesthesia_plan = "IV sedation", ext_ap_antibiotics = "", ext_ap_chlorhexidine_bullet = false, ext_ap_replacement_plan = "Immediate denture", ext_ap_clearance_timing = false, ext_ap_follow_up = "24-48 hours", ext_ap_next_step = "" }
+each.ext_exam_teeth = { conditions = ["periodontally involved", "mobile"] }
+
+[[speed_buttons]]
+label = "Medical clearance"
+values = { ext_ap_problems = ["Poor prognosis"], ext_ap_indication_rationale = ["Medical clearance"], ext_ap_alternatives = ["No treatment"], ext_ap_next_procedure = ["simple extraction"], ext_ap_anesthesia_plan = "Local", ext_ap_antibiotics = "", ext_ap_chlorhexidine_bullet = false, ext_ap_replacement_plan = "", ext_ap_clearance_timing = true, ext_ap_follow_up = "1 week", ext_ap_next_step = "" }

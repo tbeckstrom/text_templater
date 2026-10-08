@@ -1,8 +1,11 @@
 # SNIPPET: clinic_exam_extraction   PREFIX: ext_exam
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # Every line is left out of the note until something is picked; "***" is a
-# deliberate choice, never the fallback. One box per tooth to extract. The
-# sedation evaluation is always shown, and its lines drop out until picked.
+# deliberate choice, never the fallback. One box per tooth to extract, each
+# always printing its line (grossly carious preselected). The extraoral/TMJ
+# add defaults on with only the face preselected. The sedation evaluation
+# shows only when the plan is IV sedation or general anesthesia, preset to
+# normal.
 name = "Snippet: Exam - extraction consult"
 use_partials = ["common_extraction_case"]
 
@@ -22,92 +25,31 @@ body = """
 ] -%}
 {%- set airway = [p for p in airway if p] -%}
 {%- set lines = [
-  ("Extraoral: " ~ eo | join(sep="; ")) if ext_exam_extraoral_exam and eo else "",
   ("Oral hygiene: " ~ ext_exam_oral_hygiene) if ext_exam_oral_hygiene else "",
   ("Periodontal status: " ~ ext_exam_perio_status_text | replace(from="[[ext_exam_periodontal_findings]]", to=ext_exam_periodontal_findings)) if ext_exam_perio_status else "",
   ("Soft tissues: " ~ ext_exam_soft_tissue_text) if ext_exam_soft_tissue else "",
   ("Opening: " ~ ext_exam_mouth_opening_text | replace(from="[[ext_exam_mio_mm]]", to=ext_exam_mio_mm)) if ext_exam_mouth_opening else "",
+  ("Extraoral/TMJ: " ~ eo | join(sep="; ")) if ext_exam_extraoral_exam and eo else "",
 ] -%}
 {%- set sedation = [
   ("ASA class: " ~ ext_exam_asa_class) if ext_exam_asa_class else "",
   ("Airway: " ~ airway | join(sep="; ")) if airway else "",
 ] -%}
+{%- set sedated = ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] -%}
 {%- for l in lines %}{% if l %}- {{ l }}
 {% endif %}{% endfor %}
-{%- for b in ext_exam_teeth %}{% if b.conditions %}- Tooth {{ b.tooth }}: {{ (b.conditions[:-1] | join(sep=", ")) ~ " and " ~ b.conditions[-1] if b.conditions | length > 1 else b.conditions | first }}
-{% endif %}{% endfor %}
-{%- for l in sedation %}{% if l %}- {{ l }}
-{% endif %}{% endfor %}"""
+{%- for b in ext_exam_teeth %}
+{%- set parts = [
+  ((b.conditions[:-1] | join(sep=", ")) ~ " and " ~ b.conditions[-1] if b.conditions | length > 1 else b.conditions | first) if b.conditions else "",
+  b.other_finding if b.other_finding else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") if parts else "***" }}
+{% endfor %}
+{%- if sedated %}{% for l in sedation %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}{% endif %}"""
 
 # ---------------------------------------------------------- general exam ---
-
-[[fields]]
-key = "ext_exam_extraoral_exam"
-label = "+ Extraoral exam"
-section = "Exam - extraction consult"
-type = "checkbox"
-default = false
-
-[[fields]]
-key = "ext_exam_face_swelling"
-label = "Face"
-section = "Exam - extraction consult"
-type = "dropdown"
-default = "Symmetric"
-options = [
-  { label = "Symmetric", text = "symmetric without swelling" },
-  { label = "Swelling", text = "swelling of the [[ext_exam_region_e_g_left_buccal_space]]" },
-  { label = "***", text = "***" },
-]
-visible_if = "ext_exam_extraoral_exam"
-
-[[fields]]
-key = "ext_exam_region_e_g_left_buccal_space"
-label = "Region, e.g. left buccal space"
-section = "Exam - extraction consult"
-type = "text"
-default = "***"
-visible_if = "ext_exam_extraoral_exam and ext_exam_face_swelling == 'Swelling'"
-
-[[fields]]
-key = "ext_exam_lymph_nodes"
-label = "Cervical lymph nodes"
-section = "Exam - extraction consult"
-type = "dropdown"
-default = "nonpalpable"
-options = ["nonpalpable", "palpable and tender", "***"]
-visible_if = "ext_exam_extraoral_exam"
-
-[[fields]]
-key = "ext_exam_floor_of_mouth"
-label = "Floor of mouth"
-section = "Exam - extraction consult"
-type = "dropdown"
-default = "soft"
-options = ["soft", "elevated", "***"]
-visible_if = "ext_exam_extraoral_exam"
-
-[[fields]]
-key = "ext_exam_voice_swallowing"
-label = "Voice / swallowing"
-section = "Exam - extraction consult"
-type = "dropdown"
-default = "Normal"
-options = [
-  { label = "Normal", text = "normal voice and swallowing without respiratory distress" },
-  { label = "Dysphagia", text = "dysphagia without respiratory distress" },
-  { label = "***", text = "***" },
-]
-visible_if = "ext_exam_extraoral_exam"
-
-[[fields]]
-key = "ext_exam_tmj_status"
-label = "TMJs"
-section = "Exam - extraction consult"
-type = "dropdown"
-default = "non-tender without clicking or crepitus"
-options = ["non-tender without clicking or crepitus", "with clicking", "***"]
-visible_if = "ext_exam_extraoral_exam"
 
 [[fields]]
 key = "ext_exam_oral_hygiene"
@@ -173,6 +115,72 @@ label = "Healthy perio"
 section = "Exam - extraction consult"
 values = { ext_exam_perio_status = "Healthy" }
 
+# ------------------------------------------------- extraoral/TMJ exam ---
+
+[[fields]]
+key = "ext_exam_extraoral_exam"
+label = "+ Extraoral/TMJ exam"
+section = "Exam - extraction consult"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "ext_exam_face_swelling"
+label = "Face"
+section = "Exam - extraction consult"
+type = "dropdown"
+default = "Symmetric"
+options = [
+  { label = "Symmetric", text = "symmetric without swelling" },
+  { label = "Swelling", text = "swelling of the [[ext_exam_region_e_g_left_buccal_space]]" },
+  { label = "***", text = "***" },
+]
+visible_if = "ext_exam_extraoral_exam"
+
+[[fields]]
+key = "ext_exam_region_e_g_left_buccal_space"
+label = "Region, e.g. left buccal space"
+section = "Exam - extraction consult"
+type = "text"
+default = "***"
+visible_if = "ext_exam_extraoral_exam and ext_exam_face_swelling == 'Swelling'"
+
+[[fields]]
+key = "ext_exam_lymph_nodes"
+label = "Cervical lymph nodes"
+section = "Exam - extraction consult"
+type = "dropdown"
+options = ["nonpalpable", "palpable and tender", "***"]
+visible_if = "ext_exam_extraoral_exam"
+
+[[fields]]
+key = "ext_exam_floor_of_mouth"
+label = "Floor of mouth"
+section = "Exam - extraction consult"
+type = "dropdown"
+options = ["soft", "elevated", "***"]
+visible_if = "ext_exam_extraoral_exam"
+
+[[fields]]
+key = "ext_exam_voice_swallowing"
+label = "Voice / swallowing"
+section = "Exam - extraction consult"
+type = "dropdown"
+options = [
+  { label = "Normal", text = "normal voice and swallowing without respiratory distress" },
+  { label = "Dysphagia", text = "dysphagia without respiratory distress" },
+  { label = "***", text = "***" },
+]
+visible_if = "ext_exam_extraoral_exam"
+
+[[fields]]
+key = "ext_exam_tmj_status"
+label = "TMJs"
+section = "Exam - extraction consult"
+type = "dropdown"
+options = ["non-tender without clicking or crepitus", "with clicking", "with crepitus", "***"]
+visible_if = "ext_exam_extraoral_exam"
+
 # ------------------------------------------------ one box per tooth ---
 
 [[groups]]
@@ -194,6 +202,7 @@ values = { conditions = ["periodontally involved", "mobile"] }
 key = "conditions"
 label = "Conditions"
 type = "multiselect"
+default = ["grossly carious"]
 options = [
   "grossly carious",
   "fractured",
@@ -206,6 +215,12 @@ options = [
   "***",
 ]
 
+[[groups.fields]]
+key = "other_finding"
+label = "Other finding (blank = omitted)"
+type = "text"
+default = ""
+
 # ------------------------------------------------ sedation evaluation ---
 
 [[fields]]
@@ -213,14 +228,18 @@ key = "ext_exam_asa_class"
 label = "ASA class"
 section = "Sedation evaluation"
 type = "dropdown"
+default = "I"
 options = ["I", "II", "III", "IV", "***"]
+visible_if = "ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
 
 [[fields]]
 key = "ext_exam_mallampati"
 label = "Mallampati"
 section = "Sedation evaluation"
 type = "dropdown"
+default = "I"
 options = ["I", "II", "III", "IV", "***"]
+visible_if = "ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
 
 [[fields]]
 key = "ext_exam_bmi"
@@ -228,10 +247,13 @@ label = "BMI (optional)"
 section = "Sedation evaluation"
 type = "text"
 default = ""
+visible_if = "ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
 
 [[fields]]
 key = "ext_exam_neck_mobility"
 label = "Neck"
 section = "Sedation evaluation"
 type = "dropdown"
+default = "full range of motion"
 options = ["full range of motion", "limited extension", "***"]
+visible_if = "ext_ap_anesthesia_plan is defined and ext_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
