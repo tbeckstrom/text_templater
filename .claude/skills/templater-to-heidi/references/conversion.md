@@ -170,3 +170,15 @@ Apply these without asking; add new ones here as they are settled.
   the consult plan; they belong to the surgery note.
 - **Implant follow-up** defaults to "2-3 weeks post-operatively" whenever a next-visit procedure
   is planned, with the provider only when named.
+- **Postop follow-up notes (extraction)**: dictation is very short, so Heidi infers aggressively.
+  Every extracted tooth defaults to "healing within normal limits..." unless a problem is stated
+  for it (this overrides the consult "Tooth XX: ***" rule). The neurosensory line (mandibular
+  posterior) and sinus line (maxillary posterior) print their intact defaults when unstated; a
+  reported numbness makes the line "altered sensation of the *** ***, described as numbness",
+  never "intact". "Doing well with minimal discomfort" is the default subjective; a routine visit
+  (all sites healing, no complaints) prints the routine "Denies ..." set, other visits only the
+  stated denials. The interval prints as stated, else "***" (never computed from dates). Pathways
+  follow the Templater presets without unstated prescriptions: dry socket defaults the
+  irrigation + Alvogyl treatment (when anything was done to the socket), ibuprofen + APAP and
+  follow-up 2-3 days; infection defaults chlorhexidine and follow-up 1 week; antibiotics print
+  only when mentioned; otherwise follow-up is "as needed".
