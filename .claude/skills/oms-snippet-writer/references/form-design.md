@@ -101,15 +101,30 @@ When in doubt, match it.
   these sites." (a MULTILIST of the denied items).
 - **PMH, Medications, Allergies.** Each has its own bold header and a paragraph input, with section
   speed buttons ("No chronic medical conditions", "None", "NKDA").
+- **Past surgical and social history** (third molar consult; `clinic_history_surgical` and
+  `clinic_history_social`, which the extraction history prints only when the note uses them).
+  The order is PMH, PSH, Medications, Allergies, Social History, then risk factors.
+  - PSH is a comma list of procedures, with prior anesthesia problems (PONV, difficult airway,
+    malignant hyperthermia, family history of anesthesia reactions) appended as "history of ...".
+  - Social history prints a bullet only for what is present, with stated details: tobacco
+    (status from the risk factor chip, plus details), heavy alcohol, cannabis (frequency, route)
+    and recreational drugs. These are documented only, without counseling, except cannabis.
+  - Either section with nothing present prints "Reviewed and updated in chart as applicable."
 - **Risk factors.** Labelled bullets whose chips default to "no". Rarer items, such as periodontal
-  history, are optional adds. Cannabis gets its own optional line ("Cannabis: frequency, route");
-  when it is used and sedation is planned it adds the plan bullet "Advised to abstain from cannabis
-  for at least 2 weeks before sedation."
+  history, are optional adds. Tobacco stays here as well as in social history, because it drives
+  the dry socket risk and the cessation bullet. Cannabis belongs in social history, not here; when
+  it is used and sedation is planned it adds an assessment sentence ("Cannabis use was noted; the
+  patient was counseled that regular cannabis use may reduce the effectiveness of sedation and
+  increase anesthetic requirements, and abstinence for at least 2 weeks before surgery was
+  recommended.") and the plan bullet "Advised to abstain from cannabis for at least 2 weeks
+  before sedation."
 - **Adjacent teeth in a third molar consult** default to a probing line, "PD WNL at distal sites
   of 17, 27, 37 and 47" (the second molars next to the charted teeth, derived). A site picked as
   deep moves to "PD 5+ mm at distal of 37". This overrides the "adjacent teeth unpicked" default
   above, which still applies to implant consults.
 - **Exam and imaging.**
+  - Objective only: descriptive findings, never judgments such as "not concerning" or
+    "benign-appearing". The interpretation belongs in the assessment, if anywhere.
   - Labelled bullets, with one box per edentulous span and one per tooth present.
   - The conditions picked for a tooth present (heavily restored, fractured, carious, mobile, and
     so on) describe that tooth throughout the note. "nonrestorable" is the fallback.
