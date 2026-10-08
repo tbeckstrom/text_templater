@@ -28,11 +28,18 @@ When in doubt, match it.
   opposing restored natural dentition, face symmetric, opening adequate, a charted tooth
   nonrestorable, CBCT sinuses clear, every risk factor "no", healing and integration times 4-6
   months, decision "considering", and local anesthesia for the next visit.
+- **Sedation evaluation defaults to normal, shown only when sedation is planned.** When the next
+  visit is under IV sedation or general anesthesia, the ASA class and airway lines print with
+  "ASA class: I" and "Airway: Mallampati I; neck full range of motion" preselected. They stay
+  hidden for local anesthesia.
 - **Leave a finding unpicked when it needs an active look**, so choosing it is a deliberate act.
   Examples: periodontal status, adjacent teeth, parafunction, lymph nodes, TMJ, deviation,
   muscles, tissue phenotype, current prosthesis, bone adequacy on CBCT, and allergies (give them an
   NKDA speed button instead of a default).
 - **Leave optional plan items unpicked**, such as antibiotics and chlorhexidine.
+- **No workflow bullets the surgeon would not write**: no "Consult note sent to the referring
+  provider", no "Schedule surgery", and no default follow-up interval (it varies, so it is an
+  unpicked choice). Urgent scheduling and scheduling after medical clearance stay as picks.
 - **Nothing is required.** Use `(required)` only where an empty choice would break running prose and
   no default is safe, for example laterality inside an op-note sentence.
 
@@ -44,7 +51,13 @@ When in doubt, match it.
 - **Expanded-note content goes behind an optional add**: an OPTIONAL titled "+ Name", default off,
   whose controls appear only when it is ticked. Examples: additional findings, referral request,
   interim prosthesis, periodontal history. An add used in nearly every note may default on, like
-  the implant consult's extraoral/TMJ exam.
+  the extraoral/TMJ exam: it defaults on in every clinic consult, with "face symmetric without
+  swelling" preselected and nodes and TMJ unpicked.
+- **Every charted site gets its exam line.** In an extraction consult each tooth to extract prints
+  its own "Tooth XX:" line with its status (e.g. "not visible"), even when it has no other
+  finding. Each tooth box also takes an optional short free-text finding for incidentals, written
+  in clinical terms, e.g. "gingival operculum noted distal to second molar, does not appear
+  inflamed".
 
 ## Enter once, derive the rest
 
@@ -64,7 +77,7 @@ When in doubt, match it.
 ## Speed buttons
 
 - **A PRESET sits in the section it fills.** Examples:
-  - "Healthy: noncontributory / none / NKDA" under PMH;
+  - "Healthy: no chronic medical conditions / none / NKDA" under PMH;
   - "Healthy perio, sound adjacent teeth" under the exam;
   - "Limited FOV - mandible" under CBCT;
   - "All adequate" inside each CBCT box.
@@ -82,11 +95,20 @@ When in doubt, match it.
   provider:" when given.
 - **HPI.** Concise. It opens with a one-liner, "58-year-old patient presenting for implant evaluation
   of edentulous sites 35-37 and tooth 46.", followed by short sentences: how and when teeth were
-  lost, current prosthesis, patient goals.
+  lost, current prosthesis, patient goals. Current symptoms read "Patient reports no symptoms
+  currently." or "Patient reports pain and swelling.". Pertinent negatives go in their own
+  paragraph after a blank line: "No hx of facial swelling, food trapping, or pain associated with
+  these sites." (a MULTILIST of the denied items).
 - **PMH, Medications, Allergies.** Each has its own bold header and a paragraph input, with section
-  speed buttons ("Noncontributory", "None", "NKDA").
+  speed buttons ("No chronic medical conditions", "None", "NKDA").
 - **Risk factors.** Labelled bullets whose chips default to "no". Rarer items, such as periodontal
-  history, are optional adds.
+  history, are optional adds. Cannabis gets its own optional line ("Cannabis: frequency, route");
+  when it is used and sedation is planned it adds the plan bullet "Advised to abstain from cannabis
+  for at least 2 weeks before sedation."
+- **Adjacent teeth in a third molar consult** default to a probing line, "PD WNL at distal sites
+  of 17, 27, 37 and 47" (the second molars next to the charted teeth, derived). A site picked as
+  deep moves to "PD 5+ mm at distal of 37". This overrides the "adjacent teeth unpicked" default
+  above, which still applies to implant consults.
 - **Exam and imaging.**
   - Labelled bullets, with one box per edentulous span and one per tooth present.
   - The conditions picked for a tooth present (heavily restored, fractured, carious, mobile, and
@@ -94,13 +116,20 @@ When in doubt, match it.
   - CBCT uses adequate / marginal / inadequate scales for bone height, bone width, vertical and
     mesiodistal restorative space, plus an "mm" chip that opens a box for the measurement.
   - A vital structure is printed only once picked. Its proximity defaults to "in close
-    proximity", with "not in close proximity" one click away.
+    proximity", with "not in close proximity" one click away. Exception: in a third molar
+    consult the vital structure is derived from the tooth (18 and 28 the maxillary sinus, 38 and
+    48 the inferior alveolar canal) and always prints, defaulting to "in close proximity".
+  - A finding shared by every tooth (e.g. incomplete root development) prints once as a summary
+    line, "Incomplete root development of teeth 18, 28, 38 and 48."; otherwise it goes on each
+    affected tooth's line.
   - Sinus pneumatization and sinus membrane thickening are right / left / bilateral chips,
     unpicked by default.
 - **Assessment.**
   - It opens "58-year-old patient presenting with [the specific problem in clinical terms]", e.g.
     "partial edentulism at sites 35-37 and fractured, carious tooth 46 with horizontal alveolar
-    ridge deficiency".
+    ridge deficiency". This problem statement stands alone as its own paragraph.
+  - Derive problems that follow from the findings, e.g. "insufficient space for eruption"
+    whenever a third molar is charted as partial or complete bony impaction.
   - The recommendation follows, with one short rationale sentence per adjunct.
   - Alternatives go in one sentence.
   - Before the risks, one line: "Treatment timing and sequencing were discussed as outlined in the
@@ -110,11 +139,13 @@ When in doubt, match it.
   - "Specific to the planned procedure:" only the risks of the next procedure's components, of the
     charted sites, and of the patient's risk factors, separated by semicolons.
 
-  Close with the understanding and questions-answered sentence.
+  Close, after a blank line, with the understanding and questions-answered sentence, followed
+  directly by the shared decision-making sentence.
 - **Plan.** Summarized bullets, each dropping out until picked, in this order:
   - **Next visit.** Chips (extraction, socket preservation, implant placement, GBR, sinus lift, and
     so on) write the procedure with its sites, followed by the anesthesia ("under local
-    anesthesia"). They drive the specific risks.
+    anesthesia"; "under IV sedation; NPO and escort instructions reviewed"). The anesthesia is
+    part of this line, never a separate "Anesthesia:" bullet. They drive the specific risks.
   - **To do prior to next visit.** An indented sub-list of information to gather and prep:
     pickable items (medical records, medical consult, labs, and so on) plus automatic ones
     (surgical guide when the next visit places an implant, A1c for diabetes, anticoagulation,
@@ -125,6 +156,9 @@ When in doubt, match it.
     restoring dentist.
   - Then optional lines such as possible soft tissue grafting, antibiotics, interim prosthesis
     and consent.
+
+- **Sign-off.** Every NOTE ends with the surgeon's name, "Thomas Beckstrom", on its own line
+  after the plan.
 
 ## Printed sheet
 
