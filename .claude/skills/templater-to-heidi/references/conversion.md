@@ -182,3 +182,13 @@ Apply these without asking; add new ones here as they are settled.
   irrigation + Alvogyl treatment (when anything was done to the socket), ibuprofen + APAP and
   follow-up 2-3 days; infection defaults chlorhexidine and follow-up 1 week; antibiotics print
   only when mentioned; otherwise follow-up is "as needed".
+- **Procedure notes (extraction)**: dictation is very short, so Heidi infers aggressively. Every
+  unstated technique step takes the form default; a tooth is surgical unless the dictation
+  clearly says it was simple, and surgical defaults include buccal bone removal with a bur and
+  closure with 3-0 chromic gut, simple interrupted. Diagnoses come from context, else
+  "nonrestorable caries". Carpule counts, anesthesia time and vitals values print "***" unless
+  stated; the agent defaults to lidocaine plus topical. Socket preservation and alveoloplasty
+  details take form defaults, with unnamed sextants inferred from the extracted teeth. Post-op
+  meds default to OTC ibuprofen, OTC acetaminophen and chlorhexidine; Tylenol #3 replaces the
+  OTC acetaminophen line. Follow-up defaults to "as needed". The PMH line prints only when
+  conditions are known.
