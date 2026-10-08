@@ -43,7 +43,10 @@ Apply these without asking; add new ones here as they are settled.
 
 - **Exam lines**: use the Templater form defaults when they weren't mentioned (oral hygiene good,
   soft tissues WNL, opening adequate, face symmetric).
-- **PMH, medications, allergies**: print "***" when not discussed. A healthy patient gets "No
+- **Referring provider**: print the line only when someone is explicitly stated to have referred
+  the patient; a provider who is merely mentioned doesn't count.
+- **PMH, medications, allergies**: print "***" when not discussed. PMH lists only conditions that
+  are present, never normal findings or denied conditions ("kidney function okay"). A healthy patient gets "No
   chronic medical conditions" / "None" / "NKDA". PMH and medications are "- " bullets, one item
   per line, with short detail only when it bears on the visit (e.g. migraine neurologic symptoms,
   "started <1 month ago, tolerating well"). Every medication and supplement mentioned is listed.
@@ -60,8 +63,10 @@ Apply these without asking; add new ones here as they are settled.
   print follow-up only when stated.
 - **Measurements**: print them only when stated. If the surgeon is heard measuring and the value
   isn't captured, print the label with "***" for the value.
-- **Medications** named without a dose take the form's standard regimen text. An unnamed drug
-  class prints "***".
+- **Medications** named without a dose take the form's standard regimen text. Misheard drug and
+  product names are corrected to the real name from context ("CortCap" = Cortef, "Serticel" =
+  Surgicel). A drug that can't be identified confidently prints its class with " (***)", e.g.
+  "- Seizure medication (***)".
 - **Pathway presets** supply the defaults for unstated choices. For example, the alternatives
   list follows the main diagnosis, and a splint's fabricator defaults to the referring dentist.
 - **Diagnoses** the surgeon doesn't name are inferred conservatively, from clear findings only,
@@ -88,7 +93,25 @@ Apply these without asking; add new ones here as they are settled.
   management follows ("... while awaiting imaging").
 - **Social History** holds only its four items (tobacco, heavy alcohol, cannabis, recreational
   drugs).
-- **Decision**: surgery being scheduled implies "wishes to proceed"; otherwise print "***".
+- **Decision**: surgery being scheduled implies "wishes to proceed"; otherwise print "***". The
+  decision sentence is its own paragraph, after a blank line.
+- **Vitals**: whenever vitals come up, they are the first exam line, brief and ending "(see chart
+  for details)". A stated interpretation ("likely situational") is allowed on that line only.
+- **Other extraoral findings** are appended to the Extraoral/TMJ line after a semicolon.
+- **Plan extras**: the one allowed extra plan bullet must concern the planned procedure or its
+  prep, never other providers' care of other teeth or conditions.
+- **Anticoagulants**: when a perioperative plan was stated, the bullet states it ("Apixaban 5 mg
+  BID to continue perioperatively per ...; local hemostatic measures planned (gelfoam/Surgicel)").
+  Otherwise keep the "to be coordinated with the prescribing provider" wording. Hemostatic agents
+  never get their own bullet.
+- **Periapical-only imaging**: the "not close" wording becomes "roots do not appear to be in close
+  proximity to the ..."; with a panoramic radiograph or CBCT it stays "roots not in close
+  proximity to the ...".
+- **Extraction consult only**: "- No evidence of acute infection" follows the tooth lines unless
+  signs of infection were found. After the risk list and a blank line, the recovery sentence
+  prints verbatim whenever risks were discussed ("We discussed procedural details and expected
+  recovery with 2-3 days initial discomfort, up to 1-2 weeks lingering soreness."), followed by
+  up to 2 sentences of case-specific counseling that was actually said.
 - **Per-tooth exam conditions**: when a tooth's condition wasn't described, print "Tooth XX: ***".
   Never carry over a Templater preselected condition (e.g. the extraction form's "grossly
   carious").

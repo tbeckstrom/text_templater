@@ -69,6 +69,7 @@ body = """
 Alternatives reviewed: {% if alts | length > 1 %}{{ alts[:-1] | join(sep="; ") }}; and {{ alts[-1] }}{% else %}{{ alts | first }}{% endif %}.{% endif %}{% if ext_ap_replacement_plan or ext_ap_clearance_timing %}
 Treatment timing and sequencing were discussed as outlined in the plan below.{% endif %}
 {% include "clinic_risks_extraction" %}
+
 After shared decision making, {{ ext_dm_phrase }} {{ ext_ap_patient_decision_text if ext_ap_patient_decision else "***" }}
 
 **PLAN:**

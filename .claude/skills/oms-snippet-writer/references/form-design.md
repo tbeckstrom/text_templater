@@ -154,8 +154,8 @@ When in doubt, match it.
   - "Specific to the planned procedure:" only the risks of the next procedure's components, of the
     charted sites, and of the patient's risk factors, separated by semicolons.
 
-  Close, after a blank line, with the understanding and questions-answered sentence, followed
-  directly by the shared decision-making sentence.
+  Close, after a blank line, with the understanding and questions-answered sentence, then the
+  shared decision-making sentence as its own paragraph after another blank line.
 - **Plan.** Summarized bullets, each dropping out until picked, in this order:
   - **Next visit.** Chips (extraction, socket preservation, implant placement, GBR, sinus lift, and
     so on) write the procedure with its sites, followed by the anesthesia ("under local
