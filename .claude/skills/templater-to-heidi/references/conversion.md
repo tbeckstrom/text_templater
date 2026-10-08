@@ -98,3 +98,14 @@ Apply these without asking; add new ones here as they are settled.
   when unstated, but an antibiotic prints only when it was mentioned.
 - **Anesthesia default**: the extraction consult defaults to "local anesthesia" when not stated;
   the third molar consult prints "***".
+- **Pathology impression**: the level of concern and the differential are both inferred
+  conservatively from clear findings when the surgeon doesn't state them, with "***" when there is
+  no basis. A concerning level always brings squamous cell carcinoma or malignancy into the
+  differential.
+- **Lesion size** is the exception to the measurement rule: every lesion line carries a size, and
+  an unstated one prints "*** mm".
+- **Same-day procedure details**: unstated choices take the form defaults (anesthetic agent and
+  route, hemostasis, suture); numbers such as the anesthetic volume, and the pathology lab, print
+  "***" unless stated.
+- **No imaging**: when every lesion is soft tissue, print the form's "No imaging indicated" line;
+  when there is a lesion in bone and no read was given, print "- ***".
