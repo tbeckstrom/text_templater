@@ -1,0 +1,117 @@
+# SNIPPET: op_indications_extraction   PREFIX: exo_ind
+# History and indications for the extraction procedure note: who and what,
+# indications, interval changes, surrogate decision-maker and consent. NPO
+# confirmation is derived from IV sedation.
+name = "Snippet: History and indications"
+use_partials = ["common_exo_case"]
+
+body = """
+{%- set procs = [
+  ("simple extraction of " ~ exo_simple_teeth_tooth_word ~ " " ~ exo_simple_teeth_list) if exo_simple_teeth else "",
+  ("surgical extraction of " ~ exo_surgical_teeth_tooth_word ~ " " ~ exo_surgical_teeth_list) if exo_surgical_teeth else "",
+] -%}
+{%- set procs = [p for p in procs if p] -%}
+{%- set ind = [i | replace(from="[[exo_ind_clearance_prior_to]]", to=exo_ind_clearance_prior_to) for i in exo_ind_indications_text] -%}
+**HISTORY AND INDICATIONS:**
+{{ exo_pt_intro }} presenting for {% for v in procs %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.
+{% if exo_pmh_sentence %}{{ exo_pmh_sentence }}
+{% endif %}
+{%- if ind %}Treatment as above is indicated {% for v in ind %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.
+{% endif %}
+The health history and indications for the procedure were reviewed and an examination was performed.{% if exo_ind_interval_changes_text %} {{ exo_ind_interval_changes_text | join(sep=" ") | replace(from="[[exo_ind_history_changes]]", to=exo_ind_history_changes) | replace(from="[[exo_ind_exam_changes]]", to=exo_ind_exam_changes) | replace(from="[[exo_ind_plan_changes]]", to=exo_ind_plan_changes) }}{% endif %}{% if exo_ind_surrogate %} The plan of treatment was confirmed with {{ exo_ind_surrogate_role }}, {{ exo_ind_surrogate_name }}.{% endif %} The details of the procedure and its risks, benefits and alternatives were again reviewed, and all questions were invited and answered prior to starting. Informed consent was obtained.{% if exo_iv_sedation %} NPO status was confirmed.{% endif %}
+{%- if exo_ind_auscultation %}
+Heart and lungs auscultated prior to beginning: RRR, lungs CTAB.{% endif %}
+"""
+
+[[fields]]
+key = "exo_ind_indications"
+label = "Indications"
+section = "History and indications"
+type = "multiselect"
+default = ["Current symptoms", "Prevent pain/infection"]
+options = [
+  { label = "Current symptoms", text = "to treat current symptoms" },
+  { label = "Prevent pain/infection", text = "to prevent future pain and infection" },
+  { label = "Active infection", text = "to treat the active odontogenic infection" },
+  { label = "Preprosthetic", text = "to allow prosthetic rehabilitation" },
+  { label = "Ridge contour", text = "to optimize the ridge contour for future prosthetic rehabilitation" },
+  { label = "Medical clearance", text = "as part of dental clearance prior to [[exo_ind_clearance_prior_to]]" },
+  { label = "Orthodontic", text = "to facilitate orthodontic treatment" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_ind_clearance_prior_to"
+label = "Clearance prior to"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Medical clearance' in exo_ind_indications"
+
+[[fields]]
+key = "exo_ind_interval_changes"
+label = "Interval changes"
+section = "History and indications"
+type = "multiselect"
+default = ["No changes"]
+options = [
+  { label = "No changes", text = "There have been no changes in the health history, examination or treatment plan since the last visit." },
+  { label = "History changed", text = "The patient reports interval changes to the health history including [[exo_ind_history_changes]]." },
+  { label = "Exam changed", text = "The examination today is notable for [[exo_ind_exam_changes]]." },
+  { label = "Plan changed", text = "The following changes to the treatment plan were discussed: [[exo_ind_plan_changes]]." },
+]
+
+[[fields]]
+key = "exo_ind_history_changes"
+label = "History changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'History changed' in exo_ind_interval_changes"
+
+[[fields]]
+key = "exo_ind_exam_changes"
+label = "Exam changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Exam changed' in exo_ind_interval_changes"
+
+[[fields]]
+key = "exo_ind_plan_changes"
+label = "Plan changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Plan changed' in exo_ind_interval_changes"
+
+[[fields]]
+key = "exo_ind_surrogate"
+label = "+ Surrogate decision-maker"
+section = "History and indications"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_ind_surrogate_role"
+label = "Surrogate"
+section = "History and indications"
+type = "dropdown"
+default = "the patient's parent"
+options = ["the patient's parent", "the patient's legal guardian", "the patient's healthcare power of attorney", "***"]
+visible_if = "exo_ind_surrogate"
+
+[[fields]]
+key = "exo_ind_surrogate_name"
+label = "Surrogate name"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "exo_ind_surrogate"
+
+[[fields]]
+key = "exo_ind_auscultation"
+label = "+ Heart/lungs auscultated"
+section = "History and indications"
+type = "checkbox"
+default = false

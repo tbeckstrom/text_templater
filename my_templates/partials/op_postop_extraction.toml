@@ -1,0 +1,45 @@
+# SNIPPET: op_postop_extraction   PREFIX: exo_post
+# Post-op instructions, medications (OTC analgesia and chlorhexidine
+# preselected) and follow-up, which starts unpicked.
+name = "Snippet: Post-op - extraction"
+
+body = """
+**POST-OPERATIVE INSTRUCTIONS:** Given both verbally and in writing.
+
+**POST-OPERATIVE MEDICATIONS:**
+{{ exo_post_postop_meds_text | join(sep="\n") }}
+
+**PLAN/FOLLOW UP:**
+{% if exo_post_follow_up %}- Follow up {{ exo_post_follow_up }}
+{% endif %}
+{%- if exo_post_additional_plan %}- {{ exo_post_additional_plan }}
+{% endif %}"""
+
+[[fields]]
+key = "exo_post_postop_meds"
+label = "Post-op medications"
+section = "Post-op - extraction"
+type = "multiselect"
+default = ["Ibuprofen 400 OTC", "Acetaminophen 1000 OTC", "Chlorhexidine BID x2wk"]
+options = [
+  { label = "Ibuprofen 400 OTC", text = "Ibuprofen 400 mg (OTC) every 6 hours as needed for pain" },
+  { label = "Acetaminophen 1000 OTC", text = "Acetaminophen 1000 mg (OTC) every 6 hours as needed for pain, max 4000 mg/day" },
+  { label = "Chlorhexidine BID x2wk", text = "Chlorhexidine oral rinse BID x 2 weeks" },
+  { label = "Amoxicillin 500 TID x7d", text = "Amoxicillin 500 mg TID x 7 days" },
+  { label = "Tylenol #3", text = "Acetaminophen-codeine 300-30 mg (Tylenol #3) 1-2 tabs every 4-6 hours as needed for severe pain" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_post_follow_up"
+label = "Follow up"
+section = "Post-op - extraction"
+type = "dropdown"
+options = ["as needed", "in 1 week", "in 2 weeks", "***"]
+
+[[fields]]
+key = "exo_post_additional_plan"
+label = "Additional plan"
+section = "Post-op - extraction"
+type = "text"
+default = ""

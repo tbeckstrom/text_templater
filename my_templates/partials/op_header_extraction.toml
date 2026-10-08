@@ -1,0 +1,284 @@
+# SNIPPET: op_header_extraction   PREFIX: exo_hdr
+# Header block of the extraction procedure note: per-tooth diagnosis (one
+# box per tooth across simple and surgical, in FDI order) or one "same for
+# all" line, the procedure list derived from the chart and the procedure
+# adds, anesthesia, specimen and vitals.
+name = "Snippet: Header - extraction"
+use_partials = ["common_exo_case"]
+
+body = """
+{%- set all_dx = [...exo_hdr_all_dx_pulpal_text, ...exo_hdr_all_dx_perio_text, ...exo_hdr_all_dx_other_text] | join(sep=", ") | replace(from="[[exo_hdr_clearance_prior_to_2]]", to=exo_hdr_clearance_prior_to_2) -%}
+**PREPROCEDURE DIAGNOSIS:**
+{% for b in exo_hdr_dx_teeth %}
+{%- set dx = [...b.dx_pulpal_text, ...b.dx_perio_text, ...b.dx_other_text] | join(sep=", ") | replace(from="[[clearance_prior_to]]", to=b.clearance_prior_to) -%}
+{% if dx %}Tooth {{ b.site }} - {{ dx }}
+{% endif %}{% endfor %}
+{%- if exo_hdr_same_dx and exo_extract_teeth and all_dx %}{{ exo_extract_teeth_tooth_word_cap }} {{ exo_extract_teeth_list }} - {{ all_dx }}
+{% endif %}
+{%- if exo_hdr_additional_diagnosis %}{{ exo_hdr_additional_diagnosis }}
+{% endif %}
+**POSTPROCEDURE DIAGNOSIS:**
+Same as preoperative
+
+**PROCEDURE:**
+{% if exo_simple_teeth %}Simple extraction of {{ exo_simple_teeth_tooth_word }} {{ exo_simple_teeth_list }}
+{% endif %}
+{%- if exo_surgical_teeth %}Surgical extraction of {{ exo_surgical_teeth_tooth_word }} {{ exo_surgical_teeth_list }}
+{% endif %}
+{%- if exo_proc_socket_preservation is defined and exo_proc_socket_sites is defined and exo_proc_socket_sites_list is defined and exo_proc_socket_sites_site_word is defined and exo_proc_socket_preservation and exo_proc_socket_sites %}Socket preservation, {{ exo_proc_socket_sites_site_word }} {{ exo_proc_socket_sites_list }}
+{% endif %}
+{%- if exo_proc_alveoloplasty is defined and exo_proc_alveo_sextants is defined and exo_proc_alveo_sextants_text is defined and exo_proc_alveoloplasty and exo_proc_alveo_sextants %}Alveoloplasty: {% for v in exo_proc_alveo_sextants_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}
+{% endif %}
+{%- if exo_proc_incision_drainage is defined and exo_proc_id_site is defined and exo_proc_incision_drainage %}Incision and drainage, {{ exo_proc_id_site }}
+{% endif %}
+{%- if exo_proc_biopsy is defined and exo_proc_biopsy_site is defined and exo_proc_biopsy %}Biopsy, {{ exo_proc_biopsy_site }}
+{% endif %}
+**SURGEON:**
+Thomas Beckstrom DDS, MD
+
+**ANESTHESIA:**
+{% for l in exo_sedation_lines %}{{ l }}
+{% endfor %}
+{%- set local = exo_hdr_local_agents_text | join(sep="\n") | replace(from="[[exo_hdr_lido_carps]]", to=exo_hdr_lido_carps) | replace(from="[[exo_hdr_arti_carps]]", to=exo_hdr_arti_carps) | replace(from="[[exo_hdr_pril_carps]]", to=exo_hdr_pril_carps) | replace(from="[[exo_hdr_bupi_carps]]", to=exo_hdr_bupi_carps) | replace(from="[[exo_hdr_mepi_carps]]", to=exo_hdr_mepi_carps) -%}
+Local anesthesia with:
+{{ local }}
+
+**SPECIMEN:**
+{% if exo_extract_teeth %}Dentition for disposal
+{% endif %}
+{%- if exo_proc_biopsy is defined and exo_proc_biopsy_tissue_text is defined and exo_proc_biopsy_site is defined and exo_proc_biopsy %}{{ exo_proc_biopsy_tissue_text }}, {{ exo_proc_biopsy_site }}, to pathology
+{% endif %}
+{%- if exo_proc_incision_drainage is defined and exo_proc_culture_sent is defined and exo_proc_incision_drainage and exo_proc_culture_sent %}Wound culture and sensitivity
+{% endif %}
+**VITALS:**
+{{ exo_hdr_vitals_line_text | replace(from="[[exo_hdr_bp]]", to=exo_hdr_bp) | replace(from="[[exo_hdr_hr]]", to=exo_hdr_hr) }}
+"""
+
+# ----------------------------------------------------------- diagnosis ---
+
+[[fields]]
+key = "exo_hdr_same_dx"
+label = "+ Same diagnosis for all"
+section = "Diagnosis"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_hdr_all_dx_pulpal"
+label = "Caries / pulp / PA"
+section = "Diagnosis"
+type = "multiselect"
+visible_if = "exo_hdr_same_dx"
+options = [
+  { label = "Nonrestorable caries", text = "nonrestorable caries" },
+  { label = "Irreversible pulpitis", text = "irreversible pulpitis" },
+  { label = "Pulpal necrosis", text = "pulpal necrosis" },
+  { label = "Periapical abscess", text = "periapical abscess" },
+  { label = "Sx apical periodontitis", text = "symptomatic apical periodontitis" },
+]
+
+[[fields]]
+key = "exo_hdr_all_dx_perio"
+label = "Perio / fracture"
+section = "Diagnosis"
+type = "multiselect"
+visible_if = "exo_hdr_same_dx"
+options = [
+  { label = "Perio with mobility", text = "periodontitis with mobility" },
+  { label = "Crown fracture", text = "crown fracture" },
+  { label = "Vertical root fracture", text = "vertical root fracture" },
+  { label = "Retained root", text = "retained root tip" },
+]
+
+[[fields]]
+key = "exo_hdr_all_dx_other"
+label = "Other"
+section = "Diagnosis"
+type = "multiselect"
+visible_if = "exo_hdr_same_dx"
+options = [
+  { label = "Preprosthetic", text = "preprosthetic extraction" },
+  { label = "Orthodontic", text = "orthodontic extraction" },
+  { label = "Supernumerary", text = "supernumerary tooth" },
+  { label = "Malposed", text = "malposed tooth" },
+  { label = "Impacted", text = "impacted tooth" },
+  { label = "Medical clearance", text = "dental clearance prior to [[exo_hdr_clearance_prior_to_2]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_hdr_clearance_prior_to_2"
+label = "Clearance prior to"
+section = "Diagnosis"
+type = "text"
+default = "***"
+visible_if = "exo_hdr_same_dx and 'Medical clearance' in exo_hdr_all_dx_other"
+
+[[fields]]
+key = "exo_hdr_additional_diagnosis"
+label = "Additional diagnosis"
+section = "Diagnosis"
+type = "text"
+default = ""
+
+[[speed_buttons]]
+label = "All nonrestorable caries"
+section = "Diagnosis"
+values = { exo_hdr_same_dx = true, exo_hdr_all_dx_pulpal = ["Nonrestorable caries"], exo_hdr_all_dx_perio = [], exo_hdr_all_dx_other = [] }
+
+[[speed_buttons]]
+label = "All perio"
+section = "Diagnosis"
+values = { exo_hdr_same_dx = true, exo_hdr_all_dx_pulpal = [], exo_hdr_all_dx_perio = ["Perio with mobility"], exo_hdr_all_dx_other = [] }
+
+[[speed_buttons]]
+label = "All preprosthetic"
+section = "Diagnosis"
+values = { exo_hdr_same_dx = true, exo_hdr_all_dx_pulpal = [], exo_hdr_all_dx_perio = [], exo_hdr_all_dx_other = ["Preprosthetic"] }
+
+# ---------------------------------------------------------- anesthesia ---
+
+[[fields]]
+key = "exo_hdr_local_agents"
+label = "Local anesthetic"
+section = "Anesthesia"
+type = "multiselect"
+default = ["Lidocaine 2%", "Topical"]
+options = [
+  { label = "Lidocaine 2%", text = "1.7 mL 2% lidocaine with 1:100,000 epinephrine x [[exo_hdr_lido_carps]]" },
+  { label = "Articaine 4%", text = "1.7 mL 4% articaine with 1:100,000 epinephrine x [[exo_hdr_arti_carps]]" },
+  { label = "Prilocaine 4% plain", text = "1.7 mL 4% prilocaine plain x [[exo_hdr_pril_carps]]" },
+  { label = "Bupivacaine 0.5%", text = "1.7 mL 0.5% bupivacaine with 1:200,000 epinephrine x [[exo_hdr_bupi_carps]]" },
+  { label = "Mepivacaine 3% plain", text = "1.7 mL 3% mepivacaine plain x [[exo_hdr_mepi_carps]]" },
+  { label = "Topical", text = "Topical anesthetic applied prior to injections" },
+]
+
+[[fields]]
+key = "exo_hdr_lido_carps"
+label = "Lidocaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Lidocaine 2%' in exo_hdr_local_agents"
+
+[[fields]]
+key = "exo_hdr_arti_carps"
+label = "Articaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Articaine 4%' in exo_hdr_local_agents"
+
+[[fields]]
+key = "exo_hdr_pril_carps"
+label = "Prilocaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Prilocaine 4% plain' in exo_hdr_local_agents"
+
+[[fields]]
+key = "exo_hdr_bupi_carps"
+label = "Bupivacaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Bupivacaine 0.5%' in exo_hdr_local_agents"
+
+[[fields]]
+key = "exo_hdr_mepi_carps"
+label = "Mepivacaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Mepivacaine 3% plain' in exo_hdr_local_agents"
+
+# -------------------------------------------------------------- vitals ---
+
+[[fields]]
+key = "exo_hdr_vitals_line"
+label = "Vitals"
+section = "Specimen and vitals"
+type = "dropdown"
+default = "WNL"
+options = [
+  { label = "WNL", text = "BP: WNL, HR: WNL" },
+  { label = "Values", text = "BP: [[exo_hdr_bp]], HR: [[exo_hdr_hr]]" },
+  { label = "Anesthesia record", text = "See anesthesia record for details" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_hdr_bp"
+label = "BP"
+section = "Specimen and vitals"
+type = "text"
+default = "***"
+visible_if = "exo_hdr_vitals_line == 'Values'"
+
+[[fields]]
+key = "exo_hdr_hr"
+label = "HR"
+section = "Specimen and vitals"
+type = "text"
+default = "***"
+visible_if = "exo_hdr_vitals_line == 'Values'"
+
+# --------------------------------------------------- per-tooth diagnosis ---
+# One box per extracted tooth, simple and surgical merged in FDI order.
+
+[[groups]]
+key = "exo_hdr_dx_teeth"
+label = "Diagnosis"
+section = "Diagnosis"
+source = ["exo_simple_teeth", "exo_surgical_teeth"]
+source_as = "site"
+
+[[groups.fields]]
+key = "dx_pulpal"
+label = "Caries / pulp / PA"
+type = "multiselect"
+options = [
+  { label = "Nonrestorable caries", text = "nonrestorable caries" },
+  { label = "Irreversible pulpitis", text = "irreversible pulpitis" },
+  { label = "Pulpal necrosis", text = "pulpal necrosis" },
+  { label = "Periapical abscess", text = "periapical abscess" },
+  { label = "Sx apical periodontitis", text = "symptomatic apical periodontitis" },
+]
+
+[[groups.fields]]
+key = "dx_perio"
+label = "Perio / fracture"
+type = "multiselect"
+options = [
+  { label = "Perio with mobility", text = "periodontitis with mobility" },
+  { label = "Crown fracture", text = "crown fracture" },
+  { label = "Vertical root fracture", text = "vertical root fracture" },
+  { label = "Retained root", text = "retained root tip" },
+]
+
+[[groups.fields]]
+key = "dx_other"
+label = "Other"
+type = "multiselect"
+options = [
+  { label = "Preprosthetic", text = "preprosthetic extraction" },
+  { label = "Orthodontic", text = "orthodontic extraction" },
+  { label = "Supernumerary", text = "supernumerary tooth" },
+  { label = "Malposed", text = "malposed tooth" },
+  { label = "Impacted", text = "impacted tooth" },
+  { label = "Medical clearance", text = "dental clearance prior to [[clearance_prior_to]]" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "clearance_prior_to"
+label = "Clearance prior to"
+type = "text"
+default = "***"
+visible_if = "'Medical clearance' in dx_other"

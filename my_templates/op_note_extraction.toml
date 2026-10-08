@@ -1,0 +1,15 @@
+# NOTE: op_note_extraction
+# Extraction procedure note assembled from the exo snippets; common_exo_case
+# holds the facts they share (age, PMH, simple/surgical chart, sedation).
+name = "Procedure - Extraction"
+use_partials = ["common_exo_case", "op_header_extraction", "op_indications_extraction", "op_procedure_extraction", "op_postop_extraction"]
+
+body = """
+{% include "common_exo_case" %}**ORAL AND MAXILLOFACIAL SURGERY PROCEDURE NOTE**
+
+{% include "op_header_extraction" %}
+{% include "op_indications_extraction" %}
+{% include "op_procedure_extraction" %}
+{% include "op_postop_extraction" %}
+Thomas Beckstrom
+"""

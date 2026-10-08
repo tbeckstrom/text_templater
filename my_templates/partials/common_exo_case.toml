@@ -1,0 +1,169 @@
+# SNIPPET: common_exo_case   PREFIX: exo
+# The facts every extraction procedure section shares, entered once at the
+# top of the form: age, PMH, one odontogram painted simple or surgical, and
+# the sedation adds. The hidden computed fields turn them into ready-made
+# wording; exo_extract_teeth combines both paint modes in FDI order.
+body = ""
+
+[[fields]]
+key = "exo_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "exo_patient_pmh"
+label = "PMH"
+section = "Case"
+type = "text"
+default = ""
+
+[[fields]]
+key = "exo_simple_teeth"
+label = "Simple"
+section = "Case"
+type = "teeth"
+linked = "exo_surgical_teeth"
+
+[[fields]]
+key = "exo_surgical_teeth"
+label = "Surgical"
+section = "Case"
+type = "teeth"
+
+[[fields]]
+key = "exo_nitrous"
+label = "+ Nitrous"
+section = "Case"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_iv_sedation"
+label = "+ IV sedation"
+section = "Case"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_ga_time"
+label = "Total anesthesia time (min)"
+section = "Case"
+type = "dropdown"
+required = true
+options = ["30", "45", "60", "90", "120", "***"]
+visible_if = "exo_iv_sedation"
+
+[[fields]]
+key = "exo_asa_class"
+label = "ASA class"
+section = "Case"
+type = "dropdown"
+default = "I"
+options = ["I", "II", "III", "IV", "***"]
+visible_if = "exo_iv_sedation"
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "exo_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'exo_patient_age ~ "-year-old patient"'
+
+[[fields]]
+key = "exo_pmh_sentence"
+label = "PMH sentence"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '("Medical history significant for " ~ exo_patient_pmh ~ ".") if exo_patient_pmh else ""'
+
+[[fields]]
+key = "exo_sedation_lines"
+label = "Sedation lines"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '''[l for l in [
+  "IV sedation, see anesthesia record for full report" if exo_iv_sedation else "",
+  ("Total anesthesia time: " ~ exo_ga_time ~ " minutes") if exo_iv_sedation and exo_ga_time else "",
+  ("ASA class: " ~ exo_asa_class) if exo_iv_sedation and exo_asa_class else "",
+  "Anxiolysis with N2O/O2" if exo_nitrous else "",
+] if l]'''
+
+[[fields]]
+key = "exo_extract_teeth"
+label = "All teeth extracted"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '[...exo_simple_teeth, ...exo_surgical_teeth] | sort'
+
+[[fields]]
+key = "exo_simple_teeth_list"
+label = "Simple teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(exo_simple_teeth[:-1] | join(sep=", ")) ~ " and " ~ exo_simple_teeth[-1] if exo_simple_teeth | length > 1 else (exo_simple_teeth | first if exo_simple_teeth else "")'
+
+[[fields]]
+key = "exo_simple_teeth_tooth_word"
+label = "tooth/teeth (simple)"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if exo_simple_teeth | length > 1 else "tooth"'
+
+[[fields]]
+key = "exo_surgical_teeth_list"
+label = "Surgical teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(exo_surgical_teeth[:-1] | join(sep=", ")) ~ " and " ~ exo_surgical_teeth[-1] if exo_surgical_teeth | length > 1 else (exo_surgical_teeth | first if exo_surgical_teeth else "")'
+
+[[fields]]
+key = "exo_surgical_teeth_tooth_word"
+label = "tooth/teeth (surgical)"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if exo_surgical_teeth | length > 1 else "tooth"'
+
+[[fields]]
+key = "exo_extract_teeth_list"
+label = "All teeth extracted"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(exo_extract_teeth[:-1] | join(sep=", ")) ~ " and " ~ exo_extract_teeth[-1] if exo_extract_teeth | length > 1 else (exo_extract_teeth | first if exo_extract_teeth else "")'
+
+[[fields]]
+key = "exo_extract_teeth_tooth_word_cap"
+label = "Tooth/Teeth (all)"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"Teeth" if exo_extract_teeth | length > 1 else "Tooth"'
+
+[[fields]]
+key = "exo_max_posterior"
+label = "Maxillary posterior tooth extracted"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in exo_extract_teeth if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 else ""'
+
+[[fields]]
+key = "exo_surgical_mand_posterior"
+label = "Mandibular posterior surgical tooth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in exo_surgical_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 else ""'

@@ -1,0 +1,522 @@
+# SNIPPET: op_procedure_extraction   PREFIX: exo_proc
+# Description of procedure for an extraction visit. Simple teeth share one
+# paragraph; each surgical tooth gets its own box (flap, bone removal and
+# sectioning, delivery, socket, closure). Maxillary posterior and mandibular
+# posterior surgical teeth bring in the OAC and IAN lines. Socket
+# preservation, alveoloplasty (by sextant), I&D, biopsy and an aborted /
+# deferred paragraph are optional adds.
+name = "Snippet: Procedure - extraction"
+use_partials = ["common_exo_case"]
+
+body = """
+{%- set simple_steps = exo_proc_simple_steps_text | join(sep=" ") | replace(from="[[exo_proc_simple_suture_material]]", to=exo_proc_simple_suture_material) | replace(from="[[exo_proc_simple_suture_pattern]]", to=exo_proc_simple_suture_pattern) -%}
+**DESCRIPTION OF PROCEDURE:**
+Timeout performed.{% if exo_proc_albuterol %} Two puffs of albuterol inhaler were administered prior to beginning the procedure.{% endif %}{% if exo_iv_sedation %} IV sedation was administered (see anesthesia record); the patient tolerated this well with good effect.{% endif %}{% if exo_nitrous %} 100% O2 was given via nasal hood at 5 L/min for greater than 5 minutes, followed by titration of N2O to 50%.{% endif %} Local anesthesia was administered as above.{% if exo_proc_airway_items_text %} {{ exo_proc_airway_items_text | join(sep=" ") }}{% endif %}
+{% set middle %}{% if exo_simple_teeth and exo_proc_simple_steps %}Simple extraction, {{ exo_simple_teeth_tooth_word }} {{ exo_simple_teeth_list }}: {{ simple_steps }}
+{% endif %}
+{%- for b in exo_proc_surgical_boxes %}
+{%- set parts = [
+  "Initial elevation after severing the PDL with a #9 periosteal elevator gave inadequate mobility for delivery, so a surgical approach was taken." if b.converted else "",
+  (b.flap_type_text | replace(from="[[flap_from_tooth]]", to=b.flap_from_tooth) | replace(from="[[flap_to_tooth]]", to=b.flap_to_tooth)) if b.flap_type else "",
+  (b.bone_sectioning_text | join(sep=" ") | replace(from="[[root]]", to=b.root)) if b.bone_sectioning else "",
+  b.delivery_text if b.delivery else "",
+  (b.socket_steps_text | join(sep=" ")) if b.socket_steps else "",
+  ("The flap was reapproximated with " ~ b.suture_material ~ " suture in " ~ b.suture_pattern ~ " fashion.") if b.suture_material and b.suture_pattern else "",
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}Surgical extraction, tooth {{ b.site }}: {{ parts | join(sep=" ") }}
+{% endif %}{% endfor %}
+{%- if exo_max_posterior or exo_proc_no_oac %}No oroantral communication was noted.
+{% endif %}
+{%- if exo_surgical_mand_posterior or exo_proc_ian_not_encountered %}The inferior alveolar canal was not encountered and the lingual plate was intact.
+{% endif %}
+{%- if exo_proc_socket_preservation and exo_proc_socket_sites and exo_proc_graft_material and exo_proc_graft_cover and exo_proc_cover_fixation %}Socket preservation, {{ exo_proc_socket_sites_site_word }} {{ exo_proc_socket_sites_list }}: {{ exo_proc_graft_material_text }} was placed and covered with {{ exo_proc_graft_cover }}, secured with {{ exo_proc_cover_fixation }}.
+{% endif %}
+{%- if exo_proc_socket_preservation and exo_proc_graft_product_and_lot %}Graft: {{ exo_proc_graft_product_and_lot }}
+{% endif %}
+{%- if exo_proc_alveoloplasty and exo_proc_alveo_sextants and exo_proc_alveo_instruments and exo_proc_alveo_suture_material and exo_proc_alveo_suture_pattern %}Alveoloplasty, {% for v in exo_proc_alveo_sextants_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}: a crestal incision was made and a full thickness mucoperiosteal flap was raised to expose the ridge. The ridge was recontoured with {% for v in exo_proc_alveo_instruments %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %} until the contour was appropriate and no sharp edges or excessive undercuts remained. The site was irrigated with copious sterile saline and the flap was closed with {{ exo_proc_alveo_suture_material }} suture in {{ exo_proc_alveo_suture_pattern }} fashion.
+{% endif %}
+{%- if exo_proc_incision_drainage %}
+{%- set id = [
+  "Incision and drainage, " ~ exo_proc_id_site ~ ": an incision was made through mucosa and periosteum and blunt dissection was carried into the abscess cavity.",
+  exo_proc_purulence_text if exo_proc_purulence else "",
+  "A specimen was obtained for culture and sensitivity." if exo_proc_culture_sent else "",
+  "The cavity was irrigated with copious sterile saline.",
+  exo_proc_id_drain_text if exo_proc_id_drain else "",
+] -%}
+{{ [s for s in id if s] | join(sep=" ") }}
+{% endif %}
+{%- if exo_proc_biopsy %}{{ exo_proc_biopsy_tissue_text }} was excised from {{ exo_proc_biopsy_site }} and submitted in formalin for histopathologic examination.
+{% endif %}
+{%- if exo_proc_aborted %}{{ exo_proc_abort_reason_text }}
+{% if exo_proc_deferred_teeth %}Treatment of {{ exo_proc_deferred_teeth_tooth_word }} {{ exo_proc_deferred_teeth_list }} was deferred to the next appointment.
+{% endif %}{% endif %}{% endset %}
+{%- if middle %}
+{{ middle }}{% endif %}
+Gauze pressure dressings were placed.{% if "Throat screen" in exo_proc_airway_items %} The throat screen was removed and the oropharynx was inspected.{% endif %}{% if exo_nitrous %} N2O was turned off and 100% O2 was administered for greater than 5 minutes.{% endif %} No complications. The patient remained stable throughout.{% if exo_proc_tolerated %} The patient tolerated the procedure well.{% endif %} At the conclusion of the procedure, the patient was fully awake, alert and stable for discharge, and the surgical sites were hemostatic.{% if exo_iv_sedation %} The patient was discharged in the care of a responsible adult escort.{% endif %}
+"""
+
+# ------------------------------------------------------------- opening ---
+
+[[fields]]
+key = "exo_proc_albuterol"
+label = "+ Pre-op albuterol"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_airway_items"
+label = "Airway items"
+section = "Procedure - extraction"
+type = "multiselect"
+default = ["Throat screen", "Bite block"]
+options = [
+  { label = "Throat screen", text = "A throat screen was placed for airway protection." },
+  { label = "Bite block", text = "A bite block was used for stabilization." },
+]
+
+# --------------------------------------------------------- simple teeth ---
+
+[[fields]]
+key = "exo_proc_simple_steps"
+label = "Simple extraction steps"
+section = "Procedure - extraction"
+type = "multiselect"
+default = ["PDL severed with #9", "Luxated and delivered", "No retained structure", "Curetted", "Irrigated"]
+visible_if = "exo_simple_teeth"
+options = [
+  { label = "PDL severed with #9", text = "Using a #9 periosteal elevator, the PDL and gingival attachment were severed." },
+  { label = "Luxated and delivered", text = "Luxation and complete delivery were achieved with elevators and forceps." },
+  { label = "No retained structure", text = "No retained tooth structure was noted." },
+  { label = "Curetted", text = "The sockets were gently curetted." },
+  { label = "Smoothed", text = "Bony margins were smoothed with a bone file." },
+  { label = "Irrigated", text = "The surgical field was irrigated with copious sterile saline." },
+  { label = "Gelfoam", text = "Gelfoam was placed to aid in hemostasis." },
+  { label = "Surgicel", text = "Surgicel was placed to aid in hemostasis." },
+  { label = "Sutured", text = "Soft tissue was reapproximated with [[exo_proc_simple_suture_material]] suture in [[exo_proc_simple_suture_pattern]] fashion." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_proc_simple_suture_material"
+label = "Suture"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "3-0 chromic gut"
+options = ["3-0 chromic gut", "4-0 Vicryl", "***"]
+visible_if = "exo_simple_teeth and 'Sutured' in exo_proc_simple_steps"
+
+[[fields]]
+key = "exo_proc_simple_suture_pattern"
+label = "Suture pattern"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "simple interrupted"
+options = ["simple interrupted", "continuous running", "continuous locking", "figure-of-eight", "horizontal mattress", "***"]
+visible_if = "exo_simple_teeth and 'Sutured' in exo_proc_simple_steps"
+
+# ------------------------------------------------------ region lines ---
+
+[[fields]]
+key = "exo_proc_no_oac"
+label = "+ No OAC"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_ian_not_encountered"
+label = "+ IAN not encountered"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+# -------------------------------------------------- socket preservation ---
+
+[[fields]]
+key = "exo_proc_socket_preservation"
+label = "+ Socket preservation"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_socket_sites"
+label = "Socket preservation sites"
+section = "Procedure - extraction"
+type = "teeth"
+visible_if = "exo_proc_socket_preservation"
+
+[[fields]]
+key = "exo_proc_graft_material"
+label = "Graft material"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "Mineralized allograft"
+visible_if = "exo_proc_socket_preservation"
+options = [
+  { label = "Mineralized allograft", text = "Mineralized cortical allograft" },
+  { label = "Cortico-cancellous", text = "Mineralized cortico-cancellous allograft" },
+  { label = "FDBA", text = "Freeze-dried bone allograft" },
+  { label = "Xenograft", text = "Bovine xenograft" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_proc_graft_cover"
+label = "Graft cover"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "a collagen plug"
+options = ["a collagen plug", "a resorbable collagen membrane", "a dPTFE membrane", "***"]
+visible_if = "exo_proc_socket_preservation"
+
+[[fields]]
+key = "exo_proc_cover_fixation"
+label = "Cover fixation"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "a criss-cross 3-0 chromic gut suture"
+options = ["a criss-cross 3-0 chromic gut suture", "a criss-cross 4-0 Vicryl suture", "primary closure over the graft", "***"]
+visible_if = "exo_proc_socket_preservation"
+
+[[fields]]
+key = "exo_proc_graft_product_and_lot"
+label = "Graft product and lot"
+section = "Procedure - extraction"
+type = "text"
+default = ""
+visible_if = "exo_proc_socket_preservation"
+
+# ------------------------------------------------------- alveoloplasty ---
+
+[[fields]]
+key = "exo_proc_alveoloplasty"
+label = "+ Alveoloplasty"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_alveo_sextants"
+label = "Sextants"
+section = "Procedure - extraction"
+type = "multiselect"
+visible_if = "exo_proc_alveoloplasty"
+options = [
+  { label = "UR posterior", text = "maxillary right posterior sextant" },
+  { label = "Upper anterior", text = "maxillary anterior sextant" },
+  { label = "UL posterior", text = "maxillary left posterior sextant" },
+  { label = "LL posterior", text = "mandibular left posterior sextant" },
+  { label = "Lower anterior", text = "mandibular anterior sextant" },
+  { label = "LR posterior", text = "mandibular right posterior sextant" },
+]
+
+[[fields]]
+key = "exo_proc_alveo_instruments"
+label = "Instruments"
+section = "Procedure - extraction"
+type = "multiselect"
+default = ["rongeurs", "a bone file"]
+options = ["rongeurs", "a pineapple bur", "a bone file"]
+visible_if = "exo_proc_alveoloplasty"
+
+[[fields]]
+key = "exo_proc_alveo_suture_material"
+label = "Alveoloplasty suture"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "3-0 chromic gut"
+options = ["3-0 chromic gut", "4-0 Vicryl", "***"]
+visible_if = "exo_proc_alveoloplasty"
+
+[[fields]]
+key = "exo_proc_alveo_suture_pattern"
+label = "Alveoloplasty suture pattern"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "continuous running"
+options = ["continuous running", "continuous locking", "simple interrupted", "***"]
+visible_if = "exo_proc_alveoloplasty"
+
+# ----------------------------------------------------------------- I&D ---
+
+[[fields]]
+key = "exo_proc_incision_drainage"
+label = "+ I&D"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_id_site"
+label = "I&D site"
+section = "Procedure - extraction"
+type = "text"
+default = "***"
+visible_if = "exo_proc_incision_drainage"
+
+[[fields]]
+key = "exo_proc_purulence"
+label = "Purulence"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "Moderate"
+visible_if = "exo_proc_incision_drainage"
+options = [
+  { label = "Scant", text = "Scant purulent drainage was expressed." },
+  { label = "Moderate", text = "Moderate purulent drainage was expressed." },
+  { label = "Copious", text = "Copious purulent drainage was expressed." },
+  { label = "None", text = "No purulence was encountered." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_proc_culture_sent"
+label = "Culture sent"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+visible_if = "exo_proc_incision_drainage"
+
+[[fields]]
+key = "exo_proc_id_drain"
+label = "Drain"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "No drain"
+visible_if = "exo_proc_incision_drainage"
+options = [
+  { label = "No drain", text = "No drain was placed." },
+  { label = "Iodoform", text = "A 1/4 inch iodoform gauze drain was placed and secured with a 3-0 silk suture." },
+  { label = "Penrose", text = "A 1/4 inch Penrose drain was placed and secured with a 3-0 silk suture." },
+  { label = "***", text = "***" },
+]
+
+# -------------------------------------------------------------- biopsy ---
+
+[[fields]]
+key = "exo_proc_biopsy"
+label = "+ Biopsy"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_biopsy_site"
+label = "Biopsy site"
+section = "Procedure - extraction"
+type = "text"
+default = "***"
+visible_if = "exo_proc_biopsy"
+
+[[fields]]
+key = "exo_proc_biopsy_tissue"
+label = "Biopsy tissue"
+section = "Procedure - extraction"
+type = "dropdown"
+default = "Periapical soft tissue"
+visible_if = "exo_proc_biopsy"
+options = [
+  { label = "Periapical soft tissue", text = "Periapical soft tissue" },
+  { label = "Granulation tissue", text = "Granulation tissue" },
+  { label = "Follicular tissue", text = "Follicular tissue" },
+  { label = "Soft tissue", text = "Soft tissue" },
+  { label = "***", text = "***" },
+]
+
+# ---------------------------------------------------- aborted / deferred ---
+
+[[fields]]
+key = "exo_proc_aborted"
+label = "+ Aborted / deferred"
+section = "Procedure - extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "exo_proc_abort_reason"
+label = "Reason"
+section = "Procedure - extraction"
+type = "dropdown"
+required = true
+visible_if = "exo_proc_aborted"
+options = [
+  { label = "Anxiety pre-op", text = "The patient exhibited significant preoperative anxiety, with marked hesitation and visible distress upon entering the operatory. Despite counseling and reassurance, the patient became tearful and physically withdrawn even during initial conversation. They adamantly declined to proceed with treatment under local anesthesia and nitrous oxide, stating they could not tolerate the procedure unless sedated. Due to the severity of the patient's emotional response and the risk of exacerbating psychological trauma, the decision was made to defer treatment for their safety and well-being. The patient has a documented history of procedural intolerance, including a previously aborted extraction attempt due to similar distress. In light of this, IV sedation is medically necessary to ensure safe, humane, and effective delivery of care. Proceeding with extractions under IVGA will help avoid additional complications such as uncontrolled infection, fascial space involvement, osteomyelitis, and prolonged pain." },
+  { label = "Anxiety intra-op", text = "Despite adequate local anesthesia and administration of nitrous oxide, the patient remained severely anxious throughout the procedure. They required frequent pauses, reassurance, and repositioning, which significantly disrupted the flow of care and prolonged the procedure. The patient exhibited a heightened startle response and reacted unpredictably to routine stimuli such as suctioning and surgical pressure, creating concerns for both patient and provider safety. Due to escalating distress and poor procedural tolerance, the remainder of the planned extractions were deferred. Proceeding under local anesthesia was no longer feasible in a humane or safe manner, and for this reason, this visit should be considered a failed attempt under LA/N2O. Given the patient's intraoperative behavior and inability to tolerate the procedure despite appropriate anesthesia, IVGA is now medically indicated to ensure safe, efficient, and compassionate completion of care." },
+  { label = "Unable to get numb", text = "Despite the use of multiple advanced local anesthetic techniques - including IAN block, nerve to mylohyoid block, periodontal ligament injection, intraosseous infiltration, and direct intrapulpal anesthesia - adequate analgesia could not be reliably achieved. The patient continued to experience significant discomfort during instrumentation, limiting procedural progress and tolerance. The surgical difficulty was compounded by factors such as dense cortical bone, root morphology, and unfavorable tooth angulation, further increasing the duration and complexity of the procedure. As a result, the experience was both physically and emotionally taxing for the patient and raised concern for procedural safety and completion. In light of this, IV general anesthesia is medically indicated for future procedures of similar complexity as local anesthesia alone has proven insufficient for effective and humane completion of care." },
+  { label = "Time constraint", text = "At this point, the procedure was prolonged due to the notable surgical difficulty experienced so far given factors such as dense cortical bone, root morphology, and unfavorable tooth angulation. As a result, the experience was both physically and emotionally taxing for the patient and there were additional concerns for the waning effects of local anesthesia should the remaining extractions prove to be of similar difficulty. In light of this, the procedure was ended and the remaining portions of the procedure were deferred to the next appointment." },
+  { label = "Difficult sedation", text = "At this point, the procedure was prolonged due to the notable surgical difficulty experienced so far given factors such as dense cortical bone, root morphology, and unfavorable tooth angulation. The patient was becoming agitated and moving, which was increasingly refractory to additional local anesthesia and boluses of propofol. The decision was made to abort the procedure to maintain a safe environment, and the remaining portions of the procedure will be completed at the next appointment." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "exo_proc_deferred_teeth"
+label = "Deferred teeth"
+section = "Procedure - extraction"
+type = "teeth"
+visible_if = "exo_proc_aborted"
+
+# ---------------------------------------------------------- completion ---
+
+[[fields]]
+key = "exo_proc_tolerated"
+label = "Tolerated well"
+section = "Procedure - extraction"
+type = "checkbox"
+default = true
+
+# ---------------------------------------------------- derived wording ---
+
+[[fields]]
+key = "exo_proc_socket_sites_list"
+label = "Socket preservation sites"
+section = "Procedure - extraction"
+type = "computed"
+visible_if = "false"
+compute = '(exo_proc_socket_sites[:-1] | join(sep=", ")) ~ " and " ~ exo_proc_socket_sites[-1] if exo_proc_socket_sites | length > 1 else (exo_proc_socket_sites | first if exo_proc_socket_sites else "")'
+
+[[fields]]
+key = "exo_proc_socket_sites_site_word"
+label = "site/sites"
+section = "Procedure - extraction"
+type = "computed"
+visible_if = "false"
+compute = '"sites" if exo_proc_socket_sites | length > 1 else "site"'
+
+[[fields]]
+key = "exo_proc_deferred_teeth_list"
+label = "Deferred teeth"
+section = "Procedure - extraction"
+type = "computed"
+visible_if = "false"
+compute = '(exo_proc_deferred_teeth[:-1] | join(sep=", ")) ~ " and " ~ exo_proc_deferred_teeth[-1] if exo_proc_deferred_teeth | length > 1 else (exo_proc_deferred_teeth | first if exo_proc_deferred_teeth else "")'
+
+[[fields]]
+key = "exo_proc_deferred_teeth_tooth_word"
+label = "tooth/teeth"
+section = "Procedure - extraction"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if exo_proc_deferred_teeth | length > 1 else "tooth"'
+
+# ------------------------------------------------------ surgical boxes ---
+# One box per surgical tooth, with its own speed buttons.
+
+[[groups]]
+key = "exo_proc_surgical_boxes"
+label = "Surgical tooth"
+section = "Procedure - extraction"
+source = "exo_surgical_teeth"
+source_as = "site"
+
+[[groups.speed_buttons]]
+label = "Flap + delivery"
+values = { converted = false, flap_type = "Envelope flap", bone_sectioning = ["Buccal bone - bur"], delivery = "Delivered intact", socket_steps = ["No retained structure", "Curetted", "Smoothed", "Irrigated"] }
+
+[[groups.speed_buttons]]
+label = "Section roots"
+values = { converted = false, flap_type = "Envelope flap", bone_sectioning = ["Buccal trough", "Roots sectioned"], delivery = "Delivered", socket_steps = ["No retained structure", "Curetted", "Smoothed", "Irrigated"] }
+
+[[groups.speed_buttons]]
+label = "Converted from simple"
+values = { converted = true, flap_type = "Envelope flap", bone_sectioning = ["Buccal bone - bur"], delivery = "Delivered", socket_steps = ["No retained structure", "Curetted", "Smoothed", "Irrigated"] }
+
+[[groups.fields]]
+key = "converted"
+label = "Converted from simple"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "flap_type"
+label = "Flap"
+type = "dropdown"
+default = "Envelope flap"
+options = [
+  { label = "Envelope flap", text = "Using a 15 blade, a sulcular incision was made and a full thickness mucoperiosteal envelope flap was raised with a #9 periosteal elevator." },
+  { label = "Flap + vertical release", text = "Using a 15 blade, a sulcular incision with a vertical releasing incision was made and a full thickness mucoperiosteal flap was raised with a #9 periosteal elevator." },
+  { label = "Flap tooth to tooth", text = "Using a 15 blade, a crestal and sulcular incision was made from tooth [[flap_from_tooth]] to tooth [[flap_to_tooth]] and a full thickness mucoperiosteal flap was raised with a #9 periosteal elevator." },
+  { label = "PDL severed only", text = "Using a #9 periosteal elevator, the PDL and gingival attachment were severed." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "flap_from_tooth"
+label = "Flap from tooth"
+type = "text"
+default = "***"
+visible_if = "flap_type == 'Flap tooth to tooth'"
+
+[[groups.fields]]
+key = "flap_to_tooth"
+label = "Flap to tooth"
+type = "text"
+default = "***"
+visible_if = "flap_type == 'Flap tooth to tooth'"
+
+[[groups.fields]]
+key = "bone_sectioning"
+label = "Bone removal / sectioning"
+type = "multiselect"
+options = [
+  { label = "Buccal bone - bur", text = "Buccal bone was removed with a round bur under copious irrigation." },
+  { label = "Buccal bone - #9", text = "Buccal bone was removed with a #9 periosteal elevator." },
+  { label = "Buccal trough", text = "A buccal trough was created with a tapered fissure bur." },
+  { label = "Roots sectioned", text = "The tooth was sectioned with a fissure bur and an elevator into separate fragments containing each root." },
+  { label = "Crown sectioned", text = "The crown was sectioned at the CEJ with a fissure bur and delivered with elevators and forceps." },
+  { label = "Cowhorn split", text = "The tooth was split into mesial and distal segments with a cowhorn forceps seated in the furcation." },
+  { label = "Single root sectioned", text = "The [[root]] root was sectioned axially to facilitate removal." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "root"
+label = "Root"
+type = "text"
+default = "***"
+visible_if = "'Single root sectioned' in bone_sectioning"
+
+[[groups.fields]]
+key = "delivery"
+label = "Delivery"
+type = "dropdown"
+default = "Delivered"
+options = [
+  { label = "Delivered", text = "The tooth and all remaining segments were luxated and delivered with elevators and forceps." },
+  { label = "Delivered intact", text = "The tooth was luxated and delivered intact with elevators and forceps." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "socket_steps"
+label = "Socket"
+type = "multiselect"
+default = ["No retained structure", "Curetted", "Smoothed", "Irrigated"]
+options = [
+  { label = "No retained structure", text = "No tooth structure was retained in the socket." },
+  { label = "Follicle removed", text = "Follicular tissue was removed." },
+  { label = "Granulation removed", text = "Granulation tissue was removed." },
+  { label = "Curetted", text = "The socket was gently curetted." },
+  { label = "Smoothed", text = "Bony margins were smoothed with a bone file." },
+  { label = "Irrigated", text = "The site was irrigated with copious sterile saline." },
+  { label = "Gelfoam", text = "Gelfoam was placed into the socket to aid in hemostasis." },
+  { label = "Surgicel", text = "Surgicel was placed into the socket to aid in hemostasis." },
+  { label = "Bone wax", text = "Osseous bleeding was identified and bone wax was burnished over the source with a periosteal elevator to achieve hemostasis." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "suture_material"
+label = "Suture"
+type = "dropdown"
+default = "3-0 chromic gut"
+options = ["3-0 chromic gut", "4-0 Vicryl", "***"]
+
+[[groups.fields]]
+key = "suture_pattern"
+label = "Suture pattern"
+type = "dropdown"
+default = "simple interrupted"
+options = ["simple interrupted", "continuous running", "continuous locking", "figure-of-eight", "horizontal mattress", "***"]
