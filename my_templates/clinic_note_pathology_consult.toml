@@ -1,0 +1,53 @@
+# NOTE: clinic_note_pathology_consult
+# Assembled from the pathology consult snippets; common_pathology_case holds
+# the facts they share (age, presenting lesion, referring provider). A
+# same-day biopsy prints after the plan when "+ Biopsy today" is ticked.
+name = "Clinic - Pathology Consult"
+use_partials = ["common_pathology_case", "clinic_hpi_pathology", "clinic_history_pathology", "clinic_exam_pathology", "clinic_imaging_pathology", "clinic_assessment_plan_pathology", "op_biopsy_oral"]
+# Imaging is read at the desk, so the printed sheet leaves it off.
+print_skip = ["Imaging - pathology consult"]
+
+body = """
+{% include "common_pathology_case" %}{% include "clinic_hpi_pathology" %}
+{% include "clinic_history_pathology" %}
+**EXAMINATION:**
+{% include "clinic_exam_pathology" %}
+**IMAGING:**
+{% include "clinic_imaging_pathology" %}
+{% include "clinic_assessment_plan_pathology" %}{% include "op_biopsy_oral" %}
+
+Thomas Beckstrom
+"""
+
+# ---------------------------------------------------------- pathway presets ---
+# Top row of the form. Each sets the plan pathway (next visit or same-day
+# biopsy, alternatives and follow-up), replacing whatever an earlier preset
+# picked. The impression is left for the surgeon.
+
+[[speed_buttons]]
+label = "Incisional bx"
+values = { path_ap_next_procedure = "Incisional bx", path_ap_next_anesthesia = "Local", path_ap_prior_items = [], path_bx_biopsy_today = false, path_ap_irritant_plan = false, path_ap_oncology_referral = false, path_ap_alternatives = ["Serial exams", "Brush cytology", "No treatment"], path_ap_follow_up = "Path review 2-3 wk" }
+
+[[speed_buttons]]
+label = "Excisional bx"
+values = { path_ap_next_procedure = "Excisional bx", path_ap_next_anesthesia = "Local", path_ap_prior_items = [], path_bx_biopsy_today = false, path_ap_irritant_plan = false, path_ap_oncology_referral = false, path_ap_alternatives = ["Serial exams", "Incisional bx", "No treatment"], path_ap_follow_up = "Path review 2-3 wk" }
+
+[[speed_buttons]]
+label = "Incisional bx - today"
+values = { path_ap_next_procedure = "", path_ap_prior_items = [], path_bx_biopsy_today = true, path_bx_biopsy_type = "incisional", path_bx_margins_sentence = false, path_ap_irritant_plan = false, path_ap_oncology_referral = false, path_ap_alternatives = ["Serial exams", "Brush cytology", "No treatment"], path_ap_follow_up = "Path review 2-3 wk" }
+
+[[speed_buttons]]
+label = "Excisional bx - today"
+values = { path_ap_next_procedure = "", path_ap_prior_items = [], path_bx_biopsy_today = true, path_bx_biopsy_type = "excisional", path_bx_margins_sentence = true, path_ap_irritant_plan = false, path_ap_oncology_referral = false, path_ap_alternatives = ["Serial exams", "Incisional bx", "No treatment"], path_ap_follow_up = "Path review 2-3 wk" }
+
+[[speed_buttons]]
+label = "Observe 2 wk, then bx"
+values = { path_ap_next_procedure = "", path_ap_prior_items = [], path_bx_biopsy_today = false, path_ap_irritant_plan = true, path_ap_oncology_referral = false, path_ap_alternatives = ["Immediate biopsy", "No treatment"], path_ap_follow_up = "Re-eval 2 wk" }
+
+[[speed_buttons]]
+label = "Jaw lesion - CBCT + bx"
+values = { path_ap_next_procedure = "Aspiration + incisional", path_ap_next_anesthesia = "Local", path_ap_prior_items = ["CBCT"], path_bx_biopsy_today = false, path_ap_irritant_plan = false, path_ap_oncology_referral = false, path_ap_alternatives = ["Serial imaging", "Surgery without bx", "No treatment"], path_ap_follow_up = "Path review 2-3 wk" }
+
+[[speed_buttons]]
+label = "Refer H&N oncology"
+values = { path_ap_next_procedure = "", path_ap_prior_items = [], path_bx_biopsy_today = false, path_ap_irritant_plan = false, path_ap_oncology_referral = true, path_ap_alternatives = ["Incisional bx", "No treatment"], path_ap_follow_up = "" }

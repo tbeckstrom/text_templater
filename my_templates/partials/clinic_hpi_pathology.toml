@@ -1,0 +1,163 @@
+# SNIPPET: clinic_hpi_pathology   PREFIX: path_hpi
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# The one-liner reuses the presenting lesion from the case facts. Each detail
+# sentence drops out until picked or typed; pertinent negatives print as
+# their own paragraph.
+name = "Snippet: HPI - pathology consult"
+use_partials = ["common_pathology_case"]
+
+body = """
+{%- set sym = path_hpi_symptoms_present -%}
+{%- set trauma = path_hpi_local_trauma -%}
+{%- set prior = path_hpi_prior_treatment_text -%}
+{%- set neg = path_hpi_pertinent_negatives -%}
+{%- set details = [
+  ("The lesion was " ~ path_hpi_discovery_mode_text ~ ".") if path_hpi_discovery_mode else "",
+  ("It has been present for approximately " ~ path_hpi_duration_e_g_3_months ~ ".") if path_hpi_duration_e_g_3_months else "",
+  path_hpi_lesion_course_text if path_hpi_lesion_course else "",
+  path_hpi_symptom_status_text | replace(from="[[path_hpi_symptoms_present]]", to=((sym[:-1] | join(sep=", ")) ~ " and " ~ sym[-1] if sym | length > 1 else (sym | first if sym else "***"))) if path_hpi_symptom_status else "",
+  ("Possible sources of local trauma include " ~ ((trauma[:-1] | join(sep=", ")) ~ " and " ~ trauma[-1] if trauma | length > 1 else trauma | first) ~ ".") if trauma else "",
+  ("Prior treatment has included " ~ ((prior[:-1] | join(sep=", ")) ~ " and " ~ prior[-1] if prior | length > 1 else prior | first) | replace(from="[[path_hpi_prior_biopsy_diagnosis]]", to=path_hpi_prior_biopsy_diagnosis) ~ ".") if prior else "",
+  path_hpi_treatment_relief_text if path_hpi_treatment_relief else "",
+] -%}
+{%- set details = [d for d in details if d] -%}
+Reason for visit: {{ path_hpi_visit_reason_text }}{% if path_referring_provider %}
+Referring provider: {{ path_referring_provider }}{% endif %}
+
+**HPI:**
+{{ path_pt_intro }} presenting for evaluation of {{ path_lesion_phrase }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}{% if neg %}
+
+Patient denies {{ (neg[:-1] | join(sep=", ")) ~ " or " ~ neg[-1] if neg | length > 1 else neg | first }}.{% endif %}
+"""
+
+[[fields]]
+key = "path_hpi_visit_reason"
+label = "Reason for visit"
+section = "HPI - pathology consult"
+type = "dropdown"
+default = "Oral lesion"
+options = [
+  { label = "Oral lesion", text = "Evaluation of oral lesion" },
+  { label = "Jaw lesion", text = "Evaluation of jaw lesion" },
+  { label = "Lesion biopsy", text = "Evaluation and biopsy of oral lesion" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hpi_discovery_mode"
+label = "Discovery"
+section = "HPI - pathology consult"
+type = "dropdown"
+options = [
+  { label = "Patient noticed", text = "first noticed by the patient" },
+  { label = "Dentist noted", text = "noted by their dentist on routine examination" },
+  { label = "Incidental imaging", text = "found incidentally on routine dental radiographs" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hpi_duration_e_g_3_months"
+label = "Duration, e.g. 3 months (blank = omitted)"
+section = "HPI - pathology consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "path_hpi_lesion_course"
+label = "Course"
+section = "HPI - pathology consult"
+type = "dropdown"
+options = [
+  { label = "Enlarging", text = "It has gradually enlarged." },
+  { label = "Rapid growth", text = "It has enlarged rapidly." },
+  { label = "Stable", text = "It has remained stable in size." },
+  { label = "Fluctuating", text = "It fluctuates in size." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hpi_symptom_status"
+label = "Symptoms"
+section = "HPI - pathology consult"
+type = "dropdown"
+options = [
+  { label = "Asymptomatic", text = "Patient reports no symptoms currently." },
+  { label = "Symptomatic", text = "Patient reports [[path_hpi_symptoms_present]]." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hpi_symptoms_present"
+label = "Symptoms present"
+section = "HPI - pathology consult"
+type = "multiselect"
+options = ["pain", "bleeding", "swelling", "altered sensation", "loose teeth", "drainage", "***"]
+visible_if = "path_hpi_symptom_status == 'Symptomatic'"
+
+[[fields]]
+key = "path_hpi_local_trauma"
+label = "Possible local trauma"
+section = "HPI - pathology consult"
+type = "multiselect"
+options = ["cheek or lip biting", "a sharp or broken tooth", "an ill-fitting denture", "a recent burn or injury", "***"]
+
+[[fields]]
+key = "path_hpi_prior_treatment"
+label = "Prior treatment"
+section = "HPI - pathology consult"
+type = "multiselect"
+options = [
+  { label = "Prior biopsy", text = "a prior biopsy showing [[path_hpi_prior_biopsy_diagnosis]]" },
+  { label = "Prior excision", text = "prior excision with recurrence" },
+  { label = "Topical steroid", text = "a topical steroid" },
+  { label = "Antifungal", text = "an antifungal" },
+  { label = "Antibiotics", text = "antibiotics" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hpi_prior_biopsy_diagnosis"
+label = "Prior biopsy diagnosis"
+section = "HPI - pathology consult"
+type = "text"
+default = "***"
+visible_if = "'Prior biopsy' in path_hpi_prior_treatment"
+
+[[fields]]
+key = "path_hpi_treatment_relief"
+label = "Response to prior treatment"
+section = "HPI - pathology consult"
+type = "dropdown"
+options = [
+  { label = "No improvement", text = "This provided no improvement." },
+  { label = "Partial", text = "This provided partial improvement." },
+  { label = "Recurred", text = "The lesion improved but recurred." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hpi_pertinent_negatives"
+label = "Patient denies"
+section = "HPI - pathology consult"
+type = "multiselect"
+options = [
+  "pain",
+  "bleeding",
+  "change in size",
+  "lip or tongue numbness",
+  "loose teeth",
+  "weight loss",
+  "dysphagia",
+  "odynophagia",
+  "otalgia",
+  "voice change",
+  "neck mass",
+  "fevers",
+  "night sweats",
+  "***",
+]
+
+[[speed_buttons]]
+label = "Denies all"
+section = "HPI - pathology consult"
+values = { path_hpi_pertinent_negatives = ["pain", "bleeding", "change in size", "lip or tongue numbness", "loose teeth", "weight loss", "dysphagia", "odynophagia", "otalgia", "voice change", "neck mass", "fevers", "night sweats"] }

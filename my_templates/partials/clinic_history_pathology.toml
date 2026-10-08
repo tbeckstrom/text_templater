@@ -1,0 +1,205 @@
+# SNIPPET: clinic_history_pathology   PREFIX: path_hx
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# PMH, past surgical history (the shared clinic_history_surgical snippet),
+# medications and allergies, then the risk factors. Every risk factor chip
+# defaults to "no" (alcohol "none") so the cancer-risk negatives are
+# documented; tobacco, alcohol and areca nut use drive the cessation bullet,
+# and radiation, antiresorptives and immunosuppression drive the risks.
+name = "Snippet: History - pathology consult"
+use_partials = ["clinic_history_surgical"]
+
+body = """
+{%- set tobacco = [p for p in [path_hx_tobacco_use, path_hx_tobacco_details_e_g_1_ppd_x_20_yrs] if p] -%}
+{%- set alcohol = [p for p in [path_hx_alcohol_use, path_hx_alcohol_details_e_g_4_drinks_day] if p] -%}
+{%- set lines = [
+  ("Tobacco: " ~ tobacco | join(sep=", ")) if tobacco else "",
+  ("Alcohol: " ~ alcohol | join(sep=", ")) if alcohol else "",
+  ("Betel / areca nut: " ~ path_hx_betel_use) if path_hx_betel_use else "",
+  ("Prior head and neck cancer: " ~ path_hx_prior_hn_cancer_text | replace(from="[[path_hx_site_treatment_year]]", to=path_hx_site_treatment_year)) if path_hx_prior_hn_cancer else "",
+  ("Head and neck radiation: " ~ path_hx_hn_radiation_text | replace(from="[[path_hx_site_dose_date]]", to=path_hx_site_dose_date)) if path_hx_hn_radiation else "",
+  ("Antiresorptive therapy: " ~ path_hx_antiresorptive_text | replace(from="[[path_hx_agent_duration_last_dose]]", to=path_hx_agent_duration_last_dose)) if path_hx_antiresorptive else "",
+  ("Immunosuppression: " ~ path_hx_immunosuppression_text | replace(from="[[path_hx_cause_e_g_renal_transplant_on_tacrolimus]]", to=path_hx_cause_e_g_renal_transplant_on_tacrolimus)) if path_hx_immunosuppression else "",
+] -%}
+**PAST MEDICAL HISTORY:**
+{{ path_hx_pmh_text }}
+
+{% include "clinic_history_surgical" %}
+**MEDICATIONS:**
+{{ path_hx_meds_text }}
+
+**ALLERGIES:**
+{{ path_hx_allergy_text }}
+
+**RISK FACTORS:**
+{%- for l in lines %}{% if l %}
+- {{ l }}{% endif %}{% endfor %}
+"""
+
+# ------------------------------------------------------- PMH / meds / allergies ---
+
+[[fields]]
+key = "path_hx_pmh_text"
+label = "Past medical history"
+section = "Past medical history"
+type = "textarea"
+default = "***"
+
+[[fields]]
+key = "path_hx_meds_text"
+label = "Medications"
+section = "Medications"
+type = "textarea"
+default = "***"
+
+[[fields]]
+key = "path_hx_allergy_text"
+label = "Allergies"
+section = "Allergies"
+type = "textarea"
+default = "***"
+
+[[speed_buttons]]
+label = "Healthy: no chronic medical conditions / none / NKDA"
+section = "Past medical history"
+values = { path_hx_pmh_text = "No chronic medical conditions", path_hx_meds_text = "None", path_hx_allergy_text = "NKDA" }
+
+[[speed_buttons]]
+label = "No chronic medical conditions"
+section = "Past medical history"
+values = { path_hx_pmh_text = "No chronic medical conditions" }
+
+[[speed_buttons]]
+label = "None"
+section = "Medications"
+values = { path_hx_meds_text = "None" }
+
+[[speed_buttons]]
+label = "NKDA"
+section = "Allergies"
+values = { path_hx_allergy_text = "NKDA" }
+
+[[speed_buttons]]
+label = "Penicillin"
+section = "Allergies"
+values = { path_hx_allergy_text = "Penicillin (***)" }
+
+# ------------------------------------------------------------ risk factors ---
+
+[[fields]]
+key = "path_hx_tobacco_use"
+label = "Tobacco"
+section = "Risk factors"
+type = "dropdown"
+default = "no"
+options = ["no", "former smoker", "current smoker", "smokeless tobacco", "vaping", "***"]
+
+[[fields]]
+key = "path_hx_tobacco_details_e_g_1_ppd_x_20_yrs"
+label = "Tobacco details, e.g. 1 ppd x 20 yrs (blank = omitted)"
+section = "Risk factors"
+type = "text"
+default = ""
+
+[[fields]]
+key = "path_hx_alcohol_use"
+label = "Alcohol"
+section = "Risk factors"
+type = "dropdown"
+default = "none"
+options = ["none", "social", "heavy", "former heavy", "***"]
+
+[[fields]]
+key = "path_hx_alcohol_details_e_g_4_drinks_day"
+label = "Alcohol details, e.g. 4 drinks/day (blank = omitted)"
+section = "Risk factors"
+type = "text"
+default = ""
+
+[[fields]]
+key = "path_hx_betel_use"
+label = "Betel / areca nut"
+section = "Risk factors"
+type = "dropdown"
+default = "no"
+options = ["no", "former", "current", "***"]
+
+[[fields]]
+key = "path_hx_prior_hn_cancer"
+label = "Prior head and neck cancer"
+section = "Risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "yes, [[path_hx_site_treatment_year]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hx_site_treatment_year"
+label = "Site, treatment, year"
+section = "Risk factors"
+type = "text"
+default = "***"
+visible_if = "path_hx_prior_hn_cancer == 'Yes'"
+
+[[fields]]
+key = "path_hx_hn_radiation"
+label = "Head and neck radiation"
+section = "Risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "yes, [[path_hx_site_dose_date]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hx_site_dose_date"
+label = "Site, dose, date"
+section = "Risk factors"
+type = "text"
+default = "***"
+visible_if = "path_hx_hn_radiation == 'Yes'"
+
+[[fields]]
+key = "path_hx_antiresorptive"
+label = "Antiresorptive therapy"
+section = "Risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Oral bisphosphonate", text = "oral bisphosphonate, [[path_hx_agent_duration_last_dose]]" },
+  { label = "IV BP / denosumab", text = "parenteral antiresorptive therapy, [[path_hx_agent_duration_last_dose]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hx_agent_duration_last_dose"
+label = "Agent, duration, last dose"
+section = "Risk factors"
+type = "text"
+default = "***"
+visible_if = "path_hx_antiresorptive in ['Oral bisphosphonate', 'IV BP / denosumab']"
+
+[[fields]]
+key = "path_hx_immunosuppression"
+label = "Immunosuppression"
+section = "Risk factors"
+type = "dropdown"
+default = "No"
+options = [
+  { label = "No", text = "no" },
+  { label = "Yes", text = "yes, [[path_hx_cause_e_g_renal_transplant_on_tacrolimus]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_hx_cause_e_g_renal_transplant_on_tacrolimus"
+label = "Cause, e.g. renal transplant on tacrolimus"
+section = "Risk factors"
+type = "text"
+default = "***"
+visible_if = "path_hx_immunosuppression == 'Yes'"

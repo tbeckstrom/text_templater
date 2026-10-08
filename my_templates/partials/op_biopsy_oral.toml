@@ -1,0 +1,180 @@
+# SNIPPET: op_biopsy_oral   PREFIX: path_bx
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# A same-day biopsy, off by default. When "+ Biopsy today" is ticked its
+# controls appear and the procedure paragraph prints (in the pathology
+# consult, after the plan). The technique sentence follows the biopsy type.
+name = "Snippet: Biopsy today"
+
+body = """
+{%- set specimen = [
+  (path_bx_specimen_size_e_g_8_x_5_x_3 ~ " mm") if path_bx_specimen_size_e_g_8_x_5_x_3 else "",
+  ("submitted in " ~ path_bx_specimen_pieces) if path_bx_specimen_pieces else "",
+  "each site in a separate labeled container" if path_bx_separate_containers else "",
+] -%}
+{%- set specimen = [s for s in specimen if s] -%}
+{%- set technique = [
+  "An elliptical wedge of tissue including the most representative area of the lesion and a margin of adjacent normal-appearing tissue was excised with a 15 blade." if path_bx_biopsy_type == "incisional" else "",
+  "An elliptical incision was made around the lesion with a 15 blade, and the lesion was excised in its entirety at a depth sufficient to include its base." if path_bx_biopsy_type == "excisional" else "",
+  "A punch biopsy instrument was used to obtain a full-thickness specimen from the most representative area of the lesion, which was released at its base with tissue scissors." if path_bx_biopsy_type == "punch" else "",
+  "A full-thickness mucoperiosteal flap was elevated, and a bony window was created with a round bur under copious irrigation to access the lesion. Representative tissue was obtained with curettes, taking care to avoid adjacent vital structures, and the site was irrigated." if path_bx_biopsy_type == "intraosseous" else "",
+  ("Margins of approximately 2 mm of clinically normal tissue were included, and the specimen was oriented with a suture at the " ~ path_bx_margin_marker ~ " margin.") if path_bx_margins_sentence else "",
+] -%}
+{%- set technique = [t for t in technique if t] -%}
+{% if path_bx_biopsy_today %}
+
+**PROCEDURE:** {{ path_bx_biopsy_type }} biopsy of {{ path_bx_biopsy_site_text | replace(from="[[path_bx_site_biopsied_e_g_right_lateral_tongue]]", to=path_bx_site_biopsied_e_g_right_lateral_tongue) }}
+Informed consent was obtained after the risks, benefits, and alternatives were reviewed as above.{% if path_bx_photos_today %} Clinical photographs were obtained before biopsy.{% endif %} Local anesthesia was achieved with {{ path_bx_volume_e_g_1_8 }} mL of {{ path_bx_local_agent }} by {{ path_bx_la_method }}.{% if technique %} {{ technique | join(sep=" ") }}{% endif %} Hemostasis was achieved with {{ path_bx_hemostasis }}. {{ path_bx_closure_text }}
+The specimen was placed in 10% formalin and submitted to {{ path_bx_pathology_lab }} for histopathologic evaluation.{% if path_bx_site_record %} The biopsy site was documented in relation to adjacent landmarks for future re-identification.{% endif %}{% if specimen %}
+Specimen: {{ specimen | join(sep=", ") }}.{% endif %}
+The patient tolerated the procedure well without complications. Post-operative instructions were reviewed verbally and in writing.{% endif %}"""
+
+[[fields]]
+key = "path_bx_biopsy_today"
+label = "+ Biopsy today"
+section = "Biopsy today"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "path_bx_biopsy_type"
+label = "Biopsy type"
+section = "Biopsy today"
+type = "dropdown"
+default = "incisional"
+options = ["incisional", "excisional", "punch", "intraosseous"]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_biopsy_site"
+label = "Site"
+section = "Biopsy today"
+type = "dropdown"
+default = "Lesion above"
+options = [
+  { label = "Lesion above", text = "the lesion described above" },
+  { label = "Other site", text = "[[path_bx_site_biopsied_e_g_right_lateral_tongue]]" },
+]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_site_biopsied_e_g_right_lateral_tongue"
+label = "Site biopsied, e.g. right lateral tongue"
+section = "Biopsy today"
+type = "text"
+default = "***"
+visible_if = "path_bx_biopsy_today and path_bx_biopsy_site == 'Other site'"
+
+[[fields]]
+key = "path_bx_photos_today"
+label = "+ Pre-biopsy photos"
+section = "Biopsy today"
+type = "checkbox"
+default = false
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_volume_e_g_1_8"
+label = "Local anesthetic volume mL, e.g. 1.8"
+section = "Biopsy today"
+type = "text"
+default = "***"
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_local_agent"
+label = "Local anesthetic"
+section = "Biopsy today"
+type = "dropdown"
+default = "2% lidocaine with 1:100,000 epinephrine"
+options = ["2% lidocaine with 1:100,000 epinephrine", "4% articaine with 1:100,000 epinephrine", "3% mepivacaine plain", "***"]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_la_method"
+label = "Delivered by"
+section = "Biopsy today"
+type = "dropdown"
+default = "local infiltration peripheral to the lesion"
+options = ["local infiltration peripheral to the lesion", "inferior alveolar nerve block", "***"]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_margins_sentence"
+label = "+ Margins / orientation"
+section = "Biopsy today"
+type = "checkbox"
+default = false
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_margin_marker"
+label = "Suture marks the margin"
+section = "Biopsy today"
+type = "dropdown"
+default = "superior"
+options = ["superior", "anterior", "medial", "***"]
+visible_if = "path_bx_biopsy_today and path_bx_margins_sentence"
+
+[[fields]]
+key = "path_bx_hemostasis"
+label = "Hemostasis"
+section = "Biopsy today"
+type = "dropdown"
+default = "local pressure"
+options = ["local pressure", "electrocautery", "a hemostatic agent", "***"]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_closure"
+label = "Closure"
+section = "Biopsy today"
+type = "dropdown"
+default = "4-0 chromic gut"
+options = [
+  { label = "4-0 chromic gut", text = "The site was closed primarily with 4-0 chromic gut sutures." },
+  { label = "4-0 Vicryl", text = "The site was closed primarily with 4-0 Vicryl sutures." },
+  { label = "3-0 silk", text = "The site was closed primarily with 3-0 silk sutures." },
+  { label = "Secondary intention", text = "The site was left to heal by secondary intention." },
+  { label = "***", text = "***" },
+]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_pathology_lab"
+label = "Pathology lab"
+section = "Biopsy today"
+type = "text"
+default = "***"
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_site_record"
+label = "+ Site documented"
+section = "Biopsy today"
+type = "checkbox"
+default = false
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_specimen_size_e_g_8_x_5_x_3"
+label = "Specimen size mm, e.g. 8 x 5 x 3 (blank = omitted)"
+section = "Biopsy today"
+type = "text"
+default = ""
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_specimen_pieces"
+label = "Specimen pieces"
+section = "Biopsy today"
+type = "dropdown"
+options = ["one piece", "two pieces", "multiple fragments", "***"]
+visible_if = "path_bx_biopsy_today"
+
+[[fields]]
+key = "path_bx_separate_containers"
+label = "+ Separate containers"
+section = "Biopsy today"
+type = "checkbox"
+default = false
+visible_if = "path_bx_biopsy_today"

@@ -1,0 +1,57 @@
+# SNIPPET: clinic_imaging_pathology   PREFIX: path_img
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# The studies reviewed; each intraosseous lesion's radiographic findings
+# print with that lesion in the exam. Read at the desk, so the note leaves
+# this section off the printed sheet.
+name = "Snippet: Imaging - pathology consult"
+
+body = """
+{%- set studies = path_img_imaging_studies -%}
+{%- set details = [
+  ((studies[:-1] | join(sep=", ")) ~ " and " ~ studies[-1] if studies | length > 1 else studies | first) if studies else "",
+  ("dated " ~ path_img_imaging_date) if path_img_imaging_date else "",
+  path_img_imaging_source,
+] -%}
+{%- set details = [d for d in details if d] -%}
+{%- set lines = [
+  ("Studies reviewed: " ~ details | join(sep=", ")) if details else "",
+  "No imaging indicated for the soft tissue lesion." if path_img_no_imaging else "",
+  ("Other findings: " ~ path_img_other_imaging_findings) if path_img_other_imaging_findings else "",
+] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+[[fields]]
+key = "path_img_imaging_studies"
+label = "Studies reviewed"
+section = "Imaging - pathology consult"
+type = "multiselect"
+options = ["panoramic radiograph", "CBCT", "periapical radiographs", "outside CT", "outside MRI", "***"]
+
+[[fields]]
+key = "path_img_imaging_date"
+label = "Imaging date (blank = omitted)"
+section = "Imaging - pathology consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "path_img_imaging_source"
+label = "Source"
+section = "Imaging - pathology consult"
+type = "dropdown"
+options = ["obtained in office", "provided by the referring office", "***"]
+
+[[fields]]
+key = "path_img_no_imaging"
+label = "No imaging indicated"
+section = "Imaging - pathology consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "path_img_other_imaging_findings"
+label = "Other imaging findings (blank = omitted)"
+section = "Imaging - pathology consult"
+type = "text"
+default = ""

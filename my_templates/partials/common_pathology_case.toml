@@ -1,0 +1,66 @@
+# SNIPPET: common_pathology_case   PREFIX: path
+# The facts every pathology consult section shares, entered once at the top
+# of the form: age, the presenting lesion phrase (reused by the HPI one-liner,
+# the assessment opener and the next-visit line) and referring provider.
+body = ""
+
+[[fields]]
+key = "path_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "path_presenting_lesion"
+label = "Presenting lesion"
+section = "Case"
+type = "dropdown"
+default = "Oral lesion"
+options = [
+  { label = "Oral lesion", text = "an oral lesion" },
+  { label = "Jaw lesion", text = "a jaw lesion" },
+  { label = "Describe", text = "[[path_presenting_lesion_e_g_a_white_lesion_of_the_right_lateral_tongue]]" },
+]
+
+[[fields]]
+key = "path_presenting_lesion_e_g_a_white_lesion_of_the_right_lateral_tongue"
+label = "Presenting lesion, e.g. a white lesion of the right lateral tongue"
+section = "Case"
+type = "text"
+default = "***"
+visible_if = "path_presenting_lesion == 'Describe'"
+
+[[fields]]
+key = "path_referring_provider"
+label = "Referring provider (blank = omitted)"
+section = "Case"
+type = "text"
+default = ""
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "path_ref_name"
+label = "Referring provider name"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'path_referring_provider if path_referring_provider else "the referring dentist"'
+
+[[fields]]
+key = "path_lesion_phrase"
+label = "Presenting lesion phrase"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'path_presenting_lesion_text | replace(from="[[path_presenting_lesion_e_g_a_white_lesion_of_the_right_lateral_tongue]]", to=path_presenting_lesion_e_g_a_white_lesion_of_the_right_lateral_tongue)'
+
+[[fields]]
+key = "path_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'path_patient_age ~ "-year-old patient"'

@@ -1,0 +1,134 @@
+# SNIPPET: clinic_risks_pathology   PREFIX: path_risk
+# Generated from the snippet language, with hand-written TOML for the
+# conditions that read the exam's lesion boxes (a site picked in any soft
+# tissue box, or a tooth or extent in any intraosseous box), which the
+# snippet language can't express.
+# The whole risks discussion prints only when the plan has a next-visit
+# procedure or a biopsy is done today, or when "+ Risks discussion" is
+# ticked, so observation-only notes stay lean. The risk lists are built once,
+# in the hidden computed fields below, so the note and the printed sheet
+# (where each risk is a tick-box) read the same list.
+name = "Snippet: Risks - pathology consult"
+
+body = """
+{%- set specific = path_risk_specific -%}
+{% if path_risk_planned or path_risk_discussion %}Risks, benefits, and alternatives were discussed. Risks reviewed:
+- General surgical: {{ path_risk_general }}.{% if specific %}
+- Specific to the planned procedure: {% if specific | length > 1 %}{{ specific[:-1] | join(sep="; ") }}; and {{ specific[-1] }}{% else %}{{ specific | first }}{% endif %}.{% endif %}
+
+It was explained that outcomes cannot be guaranteed. All questions were answered, and the patient verbalized understanding.
+{% endif %}"""
+
+[[fields]]
+key = "path_risk_discussion"
+label = "+ Risks discussion"
+section = "Risks - pathology consult"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "path_risk_added_risks"
+label = "Add specific risks (site, history and sedation risks are added automatically)"
+section = "Risks - pathology consult"
+type = "multiselect"
+options = ["Lingual nerve", "Mental nerve", "IAN", "Jaw fracture", "Adjacent teeth", "Sinus", "MRONJ"]
+
+# ------------------------------------------------------------ helpers ---
+# Hidden in the form (visible_if = "false"). Each reads a snippet the note
+# may leave out, so it falls back to empty when that snippet is absent. The
+# lesion-box helpers flatten every box's picks into one list (Tera
+# comprehensions take a single `for`, so they join and split).
+
+[[fields]]
+key = "path_risk_next"
+label = "Next visit procedure"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = 'path_ap_next_procedure if path_ap_next_procedure is defined else ""'
+
+[[fields]]
+key = "path_risk_bx_type"
+label = "Biopsy today type (blank = no biopsy today)"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = '(path_bx_biopsy_type if path_bx_biopsy_today else "") if path_bx_biopsy_today is defined and path_bx_biopsy_type is defined else ""'
+
+[[fields]]
+key = "path_risk_planned"
+label = "Procedure planned or done today"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = '"1" if path_risk_next or path_risk_bx_type else ""'
+
+[[fields]]
+key = "path_risk_bony_procedure"
+label = "Intraosseous procedure planned or done today"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = '"1" if path_risk_next in ["Aspiration + incisional", "Enucleation", "Marsupialization"] or path_risk_bx_type == "intraosseous" else ""'
+
+[[fields]]
+key = "path_risk_soft_sites"
+label = "Soft tissue sites charted"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = '[s for s in ([b.soft_subsite ~ "," ~ b.soft_subsite_2 for b in path_exam_soft_lesions] | join(sep=",") | split(pat=",")) if s] if path_exam_soft_lesions is defined else []'
+
+[[fields]]
+key = "path_risk_bony_teeth"
+label = "Intraosseous teeth charted"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = '[t for t in ([b.bony_teeth | join(sep=",") for b in path_exam_bony_lesions] | join(sep=",") | split(pat=",")) if t] if path_exam_bony_lesions is defined else []'
+
+[[fields]]
+key = "path_risk_bony_extent"
+label = "Intraosseous extent and vital structures"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+compute = '[e for e in ([(b.bony_extent | join(sep=",")) ~ "," ~ b.bony_vital for b in path_exam_bony_lesions] | join(sep=",") | split(pat=",")) if e] if path_exam_bony_lesions is defined else []'
+
+# ------------------------------------------------------------ risk list ---
+# The two with print = true are the tick-boxes on the printed sheet.
+
+[[fields]]
+key = "path_risk_general"
+label = "General surgical"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '"bleeding, infection, pain, swelling, bruising, delayed healing, and the possible need for additional procedures"'
+
+[[fields]]
+key = "path_risk_specific"
+label = "Specific to the planned procedure"
+section = "Risks - pathology consult"
+type = "computed"
+visible_if = "false"
+print = true
+compute = '''[r for r in [
+  "a non-diagnostic or inconclusive result that may require repeat biopsy" if path_risk_next in ["Incisional bx", "Excisional bx", "Punch bx", "Aspiration + incisional", "Marsupialization"] or path_risk_bx_type else "",
+  "further treatment depending on the histopathologic diagnosis" if path_risk_planned else "",
+  "scarring or altered contour at the surgical site" if path_risk_next in ["Incisional bx", "Excisional bx", "Punch bx"] or path_risk_bx_type else "",
+  "recurrence of the lesion" if path_risk_next in ["Excisional bx", "Enucleation", "Marsupialization"] or path_risk_bx_type == "excisional" else "",
+  "temporary or permanent altered sensation or taste of the tongue from lingual nerve injury" if (path_risk_planned and ("lateral tongue" in path_risk_soft_sites or "ventral tongue" in path_risk_soft_sites or "floor of mouth" in path_risk_soft_sites)) or "Lingual nerve" in path_risk_added_risks else "",
+  "injury to the submandibular duct with possible salivary obstruction" if path_risk_planned and "floor of mouth" in path_risk_soft_sites else "",
+  "temporary or permanent altered sensation of the lower lip and chin from mental nerve injury" if (path_risk_planned and ("lower lip" in path_risk_soft_sites or "mandibular gingiva" in path_risk_soft_sites or "mandibular vestibule" in path_risk_soft_sites)) or "Mental nerve" in path_risk_added_risks else "",
+  "temporary or permanent altered sensation of the lip, chin, teeth, or gingiva from inferior alveolar nerve injury" if (path_risk_bony_procedure and (([t for t in path_risk_bony_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 or "mandibular angle" in path_risk_bony_extent or "ramus" in path_risk_bony_extent or "inferior alveolar canal" in path_risk_bony_extent or "mental foramen" in path_risk_bony_extent)) or "IAN" in path_risk_added_risks else "",
+  "pathologic fracture of the mandible" if (path_risk_next in ["Enucleation", "Marsupialization"] and (([t for t in path_risk_bony_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 or "mandibular symphysis" in path_risk_bony_extent or "mandibular angle" in path_risk_bony_extent or "ramus" in path_risk_bony_extent)) or "Jaw fracture" in path_risk_added_risks else "",
+  "injury to or loss of vitality of adjacent teeth that may require root canal therapy or extraction" if (path_risk_bony_procedure and path_risk_bony_teeth) or "Adjacent teeth" in path_risk_added_risks else "",
+  "oroantral communication that may require additional repair" if (path_risk_bony_procedure and (([t for t in path_risk_bony_teeth if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 or "maxillary sinus" in path_risk_bony_extent)) or "Sinus" in path_risk_added_risks else "",
+  "the need for a drain or obturator with daily irrigation for several months and later definitive surgery" if path_risk_next == "Marsupialization" else "",
+  "osteoradionecrosis" if path_risk_planned and path_hx_hn_radiation is defined and path_hx_hn_radiation == "Yes" else "",
+  "medication-related osteonecrosis of the jaw" if (path_risk_planned and path_hx_antiresorptive is defined and path_hx_antiresorptive in ["Oral bisphosphonate", "IV BP / denosumab"]) or "MRONJ" in path_risk_added_risks else "",
+  "delayed healing and a higher risk of infection" if path_risk_planned and path_hx_immunosuppression is defined and path_hx_immunosuppression == "Yes" else "",
+  "risks of sedation or general anesthesia, including airway compromise, aspiration, and nausea" if path_risk_next and path_ap_next_anesthesia is defined and path_ap_next_anesthesia in ["IV sedation", "General anesthesia"] else "",
+] if r] | unique'''

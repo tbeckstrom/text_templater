@@ -1,0 +1,278 @@
+# SNIPPET: clinic_assessment_plan_pathology   PREFIX: path_ap
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# One impression line per lesion type (suspicion + differential), each left
+# out until picked (joined with "; "). The next visit, a same-day biopsy, irritant removal and
+# the oncology referral bring in their one-line rationale and drive the risks
+# discussion. Cessation counseling is added automatically from the history;
+# the prep items for radiation or antiresorptives are added automatically
+# only when a next-visit procedure is picked (each can also be ticked by
+# hand). The pathway presets that fill this section live in the
+# note.
+name = "Snippet: Assessment & plan - pathology consult"
+use_partials = ["common_pathology_case", "clinic_risks_pathology"]
+
+body = """
+{%- set np = path_ap_next_procedure -%}
+{%- set bx_today = path_bx_biopsy_today is defined and path_bx_biopsy_type is defined and path_bx_biopsy_today -%}
+{%- set soft_ddx = path_ap_soft_ddx_text -%}
+{%- set soft = [
+  path_ap_soft_concern_text if path_ap_soft_concern else "",
+  ("differential diagnosis includes " ~ ((soft_ddx[:-1] | join(sep=", ")) ~ " and " ~ soft_ddx[-1] if soft_ddx | length > 1 else soft_ddx | first)) if soft_ddx else "",
+] -%}
+{%- set soft = [p for p in soft if p] -%}
+{%- set bony_ddx = path_ap_bony_ddx_text -%}
+{%- set bony = [
+  path_ap_bony_concern_text if path_ap_bony_concern else "",
+  ("differential diagnosis includes " ~ ((bony_ddx[:-1] | join(sep=", ")) ~ " and " ~ bony_ddx[-1] if bony_ddx | length > 1 else bony_ddx | first)) if bony_ddx else "",
+] -%}
+{%- set bony = [p for p in bony if p] -%}
+{%- set impressions = [
+  ("Soft tissue lesion: " ~ soft | join(sep="; ") ~ ".") if soft else "",
+  ("Intraosseous lesion: " ~ bony | join(sep="; ") ~ ".") if bony else "",
+] -%}
+{%- set impressions = [i for i in impressions if i] -%}
+{%- set alts = path_ap_alternatives_text -%}
+{%- set rec = [
+  ("Given the clinical findings, " ~ path_bx_biopsy_type ~ " biopsy was recommended and performed today to establish a histopathologic diagnosis.") if bx_today else "",
+  "Incisional biopsy was recommended to establish a histopathologic diagnosis before definitive treatment." if np == "Incisional bx" else "",
+  "Excisional biopsy was recommended, as the lesion is small and well circumscribed, allowing diagnosis and treatment in a single procedure." if np == "Excisional bx" else "",
+  "Punch biopsy was recommended to obtain representative full-thickness tissue for histopathologic diagnosis." if np == "Punch bx" else "",
+  "Aspiration was recommended to exclude a vascular lesion, followed by incisional biopsy to establish a histopathologic diagnosis before definitive surgery." if np == "Aspiration + incisional" else "",
+  "Enucleation and curettage was recommended to remove the lesion completely and provide a definitive histopathologic diagnosis." if np == "Enucleation" else "",
+  "Marsupialization was recommended to decompress the lesion and reduce its size, limiting the extent and morbidity of later definitive surgery; the lining will be submitted for histopathologic diagnosis." if np == "Marsupialization" else "",
+  "Removal of the suspected source of irritation with re-evaluation in 2 weeks was recommended, as reactive lesions often resolve once the irritant is removed; biopsy is indicated if the lesion persists." if path_ap_irritant_plan else "",
+  "Given clinical features concerning for malignancy, expedited referral to head and neck surgical oncology was recommended." if path_ap_oncology_referral else "",
+  ("Alternatives discussed included " ~ ((alts[:-1] | join(sep=", ")) ~ " and " ~ alts[-1] if alts | length > 1 else alts | first) ~ ", and the risk of a delayed diagnosis without tissue sampling was reviewed.") if alts else "",
+] -%}
+{%- set rec = [r for r in rec if r] -%}
+{%- set prep_items = path_ap_prior_items -%}
+{%- set prep = [
+  ((prep_items[:-1] | join(sep=", ")) ~ " and " ~ prep_items[-1] if prep_items | length > 1 else prep_items | first) if prep_items else "",
+  "radiation oncology records to confirm dose to the site" if (np and path_hx_hn_radiation is defined and path_hx_hn_radiation == "Yes") or "Radiation records" in path_ap_added_prep else "",
+  "coordination with the prescribing provider regarding antiresorptive therapy" if (np and path_hx_antiresorptive is defined and path_hx_antiresorptive in ["Oral bisphosphonate", "IV BP / denosumab"]) or "Antiresorptive" in path_ap_added_prep else "",
+] -%}
+{%- set prep = [p for p in prep if p] -%}
+{%- set cessation = [
+  "tobacco use" if (path_hx_tobacco_use is defined and path_hx_tobacco_use in ["current smoker", "smokeless tobacco", "vaping"]) or "Tobacco" in path_ap_added_counseling else "",
+  "alcohol use" if (path_hx_alcohol_use is defined and path_hx_alcohol_use == "heavy") or "Alcohol" in path_ap_added_counseling else "",
+  "areca nut use" if (path_hx_betel_use is defined and path_hx_betel_use == "current") or "Areca nut" in path_ap_added_counseling else "",
+] -%}
+{%- set cessation = [c for c in cessation if c] -%}
+{%- set lines = [
+  ("Next visit: " ~ path_ap_next_procedure_text ~ " of " ~ path_lesion_phrase ~ " under " ~ path_ap_next_anesthesia_text ~ ".") if np and path_ap_next_anesthesia else "",
+  ("Prior to next visit: " ~ (prep[:-1] | join(sep="; ") ~ "; and " ~ prep[-1] if prep | length > 1 else prep | first) ~ ".") if prep else "",
+  "Biopsy performed today as below; specimen submitted for histopathologic evaluation." if bx_today else "",
+  ("Remove suspected source of irritation: " ~ path_ap_irritant_and_action_e_g_smooth_fractured_cusp_of_36 ~ "; re-evaluate in 2 weeks, with biopsy if the lesion persists.") if path_ap_irritant_plan else "",
+  ("Cessation counseling provided for " ~ ((cessation[:-1] | join(sep=", ")) ~ " and " ~ cessation[-1] if cessation | length > 1 else cessation | first) ~ ", given their association with oral cancer.") if cessation else "",
+  "Clinical photographs obtained for the record and future comparison." if path_ap_photos_bullet else "",
+  "Expedited referral to head and neck surgical oncology for further evaluation and management; the importance of prompt follow-through was emphasized." if path_ap_oncology_referral else "",
+  ("Follow-up " ~ path_ap_follow_up_text ~ "; sooner if the lesion changes or new symptoms develop.") if path_ap_follow_up else "",
+] -%}
+**ASSESSMENT:**
+{{ path_pt_intro }} presenting with {{ path_lesion_phrase }}.{% if impressions %}
+
+{{ impressions | join(sep="
+") }}{% endif %}
+
+{% if rec %}{{ rec | join(sep=" ") }}
+{% endif %}Treatment timing and sequencing were discussed as outlined in the plan below.
+{% include "clinic_risks_pathology" %}After shared decision making, the patient {{ path_ap_patient_decision_text if path_ap_patient_decision else "***" }}
+
+**PLAN:**
+{%- for l in lines %}{% if l %}
+- {{ l }}{% endif %}{% endfor %}"""
+
+# ------------------------------------------------------------- assessment ---
+
+[[fields]]
+key = "path_ap_soft_concern"
+label = "Soft tissue: concern"
+section = "Assessment & plan - pathology consult"
+type = "dropdown"
+options = [
+  { label = "Low", text = "low clinical concern for dysplasia or malignancy" },
+  { label = "Indeterminate", text = "indeterminate clinical features, with dysplasia or malignancy not excluded" },
+  { label = "High", text = "clinical features concerning for dysplasia or malignancy" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_soft_ddx"
+label = "Soft tissue: differential"
+section = "Assessment & plan - pathology consult"
+type = "multiselect"
+options = [
+  { label = "Fibroma", text = "irritation fibroma" },
+  { label = "Mucocele", text = "mucocele" },
+  { label = "Pyogenic granuloma", text = "pyogenic granuloma" },
+  { label = "PGCG", text = "peripheral giant cell granuloma" },
+  { label = "POF", text = "peripheral ossifying fibroma" },
+  { label = "Papilloma", text = "squamous papilloma" },
+  { label = "Traumatic ulcer", text = "traumatic ulcer" },
+  { label = "Frictional keratosis", text = "frictional keratosis" },
+  { label = "Leukoplakia", text = "leukoplakia" },
+  { label = "Erythroplakia", text = "erythroplakia" },
+  { label = "Lichen planus", text = "oral lichen planus" },
+  { label = "Candidiasis", text = "candidiasis" },
+  { label = "Salivary neoplasm", text = "minor salivary gland neoplasm" },
+  { label = "SCC", text = "squamous cell carcinoma" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_bony_concern"
+label = "Intraosseous: concern"
+section = "Assessment & plan - pathology consult"
+type = "dropdown"
+options = [
+  { label = "Low", text = "low concern for an aggressive or malignant process" },
+  { label = "Indeterminate", text = "indeterminate features, with an aggressive or malignant process not excluded" },
+  { label = "High", text = "features concerning for an aggressive or malignant process" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_bony_ddx"
+label = "Intraosseous: differential"
+section = "Assessment & plan - pathology consult"
+type = "multiselect"
+options = [
+  { label = "Periapical cyst", text = "periapical (radicular) cyst" },
+  { label = "Periapical granuloma", text = "periapical granuloma" },
+  { label = "Dentigerous cyst", text = "dentigerous cyst" },
+  { label = "OKC", text = "odontogenic keratocyst" },
+  { label = "Ameloblastoma", text = "ameloblastoma" },
+  { label = "COD", text = "cemento-osseous dysplasia" },
+  { label = "Fibro-osseous", text = "fibro-osseous lesion" },
+  { label = "CGCG", text = "central giant cell granuloma" },
+  { label = "Simple bone cyst", text = "simple bone cyst" },
+  { label = "Odontoma", text = "odontoma" },
+  { label = "Osteomyelitis", text = "osteomyelitis" },
+  { label = "Malignancy", text = "malignancy, primary or metastatic" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_alternatives"
+label = "Alternatives"
+section = "Assessment & plan - pathology consult"
+type = "multiselect"
+default = ["Serial exams", "No treatment"]
+options = [
+  { label = "Serial exams", text = "observation with serial examination" },
+  { label = "Serial imaging", text = "observation with serial imaging" },
+  { label = "Immediate biopsy", text = "immediate biopsy" },
+  { label = "Brush cytology", text = "brush cytology" },
+  { label = "Incisional bx", text = "incisional biopsy" },
+  { label = "Excisional bx", text = "excisional biopsy" },
+  { label = "Surgery without bx", text = "definitive surgery without prior biopsy" },
+  { label = "No treatment", text = "no treatment" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_patient_decision"
+label = "Patient decision"
+section = "Assessment & plan - pathology consult"
+type = "dropdown"
+default = "Proceed"
+options = [
+  { label = "Proceed", text = "elected to proceed with the plan outlined below." },
+  { label = "Considering", text = "will consider the options discussed and contact our office." },
+  { label = "Declines", text = "declines biopsy at this time; the risk of a delayed diagnosis of a potentially serious condition was reviewed." },
+  { label = "***", text = "***" },
+]
+
+# ------------------------------------------------------------------- plan ---
+
+[[fields]]
+key = "path_ap_next_procedure"
+label = "Next visit (drives the specific risks)"
+section = "Plan"
+type = "dropdown"
+options = [
+  { label = "Incisional bx", text = "incisional biopsy" },
+  { label = "Excisional bx", text = "excisional biopsy" },
+  { label = "Punch bx", text = "punch biopsy" },
+  { label = "Aspiration + incisional", text = "aspiration and incisional biopsy" },
+  { label = "Enucleation", text = "enucleation and curettage" },
+  { label = "Marsupialization", text = "marsupialization and biopsy" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_next_anesthesia"
+label = "Anesthesia"
+section = "Plan"
+type = "dropdown"
+default = "Local"
+options = [
+  { label = "Local", text = "local anesthesia" },
+  { label = "IV sedation", text = "IV sedation; NPO and escort instructions reviewed" },
+  { label = "General anesthesia", text = "general anesthesia; NPO and escort instructions reviewed" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_ap_prior_items"
+label = "Prior to next visit"
+section = "Plan"
+type = "multiselect"
+options = ["CBCT", "panoramic radiograph", "medical records", "medical clearance", "labs", "***"]
+
+[[fields]]
+key = "path_ap_added_prep"
+label = "+ Prep, automatic from history"
+section = "Plan"
+type = "multiselect"
+options = ["Radiation records", "Antiresorptive"]
+
+[[fields]]
+key = "path_ap_irritant_plan"
+label = "+ Remove irritant"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "path_ap_irritant_and_action_e_g_smooth_fractured_cusp_of_36"
+label = "Irritant and action, e.g. smooth fractured cusp of 36"
+section = "Plan"
+type = "text"
+default = "***"
+visible_if = "path_ap_irritant_plan"
+
+[[fields]]
+key = "path_ap_added_counseling"
+label = "+ Cessation counseling, automatic from history"
+section = "Plan"
+type = "multiselect"
+options = ["Tobacco", "Alcohol", "Areca nut"]
+
+[[fields]]
+key = "path_ap_photos_bullet"
+label = "+ Clinical photos"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "path_ap_oncology_referral"
+label = "+ H&N oncology referral"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "path_ap_follow_up"
+label = "Follow-up"
+section = "Plan"
+type = "dropdown"
+options = [
+  { label = "Path review 2-3 wk", text = "in 2-3 weeks to review pathology results" },
+  { label = "Re-eval 2 wk", text = "in 2 weeks to re-evaluate the lesion" },
+  { label = "After CBCT", text = "after CBCT to review findings" },
+  { label = "3 months", text = "in 3 months for re-examination" },
+  { label = "6 months", text = "in 6 months for re-examination" },
+  { label = "***", text = "***" },
+]

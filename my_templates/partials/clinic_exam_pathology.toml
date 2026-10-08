@@ -1,0 +1,483 @@
+# SNIPPET: clinic_exam_pathology   PREFIX: path_exam
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# Head and neck lines default to normal. Each lesion is its own Add box:
+# soft tissue lesions (site chips, size, descriptors left unpicked) and
+# intraosseous lesions (tooth chart, clinical findings, and a radiographic
+# line whose chips are left off the printed sheet). The ASA and airway lines
+# show and print only when the plan's next visit is under IV sedation or
+# general anesthesia.
+name = "Snippet: Exam - pathology consult"
+
+body = """
+{%- set eo = [
+  ("face " ~ path_exam_face_symmetry_text | replace(from="[[path_exam_region]]", to=path_exam_region)) if path_exam_face_symmetry else "",
+  ("cervical lymph nodes " ~ path_exam_lymph_nodes_text | replace(from="[[path_exam_level_side_size_mobility_tenderness]]", to=path_exam_level_side_size_mobility_tenderness)) if path_exam_lymph_nodes else "",
+  ("V2/V3 sensation " ~ path_exam_nerve_sensation_text | replace(from="[[path_exam_distribution_e_g_right_v3]]", to=path_exam_distribution_e_g_right_v3)) if path_exam_nerve_sensation else "",
+] -%}
+{%- set eo = [p for p in eo if p] -%}
+{%- set lines = [
+  ("Extraoral: " ~ eo | join(sep="; ")) if eo else "",
+  ("Opening: " ~ path_exam_mouth_opening_text | replace(from="[[path_exam_mio_mm]]", to=path_exam_mio_mm)) if path_exam_mouth_opening else "",
+  ("Intraoral: " ~ path_exam_remaining_mucosa_text) if path_exam_remaining_mucosa else "",
+] -%}
+{%- set sedation_planned = path_ap_next_anesthesia is defined and path_ap_next_anesthesia in ["IV sedation", "General anesthesia"] -%}
+{%- set airway = [
+  ("Mallampati " ~ path_exam_mallampati) if path_exam_mallampati else "",
+  ("neck " ~ path_exam_neck_mobility) if path_exam_neck_mobility else "",
+  ("BMI " ~ path_exam_bmi) if path_exam_bmi else "",
+] -%}
+{%- set airway = [p for p in airway if p] -%}
+{%- set sedation = [
+  ("ASA class: " ~ path_exam_asa_class) if path_exam_asa_class else "",
+  ("Airway: " ~ airway | join(sep="; ")) if airway else "",
+] if sedation_planned else [] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}
+{%- for b in path_exam_soft_lesions %}
+{%- set site = [
+  b.soft_side,
+  b.soft_subsite,
+  b.soft_subsite_2,
+  b.site_detail_e_g_adjacent_to_36,
+] -%}
+{%- set site = [p for p in site if p] -%}
+{%- set parts = [
+  (b.size_e_g_12_x_8 ~ " mm") if b.size_e_g_12_x_8 else "",
+  b.soft_color,
+  b.soft_surface,
+  b.soft_consistency,
+  b.soft_base,
+  (b.soft_borders ~ " borders") if b.soft_borders else "",
+  b.soft_tenderness,
+  b.soft_wipeable,
+  b.other_finding,
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if site and parts %}- Soft tissue lesion, {{ site | join(sep=" ") }}: {{ parts | join(sep=", ") }}
+{% endif %}{% endfor %}
+{%- for b in path_exam_bony_lesions %}
+{%- set extent = b.bony_extent -%}
+{%- set site = [
+  ("region of " ~ ((b.bony_teeth_spans[:-1] | join(sep=", ")) ~ " and " ~ b.bony_teeth_spans[-1] if b.bony_teeth_spans | length > 1 else b.bony_teeth_spans | first)) if b.bony_teeth_spans else "",
+  ("involving the " ~ b.bony_side ~ " " ~ ((extent[:-1] | join(sep=", ")) ~ " and " ~ extent[-1] if extent | length > 1 else extent | first)) if b.bony_side and extent else "",
+] -%}
+{%- set site = [p for p in site if p] -%}
+{%- set findings = b.bony_tooth_findings -%}
+{%- set clinical = [
+  b.bony_expansion,
+  ("overlying mucosa " ~ b.bony_mucosa) if b.bony_mucosa else "",
+  ("involved teeth " ~ ((findings[:-1] | join(sep=", ")) ~ " and " ~ findings[-1] if findings | length > 1 else findings | first)) if findings else "",
+  b.bony_vitality_text | replace(from="[[teeth_e_g_35_and_36]]", to=b.teeth_e_g_35_and_36) if b.bony_vitality else "",
+  b.other_clinical_finding,
+] -%}
+{%- set clinical = [p for p in clinical if p] -%}
+{%- set effects = b.bony_effects -%}
+{%- set radiographic = [
+  b.bony_density,
+  b.bony_locularity,
+  (b.bony_borders ~ " borders") if b.bony_borders else "",
+  ("measuring " ~ b.lesion_size_e_g_18_x_12 ~ " mm") if b.lesion_size_e_g_18_x_12 else "",
+  b.bony_association_text | replace(from="[[associated_tooth]]", to=b.associated_tooth) | replace(from="[[unerupted_tooth]]", to=b.unerupted_tooth) | replace(from="[[teeth_e_g_34_and_35]]", to=b.teeth_e_g_34_and_35) if b.bony_association else "",
+  ("with " ~ ((effects[:-1] | join(sep=", ")) ~ " and " ~ effects[-1] if effects | length > 1 else effects | first)) if effects else "",
+  (b.bony_proximity ~ " the " ~ b.bony_vital) if b.bony_proximity and b.bony_vital else "",
+] -%}
+{%- set radiographic = [p for p in radiographic if p] -%}
+{% if site and clinical %}- Intraosseous lesion, {{ site | join(sep=", ") }}: {{ clinical[:-1] | join(sep="; ") ~ "; and " ~ clinical[-1] if clinical | length > 1 else clinical | first }}
+{% endif %}{% if radiographic %}  - Radiographic: {{ radiographic | join(sep=", ") }}
+{% endif %}{% endfor %}
+{%- for l in sedation %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+# ------------------------------------------------------- head and neck exam ---
+
+[[fields]]
+key = "path_exam_face_symmetry"
+label = "Face"
+section = "Exam - pathology consult"
+type = "dropdown"
+default = "Symmetric"
+options = [
+  { label = "Symmetric", text = "symmetric without swelling" },
+  { label = "Swelling", text = "with swelling of the [[path_exam_region]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_exam_region"
+label = "Region"
+section = "Exam - pathology consult"
+type = "text"
+default = "***"
+visible_if = "path_exam_face_symmetry == 'Swelling'"
+
+[[fields]]
+key = "path_exam_lymph_nodes"
+label = "Cervical lymph nodes"
+section = "Exam - pathology consult"
+type = "dropdown"
+default = "Nonpalpable"
+options = [
+  { label = "Nonpalpable", text = "nonpalpable" },
+  { label = "Palpable", text = "palpable, [[path_exam_level_side_size_mobility_tenderness]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_exam_level_side_size_mobility_tenderness"
+label = "Level, side, size, mobility, tenderness"
+section = "Exam - pathology consult"
+type = "text"
+default = "***"
+visible_if = "path_exam_lymph_nodes == 'Palpable'"
+
+[[fields]]
+key = "path_exam_nerve_sensation"
+label = "V2/V3 sensation"
+section = "Exam - pathology consult"
+type = "dropdown"
+default = "Intact"
+options = [
+  { label = "Intact", text = "intact bilaterally" },
+  { label = "Altered", text = "altered in the [[path_exam_distribution_e_g_right_v3]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_exam_distribution_e_g_right_v3"
+label = "Distribution, e.g. right V3"
+section = "Exam - pathology consult"
+type = "text"
+default = "***"
+visible_if = "path_exam_nerve_sensation == 'Altered'"
+
+[[fields]]
+key = "path_exam_mouth_opening"
+label = "Opening"
+section = "Exam - pathology consult"
+type = "dropdown"
+default = "Adequate"
+options = [
+  { label = "Adequate", text = "adequate" },
+  { label = "Limited", text = "limited, maximal interincisal opening [[path_exam_mio_mm]] mm" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "path_exam_mio_mm"
+label = "MIO mm"
+section = "Exam - pathology consult"
+type = "text"
+default = "***"
+visible_if = "path_exam_mouth_opening == 'Limited'"
+
+[[fields]]
+key = "path_exam_remaining_mucosa"
+label = "Remaining mucosa"
+section = "Exam - pathology consult"
+type = "dropdown"
+default = "WNL"
+options = [
+  { label = "WNL", text = "remaining oral mucosa within normal limits, without additional lesions" },
+  { label = "***", text = "***" },
+]
+
+# -------------------------------------------------- soft tissue lesions ---
+
+[[groups]]
+key = "path_exam_soft_lesions"
+label = "Soft tissue lesion"
+section = "Exam - pathology consult"
+
+[[groups.speed_buttons]]
+label = "Smooth nodule"
+values = { soft_color = "mucosa-colored", soft_surface = "smooth", soft_consistency = "firm", soft_base = "sessile", soft_borders = "well-defined", soft_tenderness = "non-tender", soft_wipeable = "" }
+
+[[groups.speed_buttons]]
+label = "White plaque"
+values = { soft_color = "white", soft_surface = "", soft_consistency = "", soft_base = "flat", soft_borders = "", soft_tenderness = "non-tender", soft_wipeable = "non-wipeable" }
+
+[[groups.fields]]
+key = "soft_side"
+label = "Side"
+type = "dropdown"
+options = ["right", "left", "bilateral", "midline", "***"]
+
+[[groups.fields]]
+key = "soft_subsite"
+label = "Site"
+type = "dropdown"
+options = ["upper lip", "lower lip", "buccal mucosa", "lateral tongue", "ventral tongue", "dorsal tongue", "floor of mouth", "***"]
+
+[[groups.fields]]
+key = "soft_subsite_2"
+label = "Site, palate/gingiva"
+type = "dropdown"
+options = ["hard palate", "soft palate", "maxillary gingiva", "mandibular gingiva", "maxillary vestibule", "mandibular vestibule", "retromolar trigone", "***"]
+
+[[groups.fields]]
+key = "site_detail_e_g_adjacent_to_36"
+label = "Site detail, e.g. adjacent to 36 (blank = omitted)"
+type = "text"
+default = ""
+
+[[groups.fields]]
+key = "size_e_g_12_x_8"
+label = "Size mm, e.g. 12 x 8"
+type = "text"
+default = "***"
+
+[[groups.fields]]
+key = "soft_color"
+label = "Color"
+type = "dropdown"
+options = ["white", "red", "red and white", "mucosa-colored", "yellow", "blue-purple", "pigmented", "***"]
+
+[[groups.fields]]
+key = "soft_surface"
+label = "Surface"
+type = "dropdown"
+options = ["smooth", "ulcerated", "verrucous", "papillary", "granular", "fissured", "***"]
+
+[[groups.fields]]
+key = "soft_consistency"
+label = "Consistency"
+type = "dropdown"
+options = ["soft", "firm", "rubbery", "indurated", "fluctuant", "***"]
+
+[[groups.fields]]
+key = "soft_base"
+label = "Base"
+type = "dropdown"
+options = ["flat", "sessile", "pedunculated", "***"]
+
+[[groups.fields]]
+key = "soft_borders"
+label = "Borders"
+type = "dropdown"
+options = ["well-defined", "ill-defined", "***"]
+
+[[groups.fields]]
+key = "soft_tenderness"
+label = "Tenderness"
+type = "dropdown"
+options = ["non-tender", "tender", "***"]
+
+[[groups.fields]]
+key = "soft_wipeable"
+label = "Wipeable"
+type = "dropdown"
+options = ["non-wipeable", "wipeable", "***"]
+
+[[groups.fields]]
+key = "other_finding"
+label = "Other finding (blank = omitted)"
+type = "text"
+default = ""
+
+# -------------------------------------------------- intraosseous lesions ---
+
+[[groups]]
+key = "path_exam_bony_lesions"
+label = "Intraosseous lesion"
+section = "Exam - pathology consult"
+
+[[groups.speed_buttons]]
+label = "Well-defined RL"
+values = { bony_density = "radiolucent", bony_locularity = "unilocular", bony_borders = "well-defined corticated" }
+
+[[groups.fields]]
+key = "bony_teeth"
+label = "Teeth / sites spanned"
+type = "teeth"
+
+[[groups.fields]]
+key = "bony_side"
+label = "Side"
+type = "dropdown"
+options = ["right", "left", "bilateral", "***"]
+
+[[groups.fields]]
+key = "bony_extent"
+label = "Involving"
+type = "multiselect"
+options = [
+  "mandibular symphysis",
+  "mandibular angle",
+  "ramus",
+  "condyle",
+  "coronoid process",
+  "maxillary sinus",
+  "maxillary tuberosity",
+  "nasal floor",
+  "***",
+]
+
+[[groups.fields]]
+key = "bony_expansion"
+label = "Expansion"
+type = "dropdown"
+default = "no palpable expansion"
+options = ["no palpable expansion", "buccal expansion", "lingual expansion", "buccolingual expansion", "palatal expansion", "***"]
+
+[[groups.fields]]
+key = "bony_mucosa"
+label = "Overlying mucosa"
+type = "dropdown"
+default = "intact"
+options = ["intact", "erythematous", "with sinus tract", "ulcerated", "***"]
+
+[[groups.fields]]
+key = "bony_tooth_findings"
+label = "Involved teeth"
+type = "multiselect"
+options = ["nonmobile", "mobile", "displaced", "tender to percussion", "***"]
+
+[[groups.fields]]
+key = "bony_vitality"
+label = "Pulp testing"
+type = "dropdown"
+options = [
+  { label = "Vital", text = "involved teeth responsive to cold testing" },
+  { label = "Nonvital", text = "no response to cold testing of [[teeth_e_g_35_and_36]]" },
+  { label = "Not tested", text = "pulp testing not performed" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "teeth_e_g_35_and_36"
+label = "Teeth, e.g. 35 and 36"
+type = "text"
+default = "***"
+visible_if = "bony_vitality == 'Nonvital'"
+
+[[groups.fields]]
+key = "other_clinical_finding"
+label = "Other clinical finding (blank = omitted)"
+type = "text"
+default = ""
+
+# Radiographic findings are read at the desk, so they stay off the sheet.
+
+[[groups.fields]]
+key = "bony_density"
+label = "Density"
+type = "dropdown"
+print = false
+options = ["radiolucent", "radiopaque", "mixed radiolucent-radiopaque", "***"]
+
+[[groups.fields]]
+key = "bony_locularity"
+label = "Locularity"
+type = "dropdown"
+print = false
+options = ["unilocular", "multilocular", "***"]
+
+[[groups.fields]]
+key = "bony_borders"
+label = "Borders"
+type = "dropdown"
+print = false
+options = ["well-defined corticated", "well-defined noncorticated", "ill-defined", "***"]
+
+[[groups.fields]]
+key = "lesion_size_e_g_18_x_12"
+label = "Lesion size mm, e.g. 18 x 12 (blank = omitted)"
+type = "text"
+default = ""
+print = false
+
+[[groups.fields]]
+key = "bony_association"
+label = "Tooth association"
+type = "dropdown"
+print = false
+options = [
+  { label = "Periapical", text = "at the apex of tooth [[associated_tooth]]" },
+  { label = "Pericoronal", text = "around the crown of unerupted tooth [[unerupted_tooth]]" },
+  { label = "Interradicular", text = "between the roots of [[teeth_e_g_34_and_35]]" },
+  { label = "Not tooth-related", text = "not associated with a tooth" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "associated_tooth"
+label = "Associated tooth"
+type = "text"
+default = "***"
+print = false
+visible_if = "bony_association == 'Periapical'"
+
+[[groups.fields]]
+key = "unerupted_tooth"
+label = "Unerupted tooth"
+type = "text"
+default = "***"
+print = false
+visible_if = "bony_association == 'Pericoronal'"
+
+[[groups.fields]]
+key = "teeth_e_g_34_and_35"
+label = "Teeth, e.g. 34 and 35"
+type = "text"
+default = "***"
+print = false
+visible_if = "bony_association == 'Interradicular'"
+
+[[groups.fields]]
+key = "bony_effects"
+label = "Effects"
+type = "multiselect"
+print = false
+options = ["root resorption", "tooth displacement", "cortical expansion", "cortical thinning", "cortical perforation", "***"]
+
+[[groups.fields]]
+key = "bony_proximity"
+label = "Proximity"
+type = "dropdown"
+default = "in close proximity to"
+print = false
+options = ["in close proximity to", "not in close proximity to", "displacing", "***"]
+
+[[groups.fields]]
+key = "bony_vital"
+label = "Vital structure"
+type = "dropdown"
+print = false
+options = ["inferior alveolar canal", "mental foramen", "maxillary sinus", "nasal floor", "***"]
+
+# ------------------------------------------------ sedation evaluation ---
+
+[[fields]]
+key = "path_exam_asa_class"
+label = "ASA class"
+section = "Sedation evaluation"
+type = "dropdown"
+default = "I"
+options = ["I", "II", "III", "IV", "***"]
+visible_if = "path_ap_next_anesthesia is defined and path_ap_next_anesthesia in ['IV sedation', 'General anesthesia']"
+
+[[fields]]
+key = "path_exam_mallampati"
+label = "Mallampati"
+section = "Sedation evaluation"
+type = "dropdown"
+default = "I"
+options = ["I", "II", "III", "IV", "***"]
+visible_if = "path_ap_next_anesthesia is defined and path_ap_next_anesthesia in ['IV sedation', 'General anesthesia']"
+
+[[fields]]
+key = "path_exam_neck_mobility"
+label = "Neck"
+section = "Sedation evaluation"
+type = "dropdown"
+default = "full range of motion"
+options = ["full range of motion", "limited extension", "***"]
+visible_if = "path_ap_next_anesthesia is defined and path_ap_next_anesthesia in ['IV sedation', 'General anesthesia']"
+
+[[fields]]
+key = "path_exam_bmi"
+label = "BMI (blank = omitted)"
+section = "Sedation evaluation"
+type = "text"
+default = ""
+visible_if = "path_ap_next_anesthesia is defined and path_ap_next_anesthesia in ['IV sedation', 'General anesthesia']"
