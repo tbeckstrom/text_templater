@@ -89,3 +89,12 @@ Apply these without asking; add new ones here as they are settled.
 - **Social History** holds only its four items (tobacco, heavy alcohol, cannabis, recreational
   drugs).
 - **Decision**: surgery being scheduled implies "wishes to proceed"; otherwise print "***".
+- **Per-tooth exam conditions**: when a tooth's condition wasn't described, print "Tooth XX: ***".
+  Never carry over a Templater preselected condition (e.g. the extraction form's "grossly
+  carious").
+- **Per-tooth imaging**: print the normal lesion status by default ("no periapical pathology",
+  "no pericoronal pathology"), but bone level only when mentioned.
+- **Pathway plan defaults**: a pathway's follow-up interval, chlorhexidine and urgency lines apply
+  when unstated, but an antibiotic prints only when it was mentioned.
+- **Anesthesia default**: the extraction consult defaults to "local anesthesia" when not stated;
+  the third molar consult prints "***".

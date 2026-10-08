@@ -1,8 +1,8 @@
 # SNIPPET: clinic_imaging_extraction   PREFIX: ext_img
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
-# One box per tooth to extract. Periapical status and bone level preselect
-# the normal finding; a vital structure is only mentioned once picked, and
-# its proximity defaults to "in close proximity to".
+# One box per tooth to extract. Periapical status preselects the normal
+# finding, and bone level prints only once picked. A vital structure is only
+# mentioned once picked, and its proximity defaults to "in close proximity to".
 name = "Snippet: Imaging - extraction consult"
 use_partials = ["common_extraction_case"]
 
@@ -69,7 +69,6 @@ visible_if = "periapical_status == 'Large PA lesion'"
 key = "bone_level"
 label = "Bone level"
 type = "dropdown"
-default = "Normal"
 options = [
   { label = "Normal", text = "bone levels within normal limits" },
   { label = "Moderate loss", text = "moderate alveolar bone loss" },
