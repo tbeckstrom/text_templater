@@ -1,7 +1,8 @@
 # SNIPPET: clinic_imaging_tmj   PREFIX: tmj_img
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # Panoramic findings per condyle, with optional CBCT and MRI adds. Every
-# descriptor is left out until picked ("***" is a deliberate choice).
+# descriptor is left out until picked ("***" is a deliberate choice). Teeth
+# charted as missing add a sentence after the panoramic line.
 name = "Snippet: Imaging - TMJ consult"
 
 body = """
@@ -24,8 +25,10 @@ body = """
   tmj_img_other_mri_findings if tmj_img_other_mri_findings else "",
 ] -%}
 {%- set mri = [p for p in mri if p] -%}
+{%- set missing = tmj_img_missing_teeth -%}
+{%- set missing = ("Missing " ~ ("teeth " if missing | length > 1 else "tooth ") ~ ((missing[:-1] | join(sep=", ")) ~ " and " ~ missing[-1] if missing | length > 1 else missing | first) ~ ".") if missing else "" -%}
 {%- set lines = [
-  ("Panoramic radiograph: " ~ (pano[:-1] | join(sep="; ") ~ "; and " ~ pano[-1] if pano | length > 1 else pano | first)) if pano else "",
+  ("Panoramic radiograph: " ~ (pano[:-1] | join(sep="; ") ~ "; and " ~ pano[-1] if pano | length > 1 else pano | first) ~ ("." if missing else "") ~ (" " ~ missing if missing else "")) if pano else "",
   ("CBCT: " ~ (cbct[:-1] | join(sep="; ") ~ "; and " ~ cbct[-1] if cbct | length > 1 else cbct | first)) if tmj_img_cbct_add and cbct else "",
   ("MRI: " ~ (mri[:-1] | join(sep="; ") ~ "; and " ~ mri[-1] if mri | length > 1 else mri | first)) if tmj_img_mri_add and mri else "",
 ] -%}
@@ -39,14 +42,14 @@ key = "tmj_img_r_pano_condyle"
 label = "Pano - right condyle"
 section = "Imaging - TMJ consult"
 type = "multiselect"
-options = ["normal morphology", "flattening", "erosion", "osteophyte formation", "***"]
+options = ["normal morphology", "grossly normal morphology", "flattening", "mild flattening", "very mild flattening", "erosion", "osteophyte formation", "***"]
 
 [[fields]]
 key = "tmj_img_l_pano_condyle"
 label = "Pano - left condyle"
 section = "Imaging - TMJ consult"
 type = "multiselect"
-options = ["normal morphology", "flattening", "erosion", "osteophyte formation", "***"]
+options = ["normal morphology", "grossly normal morphology", "flattening", "mild flattening", "very mild flattening", "erosion", "osteophyte formation", "***"]
 
 [[fields]]
 key = "tmj_img_pano_other"
@@ -57,6 +60,12 @@ options = [
   { label = "No other pathology", text = "no other osseous pathology noted" },
   { label = "***", text = "***" },
 ]
+
+[[fields]]
+key = "tmj_img_missing_teeth"
+label = "Missing teeth"
+section = "Imaging - TMJ consult"
+type = "teeth"
 
 # ----------------------------------------------------------------- CBCT ---
 

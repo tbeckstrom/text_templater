@@ -2,19 +2,22 @@
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # TMD-related history defaults to "no" except clenching/bruxism, which is
 # left unpicked so it is asked deliberately. Each item feeds the contributing
-# factors sentence in the assessment.
+# factors sentence in the assessment. Past surgical and social history print
+# only when the note also uses clinic_history_surgical and clinic_history_social.
 name = "Snippet: History - TMJ consult"
 
 body = """
 **PAST MEDICAL HISTORY:**
 {{ tmj_hx_pmh }}
-
+{% if psh_history is defined %}
+{% include "clinic_history_surgical" %}{% endif %}
 **MEDICATIONS:**
 {{ tmj_hx_meds }}
 
 **ALLERGIES:**
 {{ tmj_hx_allergy }}
-
+{% if soc_cannabis is defined %}
+{% include "clinic_history_social" %}{% endif %}
 **TMD-RELATED HISTORY:**
 {%- set lines = [
   ("Jaw or facial trauma: " ~ tmj_hx_trauma_hx_text | replace(from="[[tmj_hx_trauma_details]]", to=tmj_hx_trauma_details)) if tmj_hx_trauma_hx else "",
@@ -52,7 +55,7 @@ default = "***"
 
 [[fields]]
 key = "tmj_hx_trauma_hx"
-label = "Jaw or facial trauma"
+label = "Jaw or facial trauma (incl. concussions, sports injuries)"
 section = "TMD-related history"
 type = "dropdown"
 default = "No"
@@ -185,14 +188,14 @@ default = "***"
 visible_if = "tmj_hx_tmj_surgery_hx == 'Open joint surgery'"
 
 [[speed_buttons]]
-label = "Healthy: noncontributory / none / NKDA"
+label = "Healthy: no chronic medical conditions / none / NKDA"
 section = "Past medical history"
-values = { tmj_hx_pmh = "Noncontributory", tmj_hx_meds = "None", tmj_hx_allergy = "NKDA" }
+values = { tmj_hx_pmh = "No chronic medical conditions", tmj_hx_meds = "None", tmj_hx_allergy = "NKDA" }
 
 [[speed_buttons]]
-label = "Noncontributory"
+label = "No chronic medical conditions"
 section = "Past medical history"
-values = { tmj_hx_pmh = "Noncontributory" }
+values = { tmj_hx_pmh = "No chronic medical conditions" }
 
 [[speed_buttons]]
 label = "None"

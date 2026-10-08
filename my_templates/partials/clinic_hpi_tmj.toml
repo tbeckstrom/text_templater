@@ -11,18 +11,19 @@ body = """
   tmj_hpi_onset_mode_text if tmj_hpi_onset_mode else "",
   ("Pain is " ~ ((tmj_hpi_pain_character[:-1] | join(sep=", ")) ~ " and " ~ tmj_hpi_pain_character[-1] if tmj_hpi_pain_character | length > 1 else tmj_hpi_pain_character | first) ~ ".") if tmj_hpi_pain_character else "",
   ("Pain is " ~ ((tmj_hpi_pain_pattern[:-1] | join(sep=", ")) ~ " and " ~ tmj_hpi_pain_pattern[-1] if tmj_hpi_pain_pattern | length > 1 else tmj_hpi_pain_pattern | first) ~ ".") if tmj_hpi_pain_pattern else "",
-  ("Pain is rated " ~ tmj_hpi_pain_at_worst_10 ~ "/10 at worst.") if tmj_hpi_pain_at_worst_10 else "",
+  ("Pain is rated " ~ tmj_hpi_pain_at_worst_10 ~ "/10 " ~ tmj_hpi_pain_rating_context ~ ".") if tmj_hpi_pain_at_worst_10 and tmj_hpi_pain_rating_context else "",
   ("Symptoms are aggravated by " ~ ((tmj_hpi_aggravating[:-1] | join(sep=", ")) ~ " and " ~ tmj_hpi_aggravating[-1] if tmj_hpi_aggravating | length > 1 else tmj_hpi_aggravating | first) ~ ".") if tmj_hpi_aggravating else "",
   ("Associated symptoms include " ~ ((tmj_hpi_associated_symptoms_text[:-1] | join(sep=", ")) ~ " and " ~ tmj_hpi_associated_symptoms_text[-1] if tmj_hpi_associated_symptoms_text | length > 1 else tmj_hpi_associated_symptoms_text | first) ~ ".") if tmj_hpi_associated_symptoms else "",
   "Prior joint clicking stopped when limited opening began." if tmj_hpi_click_to_lock else "",
   ("Prior treatment has included " ~ ((tmj_hpi_prior_treatment[:-1] | join(sep=", ")) ~ " and " ~ tmj_hpi_prior_treatment[-1] if tmj_hpi_prior_treatment | length > 1 else tmj_hpi_prior_treatment | first) ~ ".") if tmj_hpi_prior_treatment else "",
   tmj_hpi_treatment_relief_text if tmj_hpi_treatment_relief else "",
+  tmj_hpi_treatment_course | trim if tmj_hpi_treatment_course else "",
 ] -%}
 {%- set details = [d for d in details if d] -%}
 Reason for visit: {{ tmj_hpi_visit_reason_text }}{% if tmj_referring_provider %}
 Referring provider: {{ tmj_referring_provider }}{% endif %}
 **HPI:**
-{{ tmj_pt_intro }} presenting for evaluation of {{ tmj_complaint_side }} TMJ region pain.{% if details %} {{ details | join(sep=" ") }}{% endif %}
+{{ tmj_pt_intro }} presenting for evaluation of {{ tmj_pain_phrase }}{% if tmj_hpi_key_sign %} with {{ tmj_hpi_key_sign }}{% endif %}.{% if details %} {{ details | join(sep=" ") }}{% endif %}
 """
 
 [[fields]]
@@ -37,6 +38,13 @@ options = [
   { label = "Limited opening", text = "Evaluation of jaw pain and limited opening" },
   { label = "***", text = "***" },
 ]
+
+[[fields]]
+key = "tmj_hpi_key_sign"
+label = "Key sign, e.g. rightward jaw deviation (blank = omitted)"
+section = "HPI - TMJ consult"
+type = "text"
+default = ""
 
 [[fields]]
 key = "tmj_hpi_onset_how_long_ago"
@@ -75,17 +83,26 @@ options = ["constant", "intermittent", "worse on waking", "worse later in the da
 
 [[fields]]
 key = "tmj_hpi_pain_at_worst_10"
-label = "Pain at worst, /10"
+label = "Pain rating, /10"
 section = "HPI - TMJ consult"
 type = "text"
 default = ""
+
+[[fields]]
+key = "tmj_hpi_pain_rating_context"
+label = "Rating context"
+section = "HPI - TMJ consult"
+type = "dropdown"
+default = "at worst"
+options = ["at worst", "on a typical day", "currently", "***"]
+visible_if = "tmj_hpi_pain_at_worst_10"
 
 [[fields]]
 key = "tmj_hpi_aggravating"
 label = "Aggravated by"
 section = "HPI - TMJ consult"
 type = "multiselect"
-options = ["chewing", "wide opening", "yawning", "talking", "clenching", "***"]
+options = ["chewing", "wide opening", "yawning", "talking", "clenching", "stress", "***"]
 
 [[fields]]
 key = "tmj_hpi_associated_symptoms"
@@ -131,3 +148,10 @@ options = [
   { label = "Good relief", text = "This provided good but incomplete relief." },
   { label = "***", text = "***" },
 ]
+
+[[fields]]
+key = "tmj_hpi_treatment_course"
+label = "Treatment course: when, how long it helped, why it stopped (blank = omitted)"
+section = "HPI - TMJ consult"
+type = "textarea"
+default = ""

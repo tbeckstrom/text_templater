@@ -36,14 +36,15 @@ body = """
 {%- set muscles = [
   tmj_exam_muscle_status_text | replace(from="[[tmj_exam_tender_muscles]]", to=tender_muscles_joined) if tmj_exam_muscle_status else "",
   "reproducing the patient's familiar pain" if tmj_exam_familiar_pain else "",
+  tmj_exam_muscle_other if tmj_exam_muscle_other else "",
 ] -%}
 {%- set muscles = [p for p in muscles if p] -%}
 {%- set lines = [
   ("Face: " ~ tmj_exam_face_findings) if tmj_exam_face_findings else "",
   ("Mouth opening: " ~ opening | join(sep=", ")) if opening else "",
   ("Excursions: " ~ excursions | join(sep=", ")) if excursions else "",
-  ("Right TMJ: " ~ (rtmj[:-1] | join(sep="; ") ~ "; and " ~ rtmj[-1] if rtmj | length > 1 else rtmj | first)) if rtmj else "",
-  ("Left TMJ: " ~ (ltmj[:-1] | join(sep="; ") ~ "; and " ~ ltmj[-1] if ltmj | length > 1 else ltmj | first)) if ltmj else "",
+  ("Right TMJ: " ~ (rtmj[:-1] | join(sep="; ") ~ "; and " ~ rtmj[-1] if rtmj | length > 1 else rtmj | first) ~ (", " ~ tmj_exam_r_joint_other if tmj_exam_r_joint_other else "")) if rtmj else (("Right TMJ: " ~ tmj_exam_r_joint_other) if tmj_exam_r_joint_other else ""),
+  ("Left TMJ: " ~ (ltmj[:-1] | join(sep="; ") ~ "; and " ~ ltmj[-1] if ltmj | length > 1 else ltmj | first) ~ (", " ~ tmj_exam_l_joint_other if tmj_exam_l_joint_other else "")) if ltmj else (("Left TMJ: " ~ tmj_exam_l_joint_other) if tmj_exam_l_joint_other else ""),
   ("Muscles of mastication: " ~ muscles | join(sep=", ")) if muscles else "",
   ("Occlusion: " ~ tmj_exam_occlusion_status_text | replace(from="[[tmj_exam_side]]", to=tmj_exam_side) | replace(from="[[tmj_exam_side_2]]", to=tmj_exam_side_2)) if tmj_exam_occlusion_status else "",
   ("Signs of parafunction: " ~ ((tmj_exam_parafunction_signs[:-1] | join(sep=", ")) ~ " and " ~ tmj_exam_parafunction_signs[-1] if tmj_exam_parafunction_signs | length > 1 else tmj_exam_parafunction_signs | first)) if tmj_exam_parafunction_signs else "",
@@ -197,6 +198,20 @@ options = [
   { label = "***", text = "***" },
 ]
 
+[[fields]]
+key = "tmj_exam_r_joint_other"
+label = "Right TMJ other finding (blank = omitted)"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
+[[fields]]
+key = "tmj_exam_l_joint_other"
+label = "Left TMJ other finding (blank = omitted)"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
+
 # -------------------------------------------------------------- muscles ---
 
 [[fields]]
@@ -235,6 +250,13 @@ label = "Reproduces familiar pain"
 section = "Exam - TMJ consult"
 type = "checkbox"
 default = false
+
+[[fields]]
+key = "tmj_exam_muscle_other"
+label = "Other muscle finding (blank = omitted)"
+section = "Exam - TMJ consult"
+type = "text"
+default = ""
 
 # ------------------------------------------------ occlusion and dentition ---
 

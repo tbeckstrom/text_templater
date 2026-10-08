@@ -2,11 +2,12 @@
 # Social history, printed after allergies by the history snippet when a note
 # uses this snippet (the third molar consult). Only what is present prints,
 # else "Reviewed and updated in chart as applicable." Tobacco status comes
-# from the risk factor chip; this adds its details.
+# from the extraction risk factor chip when the note has one, otherwise from
+# this snippet's own chip; this adds its details.
 name = "Snippet: Social history"
 
 body = """
-{%- set tobacco = ext_hx_tobacco_use if ext_hx_tobacco_use is defined else "" -%}
+{%- set tobacco = ext_hx_tobacco_use if ext_hx_tobacco_use is defined else soc_tobacco -%}
 {%- set social = [
   ("Tobacco: " ~ (tobacco ~ " smoker" if tobacco in ["former", "current"] else tobacco) ~ (", " ~ soc_tobacco_detail if soc_tobacco_detail else "")) if tobacco in ["former", "current", "vaping"] else "",
   ("Alcohol: heavy" ~ (", " ~ soc_alcohol_detail if soc_alcohol_detail else "")) if soc_alcohol else "",
@@ -20,12 +21,20 @@ body = """
 """
 
 [[fields]]
+key = "soc_tobacco"
+label = "Tobacco"
+section = "Social history"
+type = "dropdown"
+options = ["former", "current", "vaping", "***"]
+visible_if = "ext_hx_tobacco_use is not defined"
+
+[[fields]]
 key = "soc_tobacco_detail"
 label = "Tobacco details (blank = omitted)"
 section = "Social history"
 type = "text"
 default = ""
-visible_if = "ext_hx_tobacco_use is defined and ext_hx_tobacco_use in ['former', 'current', 'vaping']"
+visible_if = "(ext_hx_tobacco_use is defined and ext_hx_tobacco_use in ['former', 'current', 'vaping']) or (ext_hx_tobacco_use is not defined and soc_tobacco)"
 
 [[fields]]
 key = "soc_alcohol"

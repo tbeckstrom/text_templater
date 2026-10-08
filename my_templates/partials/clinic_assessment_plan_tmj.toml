@@ -3,7 +3,8 @@
 # DC/TMD diagnoses each carry their own side. Contributing factors come from
 # the TMD-related history automatically (each can also be ticked by hand).
 # Plan picks bring in their one-line rationale; "Next visit" drives the
-# risks discussion. Plan lines are left out until picked ("***" is a
+# risks discussion. An MRI order leads with the findings that prompted it and
+# frames conservative care as interim. Plan lines are left out until picked ("***" is a
 # deliberate choice). The pathway presets that fill this section live in the
 # note.
 name = "Snippet: Assessment & plan - TMJ consult"
@@ -24,16 +25,16 @@ body = """
   "An occlusal splint was recommended to reduce joint loading and muscle activity from nocturnal parafunction." if tmj_ap_splint_plan in ["Our office", "Referring dentist"] else "",
   "A short course of a nighttime muscle relaxant was recommended for masticatory muscle pain and sleep-related clenching." if tmj_ap_muscle_relaxant else "",
   "Physical therapy was recommended to restore range of motion and address cervical and postural contributors." if tmj_ap_pt_bullet else "",
-  "MRI was recommended to evaluate disc position and joint effusion, which will guide further management." if "MRI TMJ" in tmj_ap_imaging_orders else "",
   "Arthrocentesis was recommended to lavage inflammatory mediators from the joint space, release adhesions and improve mobility." if tmj_ap_next_procedure == "Arthrocentesis" else "",
   "Arthroscopy was recommended to directly evaluate and treat intra-articular pathology." if tmj_ap_next_procedure == "Arthroscopy" else "",
 ] -%}
 {%- set rationale = [r for r in rationale if r] -%}
+{%- set mri = "MRI TMJ" in tmj_ap_imaging_orders -%}
 {%- set alts = tmj_ap_alternatives -%}
 {%- set refs = tmj_ap_referrals -%}
 {%- set imaging = tmj_ap_imaging_orders_text -%}
 {%- set lines = [
-  "Conservative care reviewed: soft diet, jaw rest, avoiding gum chewing and wide opening, moist heat or ice to the affected area, parafunction awareness, scheduled over-the-counter NSAIDs as tolerated, and home jaw exercises." if tmj_ap_conservative_care else "",
+  "Conservative care reviewed" ~ (" " ~ tmj_ap_conservative_qualifier if tmj_ap_conservative_qualifier else "") ~ ": soft diet, jaw rest, avoiding gum chewing and wide opening, moist heat or ice to the affected area, parafunction awareness, scheduled over-the-counter NSAIDs as tolerated, and home jaw exercises." if tmj_ap_conservative_care else "",
   ("NSAID: " ~ tmj_ap_nsaid_regimen_text ~ ".") if tmj_ap_nsaid_regimen else "",
   ("Muscle relaxant: " ~ tmj_ap_muscle_relaxant_text ~ ".") if tmj_ap_muscle_relaxant else "",
   ("Occlusal splint: " ~ tmj_ap_splint_plan_text | replace(from="[[tmj_ref_name]]", to=tmj_ref_name) ~ ".") if tmj_ap_splint_plan else "",
@@ -43,15 +44,17 @@ body = """
   ("Imaging ordered: " ~ ((imaging[:-1] | join(sep=", ")) ~ " and " ~ imaging[-1] if imaging | length > 1 else imaging | first) ~ ".") if imaging else "",
   ("Next visit: " ~ tmj_ap_next_procedure_text | replace(from="[[tmj_ap_arthrocentesis_side]]", to=tmj_ap_arthrocentesis_side) | replace(from="[[tmj_ap_arthroscopy_side]]", to=tmj_ap_arthroscopy_side) ~ " under " ~ tmj_ap_proc_anesthesia ~ ".") if tmj_ap_next_procedure and tmj_ap_proc_anesthesia else "",
   ("Follow-up " ~ tmj_ap_follow_up_text ~ "; sooner if symptoms worsen.") if tmj_ap_follow_up else "",
-  "If symptoms persist despite 3-6 months of conservative care, further imaging and minimally invasive joint procedures such as arthrocentesis will be considered." if tmj_ap_escalation else "",
+  ("If symptoms persist, minimally invasive joint procedures such as arthrocentesis will be considered." if mri else "If symptoms persist despite 3-6 months of conservative care, further imaging and minimally invasive joint procedures such as arthrocentesis will be considered.") if tmj_ap_escalation else "",
   ("Consult note sent to " ~ tmj_ref_name ~ ".") if tmj_ap_consult_letter else "",
 ] -%}
 **ASSESSMENT:**
-{{ tmj_pt_intro }} presenting with {{ tmj_complaint_side }} TMJ region pain.{% if dx %}
-Findings are consistent with {{ dx }}.{% endif %}{% if contrib %}
-Contributing factors include {{ (contrib[:-1] | join(sep=", ")) ~ " and " ~ contrib[-1] if contrib | length > 1 else contrib | first }}.{% endif %}{% if tmj_ap_recommendation or rationale %}
-{{ tmj_ap_recommendation_text }}{% if tmj_ap_recommendation and rationale %} {% endif %}{{ rationale | join(sep=" ") }}{% endif %}{% if alts %}
-Alternatives discussed included {{ (alts[:-1] | join(sep=", ")) ~ " and " ~ alts[-1] if alts | length > 1 else alts | first }}.{% endif %}
+{{ tmj_pt_intro }} presenting with {{ tmj_pain_phrase }}.{% if dx %}
+Findings are consistent with {{ dx }}.{% endif %}{% if contrib or mri %}
+{% if contrib %}
+Contributing factors include {{ (contrib[:-1] | join(sep=", ")) ~ " and " ~ contrib[-1] if contrib | length > 1 else contrib | first }}.{% endif %}{% if mri %}
+Given {{ tmj_ap_mri_findings }}, MRI was recommended to evaluate disc position and joint effusion, which will guide further management.{% endif %}{% endif %}
+{% if tmj_ap_recommendation or rationale or alts %}
+{% if tmj_ap_recommendation == "Conservative" and mri %}Regarding the patient's pain, conservative, reversible therapy was recommended as first-line management while awaiting imaging.{% else %}{{ tmj_ap_recommendation_text }}{% endif %}{% if tmj_ap_recommendation and rationale %} {% endif %}{{ rationale | join(sep=" ") }}{% if alts %}{% if tmj_ap_recommendation or rationale %} {% endif %}Alternatives discussed included {{ (alts[:-1] | join(sep=", ")) ~ " and " ~ alts[-1] if alts | length > 1 else alts | first }}.{% endif %}{% endif %}
 Treatment options and the expected course were discussed as outlined in the plan below.
 {% include "clinic_risks_tmj" %}After shared decision making, the patient {{ tmj_ap_patient_decision_text if tmj_ap_patient_decision else "***" }}
 
@@ -167,6 +170,15 @@ label = "Alternatives"
 section = "Assessment & plan - TMJ consult"
 type = "multiselect"
 options = ["observation", "continued conservative care", "occlusal splint therapy", "physical therapy", "injection therapy", "arthrocentesis", "arthroscopy", "open joint surgery", "no treatment", "***"]
+default = ["observation", "no treatment"]
+
+[[fields]]
+key = "tmj_ap_mri_findings"
+label = "Findings prompting MRI, e.g. inability to translate the right condyle with limited opening"
+section = "Assessment & plan - TMJ consult"
+type = "text"
+default = "***"
+visible_if = "'MRI TMJ' in tmj_ap_imaging_orders"
 
 [[fields]]
 key = "tmj_ap_patient_decision"
@@ -188,6 +200,14 @@ label = "+ Conservative care"
 section = "Assessment & plan - TMJ consult"
 type = "checkbox"
 default = false
+
+[[fields]]
+key = "tmj_ap_conservative_qualifier"
+label = "Qualifier, e.g. while pain is flaring (blank = omitted)"
+section = "Assessment & plan - TMJ consult"
+type = "text"
+default = ""
+visible_if = "tmj_ap_conservative_care"
 
 [[fields]]
 key = "tmj_ap_nsaid_regimen"
