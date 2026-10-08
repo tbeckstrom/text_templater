@@ -1,6 +1,8 @@
 (GLOBAL INSTRUCTIONS: This is an oral and maxillofacial surgery consultation for third molars. Always follow the structure, order and wording of this template exactly. Write in a concise clinical style with short sentences and no narrative padding. Never add sections that are not in this template. Never use the patient's name; refer to them as "the patient". Use only plain keyboard characters: a hyphen instead of any dash, straight quotes, and no special symbols. Write every bullet as a plain text line that begins with a hyphen and a space; never use formatted list items.)
 
-(CLINICAL TERMINOLOGY: The surgeon explains findings to the patient in plain English. Always translate these explanations back into clinical terminology in the note. For example: a gum flap over a tooth = operculum; a tooth stuck in the bone = bony impaction; fully in the bone = complete bony impaction; partly in the bone = partial bony impaction; covered only by gum = soft tissue impaction; tilted forward = mesioangular; tilted back = distoangular; lying sideways = horizontal; upright = vertical; the nerve = the inferior alveolar canal; roots still forming = incomplete root development; not enough room = insufficient space for eruption; infection around the tooth = pericoronitis; deep gum pockets = increased probing depths. Include findings the surgeon calls minor or not concerning, written as a short clinical phrase.)
+(CLINICAL TERMINOLOGY: The surgeon explains findings to the patient in plain English. Always translate these explanations back into clinical terminology in the note. For example: a gum flap over a tooth = operculum; a tooth stuck in the bone = bony impaction; fully in the bone = complete bony impaction; partly in the bone = partial bony impaction; covered only by gum = soft tissue impaction; tilted forward = mesioangular; tilted back = distoangular; lying sideways = horizontal; upright = vertical; the nerve = the inferior alveolar canal; roots still forming = incomplete root development; not enough room = insufficient space for eruption; infection around the tooth = pericoronitis; deep gum pockets = increased probing depths. Include findings the surgeon calls minor or not concerning, written as a short descriptive clinical phrase.)
+
+(OBJECTIVE SECTIONS: EXAMINATION and IMAGING contain descriptive findings only. Never write judgments or interpretations in them, such as "not concerning", "benign-appearing", "likely reactive", "normal variant" or "no further workup needed"; drop the judgment and keep only the description, for example "mild erythema of the soft palate".)
 
 (TOOTH NUMBERING: Always use FDI two-digit tooth numbers and never Universal numbers or the "#" symbol. Write "tooth 38", never "#17". Convert spoken descriptions: upper right wisdom tooth = 18, upper left = 28, lower left = 38, lower right = 48, upper right second molar = 17, upper left = 27, lower left = 37, lower right = 47. "8s" means third molars and "7s" means second molars. If the surgeon speaks Universal numbers, convert them: 1 = 18, 16 = 28, 17 = 38, 32 = 48, 2 = 17, 15 = 27, 18 = 37, 31 = 47. "All four wisdom teeth" means teeth 18, 28, 38 and 48.)
 
@@ -20,11 +22,22 @@ HPI:
 PAST MEDICAL HISTORY:
 [Past medical history] (Write as a brief comma-separated list of conditions. If the patient states they have no medical problems, print "No chronic medical conditions". If past medical history was not discussed, print "***".)
 
+PAST SURGICAL HISTORY:
+[Past surgical history] (Write prior surgeries as a brief comma-separated list, with the year in parentheses if stated. If any prior anesthesia problem was mentioned, such as PONV, difficult airway, malignant hyperthermia or a family history of anesthesia reactions, append it after a semicolon as "history of " followed by the problem and any stated context. If no prior surgery or anesthesia problem was mentioned, or the patient denies prior surgery, print "Reviewed and updated in chart as applicable.")
+
 MEDICATIONS:
 [Current medications] (Write as a brief comma-separated list with doses if stated. If the patient states they take no medications, print "None". If medications were not discussed, print "***".)
 
 ALLERGIES:
 [Allergies] (Write each allergy with its reaction in parentheses if stated. If the patient states no allergies, print "NKDA". If allergies were not discussed, print "***".)
+
+SOCIAL HISTORY:
+[Social history] (Print a bullet only for each item that is present, with the status and any details that were stated, in this order:
+"- Tobacco: " followed by "former smoker", "current smoker" or "vaping", then any stated details such as quit date, amount or pack-years, after a comma.
+"- Alcohol: heavy" followed by any stated amount after a comma, only if heavy alcohol use was reported.
+"- Cannabis: " followed by the frequency and route as stated.
+"- Recreational drugs: " followed by the substances and frequency as stated.
+If none of these is present, or social history was not discussed, print only "Reviewed and updated in chart as applicable.")
 
 EXTRACTION RISK FACTORS:
 [Extraction risk factors] (Always print these six lines as bullets in this order, using the wording shown. For each line: if the factor is present, print the positive wording; if the medical history or medications were discussed and the factor was not mentioned, print "no"; if neither medical history nor medications were discussed at all, print "***".
@@ -34,7 +47,6 @@ EXTRACTION RISK FACTORS:
 "- Head and neck radiation: " then "no", or "yes, " followed by the site, dose and date, using *** for any part not stated.
 "- Diabetes: " then "no", or "diabetes mellitus, most recent A1c " followed by the value and "%", using *** if the value is not stated.
 "- Tobacco: " then exactly one of "no", "former", "current", "vaping".
-Then add "- Cannabis: " followed by the frequency and route of use as stated, only if the patient uses cannabis or marijuana in any form, else omit this line.
 Then add "- Other: " only if any of these are present, listed with commas: immunosuppression, current chemotherapy, oral contraceptive use, prosthetic joint, cardiac condition requiring antibiotic prophylaxis; else omit this line.)
 
 EXAMINATION:
@@ -75,6 +87,7 @@ If removal is for orthodontic or orthognathic treatment: "Removal is required to
 If the teeth are asymptomatic and removal is prophylactic or preventive: "In the absence of symptoms, removal was discussed as a means of reducing the likelihood of future pericoronitis, caries, periodontal disease, or pathology, with generally lower surgical risk and faster recovery at a younger age."
 If coronectomy is planned or was discussed for a tooth close to the nerve, print verbatim with XX replaced by the FDI tooth number: "Given the close proximity of the roots to the inferior alveolar canal, coronectomy of tooth XX is recommended to reduce the risk of inferior alveolar nerve injury. The risks of root migration and a possible second surgery were discussed."
 If surgical extraction is planned, print verbatim: "A surgical approach with sectioning of the crown and bone removal as needed is anticipated."
+If the patient uses cannabis or marijuana in any form and IV sedation or general anesthesia is planned, print verbatim with DECISION-MAKER replaced: "Cannabis use was noted; DECISION-MAKER was counseled that regular cannabis use may reduce the effectiveness of sedation and increase anesthetic requirements, and abstinence for at least 2 weeks before surgery was recommended."
 Then, only if the surgeon gave case-specific reasoning not covered above, add at most one short sentence capturing it.
 Part 3 is the alternatives and risks below.)
 [Alternatives] (Only include if the risks or treatment options were discussed in any way, else omit entirely. Print on its own line: "Alternatives reviewed: " followed by the alternatives separated by semicolons with "; and " before the last, then a full stop. Always include "observation with periodic clinical and radiographic surveillance" and "no treatment (risk of recurrent infection, caries, and pathology)". If coronectomy is planned, also include "complete removal (higher risk of inferior alveolar nerve injury)" after observation. If coronectomy was offered as an alternative to complete removal, also include "coronectomy (partial tooth removal to reduce the risk of nerve injury)".)
