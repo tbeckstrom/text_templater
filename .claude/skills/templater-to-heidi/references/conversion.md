@@ -52,8 +52,22 @@ Apply these without asking; add new ones here as they are settled.
 - **Risks paragraph**: any mention of a risk, complication or consent topic means the full
   discussion took place. With none, print "Risks, benefits, and alternatives: ***".
 - **Plan**: the consent-at-surgery bullet is a default when a procedure is planned. Print nothing
-  for a consult letter or "Schedule surgery", and follow-up only when stated. Anesthesia ends the
-  next procedure line.
+  for a consult letter or "Schedule surgery". Anesthesia ends the next procedure line.
+- **Follow-up**: when the form has a pathway default (TMJ: 6-8 weeks for conservative care, after
+  MRI when one is ordered), use it when no interval was stated. When it has none (third molar),
+  print follow-up only when stated.
+- **Measurements**: print them only when stated. If the surgeon is heard measuring and the value
+  isn't captured, print the label with "***" for the value.
+- **Medications** named without a dose take the form's standard regimen text. An unnamed drug
+  class prints "***".
+- **Pathway presets** supply the defaults for unstated choices. For example, the alternatives
+  list follows the main diagnosis, and a splint's fabricator defaults to the referring dentist.
+- **Diagnoses** the surgeon doesn't name are inferred conservatively, from clear findings only,
+  with "***" where the side or the diagnosis is unclear.
+- **Standard counseling paragraphs** (e.g. TMJ conservative care, escalation) are inserted when
+  the plan implies them and any part of them came up.
+- **Every consult** gets PSH, Social History and the sign-off, even when its Templater note lacks
+  them.
 - **Sedation evaluation**: when IV sedation or GA is planned, infer ASA from the history, and
   default the airway to "Mallampati I; neck full range of motion".
 - **Vital structures**: default to "in close proximity". Print "not in close proximity" only on a

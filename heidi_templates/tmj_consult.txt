@@ -1,0 +1,123 @@
+(GLOBAL INSTRUCTIONS: This is an oral and maxillofacial surgery consultation for temporomandibular joint (TMJ) pain. Always follow the structure, order and wording of this template exactly. Write in a concise clinical style with short sentences and no narrative padding. Never add sections that are not in this template. Never use the patient's name; refer to them as "the patient". Use only plain keyboard characters: a hyphen instead of any dash, straight quotes, and no special symbols. Write every bullet as a plain text line that begins with a hyphen and a space; never use formatted list items.)
+
+(CLINICAL TERMINOLOGY: The surgeon explains findings to the patient in plain English. Always translate these explanations back into clinical terminology in the note. For example: jaw joint = TMJ; popping or clicking = click; grinding or gravel sound in the joint = crepitus; jaw gets stuck = locking; cannot open all the way = limited opening; jaw muscles = muscles of mastication; cheek muscle = masseter; temple muscle = temporalis; jaw swings to one side and comes back = deviation with return to midline; jaw goes to one side and stays there = deflection without correction; grinding teeth at night = nocturnal bruxism; clenching during the day = daytime clenching; bite feels off = a change in the bite; pressing on the joint while biting hurts = pain on dynamic loading; tongue has ridges = tongue scalloping; line on the inside of the cheek = linea alba; worn teeth = attritional wear. Include findings the surgeon calls minor or not concerning, written as a short descriptive clinical phrase.)
+
+(OBJECTIVE SECTIONS: EXAMINATION and IMAGING contain descriptive findings only. Never write judgments or interpretations in them, such as "not concerning", "benign-appearing", "likely muscular", "normal variant" or "no further workup needed"; drop the judgment and keep only the description.)
+
+(TOOTH NUMBERING: If any tooth is mentioned, always use FDI two-digit tooth numbers and never Universal numbers or the "#" symbol.)
+
+(TRANSCRIPT QUALITY: The transcript is often incomplete and poorly transcribed. Infer the intended clinical meaning from context, such as misheard drug names or anatomical terms, and make reasonable assumptions about what was discussed when the conversation clearly implies it. Never invent findings, measurements, medications, diagnoses or values that have no basis in the transcript, contextual notes or clinical note. Wherever this template says to print "***", print exactly three asterisks so the surgeon can complete it.)
+
+(IMAGING READ: The surgeon may dictate an imaging read in clinical terms before or after the patient is in the room, or type it into the contextual notes. That read is the authoritative source for the IMAGING section and for imaging-based statements in the ASSESSMENT, and it overrides anything said to the patient. If there is more than one read, the later one wins.)
+
+(WORDING TOKENS: In the quoted wording below, replace these capitalized tokens. AGE = the patient's age in years, taken from the transcript, contextual notes or patient details; never drop it, and print *** in its place if it is not available, giving "***-year-old patient". SIDE = the side of the TMJ complaint, exactly one of "right", "left" or "bilateral", or *** if unclear. REFERRER = the referring dentist's or provider's name if stated, otherwise "the referring dentist".)
+
+Reason for visit: [Reason for visit] (Always print exactly one of these, choosing the best match: "Evaluation of TMJ pain", "Evaluation of jaw pain and clicking", "Evaluation of jaw pain and limited opening". Default to "Evaluation of TMJ pain" when unclear.)
+Referring provider: [Referring provider name] (Only include if a referring dentist or provider is named in the transcript, contextual notes or clinical note, else omit this line entirely.)
+
+HPI:
+[History of present illness] (Write as one short paragraph built from these sentences in this order, printing each only if its content was mentioned, else omitting it.
+Sentence 1, always: "AGE-year-old patient presenting for evaluation of SIDE TMJ region pain."
+"Symptoms began " followed by how long ago, then " ago."
+Exactly one of, if the onset was described: "Onset was gradual." "Onset was sudden." "Onset followed jaw or facial trauma." "Onset followed dental treatment." "Onset followed prolonged or wide opening."
+"Pain is " followed by the character, using these terms where they fit: aching, sharp, throbbing, joined with commas and "and", then a full stop.
+"Pain is " followed by the pattern, using these terms where they fit: constant, intermittent, worse on waking, worse later in the day, joined with commas and "and", then a full stop.
+"Pain is rated " followed by the number, then "/10 at worst."
+"Symptoms are aggravated by " followed by these terms where they fit: chewing, wide opening, yawning, talking, clenching, joined with commas and "and", then a full stop.
+"Associated symptoms include " followed by these terms where they fit: joint clicking, joint grinding, intermittent catching or locking, difficulty opening fully, a change in the bite, ear pain or fullness, tinnitus, headaches, neck pain, joined with commas and "and", then a full stop.
+"Prior joint clicking stopped when limited opening began." if the patient describes clicking that went away when the jaw became limited.
+"Prior treatment has included " followed by these terms where they fit: NSAIDs, a muscle relaxant, a night guard, physical therapy, injections, joined with commas and "and", then a full stop.
+Exactly one of, if relief from prior treatment was described: "This provided no relief." "This provided minimal relief." "This provided partial relief." "This provided good but incomplete relief."
+Then, only if clinically relevant context was explicitly mentioned and is not covered above, add at most two short factual sentences; else add nothing.)
+
+PAST MEDICAL HISTORY:
+[Past medical history] (Write as a brief comma-separated list of conditions. If the patient states they have no medical problems, print "No chronic medical conditions". If past medical history was not discussed, print "***".)
+
+PAST SURGICAL HISTORY:
+[Past surgical history] (Write prior surgeries as a brief comma-separated list, with the year in parentheses if stated. If any prior anesthesia problem was mentioned, such as PONV, difficult airway, malignant hyperthermia or a family history of anesthesia reactions, append it after a semicolon as "history of " followed by the problem and any stated context. Prior TMJ procedures go in TMD-RELATED HISTORY, not here. If no prior surgery or anesthesia problem was mentioned, or the patient denies prior surgery, print "Reviewed and updated in chart as applicable.")
+
+MEDICATIONS:
+[Current medications] (Write as a brief comma-separated list with doses if stated. If the patient states they take no medications, print "None". If medications were not discussed, print "***".)
+
+ALLERGIES:
+[Allergies] (Write each allergy with its reaction in parentheses if stated. If the patient states no allergies, print "NKDA". If allergies were not discussed, print "***".)
+
+SOCIAL HISTORY:
+[Social history] (Print a bullet only for each item that is present, with the status and any details that were stated, in this order:
+"- Tobacco: " followed by "former smoker", "current smoker" or "vaping", then any stated details such as quit date, amount or pack-years, after a comma.
+"- Alcohol: heavy" followed by any stated amount after a comma, only if heavy alcohol use was reported.
+"- Cannabis: " followed by the frequency and route as stated.
+"- Recreational drugs: " followed by the substances and frequency as stated.
+If none of these is present, or social history was not discussed, print only "Reviewed and updated in chart as applicable.")
+
+TMD-RELATED HISTORY:
+[TMD-related history] (Always print these seven lines as bullets in this order, using the wording shown. Except for clenching / bruxism: if the factor is present, print the positive wording; if the medical history was discussed and the factor was not mentioned, print "no"; if the medical history was not discussed at all, print "***".
+"- Jaw or facial trauma: " then "no" or a brief description of the trauma and when it happened.
+"- Clenching / bruxism: " then exactly one of "no", "daytime clenching", "nocturnal bruxism", "daytime clenching and nocturnal bruxism". If clenching or grinding was never discussed, always print "***".
+"- Inflammatory arthritis: " then "no", "rheumatoid arthritis", "psoriatic arthritis" or the type of arthritis stated.
+"- Sleep apnea: " then "no", "obstructive sleep apnea" or "obstructive sleep apnea on CPAP".
+"- Headaches: " then "no", "tension-type headaches" or "migraine".
+"- Anxiety / depression / stress: " then exactly one of "no", "anxiety", "depression", "anxiety and depression", "high current life stress".
+"- Prior TMJ procedure: " then "no", or "arthrocentesis, ", "arthroscopy, " or "open joint surgery, " followed by the side and date, using *** for any part not stated.)
+
+EXAMINATION:
+[Examination findings] (Write as bullets in this order and wording. Print each line only if it has content, except the three default lines.
+"- Face: " then "symmetric", "bilateral masseteric hypertrophy" or "asymmetric". Default to "symmetric" if not mentioned.
+"- Mouth opening: " followed by these parts that apply, separated by commas: "maximal interincisal opening " followed by the value and " mm"; "assisted " followed by the value and " mm"; "without pain" or "with pain"; and exactly one of "straight opening path", "deviation to the right with return to midline", "deviation to the left with return to midline", "deflection to the right without correction", "deflection to the left without correction". If the surgeon is heard measuring opening but the value is not captured, print *** in place of the value, for example "maximal interincisal opening *** mm".
+"- Excursions: " followed by these parts that apply, separated by commas: "right lateral " followed by the value and " mm"; "left lateral " followed by the value and " mm"; "protrusive " followed by the value and " mm"; "without pain" or "with pain". If the surgeon is heard measuring excursions but a value is not captured, print *** in place of that value.
+"- Right TMJ: " and then "- Left TMJ: ", each followed by the findings mentioned for that joint, separated by semicolons with "; and " before the last: joint sounds as exactly one of "no clicking or crepitus", "reciprocal click on opening and closing", "click on opening" or "crepitus"; palpation as "non-tender to lateral palpation" or "tender to lateral palpation"; loading as "no pain on dynamic loading" or "pain on dynamic loading". Omit a joint's line if nothing was mentioned for that joint.
+"- Muscles of mastication: " followed by "non-tender to palpation", or "tender to palpation of " followed by the tender muscles joined with commas and "and", using these terms: right masseter, left masseter, right temporalis, left temporalis, right lateral pterygoid region, left lateral pterygoid region, right medial pterygoid, left medial pterygoid, the cervical musculature. Add ", reproducing the patient's familiar pain" if palpation reproduced the patient's usual pain. Omit this line if the muscles were not mentioned.
+"- Occlusion: " then "stable and reproducible", "posterior open bite, " followed by the side, "anterior open bite", or "mandibular midline shift to the " followed by the side. Default to "stable and reproducible" if not mentioned.
+"- Signs of parafunction: " followed by these terms where they fit: attritional wear, linea alba, tongue scalloping, abfraction lesions, joined with commas and "and". Omit if none was mentioned.
+"- Cranial nerves: " then "CN V and VII grossly intact bilaterally" unless a deficit was described, in which case describe it briefly.)
+
+IMAGING:
+[Imaging findings] (Use the imaging read if one is present. Write as bullets in this order and wording, printing each line only if that imaging was reviewed.
+"- Panoramic radiograph: " followed by the parts below, separated by semicolons with "; and " before the last: "right condyle with " followed by the findings; "left condyle with " followed by the findings; then "no other osseous pathology noted" unless other pathology was described, in which case describe it. Condyle findings use these terms where they fit, joined with commas and "and": normal morphology, flattening, erosion, osteophyte formation.
+"- CBCT: " in the same pattern, with condyle findings from: normal morphology, flattening, erosion, osteophyte formation, subchondral sclerosis, subchondral cyst, reduced joint space; then any other CBCT findings as stated.
+"- MRI: " followed by the parts that apply, separated by semicolons with "; and " before the last: "right disc " and "left disc ", each followed by exactly one of "normally positioned", "anteriorly displaced with reduction" or "anteriorly displaced without reduction"; exactly one of "no joint effusion", "right joint effusion", "left joint effusion" or "bilateral joint effusions"; then any other MRI findings as stated.
+If no imaging was reviewed or described, print "- ***".)
+
+ASSESSMENT:
+[Assessment] (Write each of these as its own line, in this order.
+Line 1, always: "AGE-year-old patient presenting with SIDE TMJ region pain."
+Line 2: "Findings are consistent with " followed by the diagnoses, separated by semicolons with "; and " before the last, then a full stop. Use the diagnoses the surgeon states. If none is stated, infer them conservatively from clear findings only: tender masticatory muscles reproducing familiar pain = "myalgia of the masticatory muscles", or "myofascial pain with referral" if the pain spreads beyond the palpated muscle; joint tenderness or pain on loading = "SIDE TMJ arthralgia"; reciprocal click = "SIDE TMJ disc displacement with reduction", or "SIDE TMJ disc displacement with reduction with intermittent locking" with intermittent catching; limited opening after clicking stopped = "SIDE TMJ disc displacement without reduction with limited opening"; disc displacement without reduction on MRI with normal opening = "SIDE TMJ disc displacement without reduction without limited opening"; crepitus or degenerative condylar changes on imaging = "SIDE TMJ degenerative joint disease"; jaw that pops out of place on wide opening = "SIDE TMJ subluxation". Here SIDE is the side of that finding: "right", "left" or "bilateral", or *** if unclear. If no diagnosis can be stated or inferred, print "Findings are consistent with ***."
+Line 3: "Contributing factors include " followed by every factor that applies, joined with commas and "and", then a full stop; omit the line if none applies: "parafunctional clenching or bruxism" if clenching or bruxism is present; "psychosocial stress" if anxiety, depression or high stress is present; "sleep-disordered breathing" if sleep apnea is present; "prior jaw trauma" if jaw or facial trauma is present; "inflammatory arthritis" if inflammatory arthritis is present.
+Line 4: exactly one recommendation sentence: "Conservative, reversible therapy was recommended as first-line management, as most temporomandibular disorders improve without surgical intervention." if conservative management is recommended; "Given persistent symptoms and functional limitation despite an adequate trial of conservative therapy, a minimally invasive joint procedure was recommended." if arthrocentesis or arthroscopy is recommended now. Then, on the same line, each of these rationale sentences verbatim whose condition applies:
+If a new splint or night guard is recommended: "An occlusal splint was recommended to reduce joint loading and muscle activity from nocturnal parafunction."
+If a muscle relaxant is prescribed: "A short course of a nighttime muscle relaxant was recommended for masticatory muscle pain and sleep-related clenching."
+If physical therapy is recommended: "Physical therapy was recommended to restore range of motion and address cervical and postural contributors."
+If an MRI is ordered: "MRI was recommended to evaluate disc position and joint effusion, which will guide further management."
+If arthrocentesis is planned: "Arthrocentesis was recommended to lavage inflammatory mediators from the joint space, release adhesions and improve mobility."
+If arthroscopy is planned: "Arthroscopy was recommended to directly evaluate and treat intra-articular pathology."
+Line 5: "Alternatives discussed included " followed by the alternatives joined with commas and "and", then a full stop, using these terms: observation, continued conservative care, occlusal splint therapy, physical therapy, injection therapy, arthrocentesis, arthroscopy, open joint surgery, no treatment. Use the alternatives stated. If none were stated, use the default for the main diagnosis: myalgia or myofascial pain = "observation, physical therapy, injection therapy and no treatment"; disc displacement with reduction = "observation, physical therapy, arthrocentesis and no treatment"; disc displacement without reduction = "observation, continued conservative care, arthrocentesis and arthroscopy"; degenerative joint disease = "observation, physical therapy, arthrocentesis and arthroscopy".
+Line 6, always: "Treatment options and the expected course were discussed as outlined in the plan below.")
+[Risks discussion] (Only include if arthrocentesis or arthroscopy is planned as the next visit, or the risks of a TMJ procedure were discussed; else omit entirely. If a procedure is planned and any risk, complication or consent topic was mentioned at all, even briefly, assume a full risks discussion took place and print the block below. If a procedure is planned but no risk topic was mentioned at all, print only "Risks, benefits, and alternatives: ***".
+Line 1: "Risks, benefits, and alternatives of the planned procedure were discussed. Risks reviewed:"
+Line 2: "- General surgical: bleeding, infection, pain, swelling, bruising and the possible need for additional procedures."
+Line 3: "- Specific to the planned procedure: " followed by the specific risks, separated by semicolons with "; and " before the last, then a full stop. Build this list as a strict checklist: go through all six items below in order, decide yes or no for each against the PLAN, and include every item that is yes. Never skip an item whose condition is met, even if that risk was not mentioned in the transcript.
+1. "temporary or permanent facial nerve weakness, particularly of the forehead or eyelid" if arthrocentesis or arthroscopy is planned.
+2. "injury to the external auditory canal or middle ear with altered hearing" if arthrocentesis or arthroscopy is planned.
+3. "temporary preauricular swelling from fluid extravasation" if arthrocentesis or arthroscopy is planned.
+4. "temporary change in the bite" if arthrocentesis or arthroscopy is planned.
+5. "injury to the articular surfaces and instrument breakage" if arthroscopy is planned.
+6. "persistent or recurrent pain or limited opening, with possible need for further treatment including open joint surgery" if arthrocentesis or arthroscopy is planned.
+Line 4: "The patient understands that symptom relief cannot be guaranteed. All questions were answered, and the patient verbalized understanding.")
+[Patient decision] (Always print on its own line "After shared decision making, the patient " followed by exactly one of: "elected to proceed with the plan outlined below." if the patient agreed, or the plan was started, such as a medication prescribed, a splint, referral or imaging arranged, or a procedure scheduled; "will consider the options discussed and contact our office." if they want time to think. If the decision cannot be determined, print "***".)
+
+PLAN:
+[Plan] (Write as bullets. Print only the lines whose condition applies, in this order and wording.
+"- Conservative care reviewed: soft diet, jaw rest, avoiding gum chewing and wide opening, moist heat or ice to the affected area, parafunction awareness, scheduled over-the-counter NSAIDs as tolerated, and home jaw exercises." if conservative management is recommended and any self-care item came up, such as soft diet, jaw rest, heat, ice, avoiding gum or wide opening, or jaw exercises.
+"- NSAID: " followed by the regimen, then a full stop, if an anti-inflammatory was recommended. When no dose was stated, use the standard regimen: ibuprofen = "ibuprofen 600 mg PO TID with food for 2 weeks, then as needed"; naproxen = "naproxen 500 mg PO BID with food for 2 weeks, then as needed"; meloxicam = "meloxicam 15 mg PO daily for 2 weeks"; an unnamed NSAID = "***".
+"- Muscle relaxant: " followed by the regimen, then a full stop, if a muscle relaxant was prescribed. When no dose was stated, use the standard regimen: cyclobenzaprine = "cyclobenzaprine 5 mg PO at bedtime as needed for 2-4 weeks; sedation precautions reviewed"; tizanidine = "tizanidine 2 mg PO at bedtime as needed for 2-4 weeks; sedation precautions reviewed"; an unnamed muscle relaxant = "***".
+"- Occlusal splint: " followed by exactly one of, then a full stop: "full-coverage hard acrylic maxillary splint for nighttime wear, to be fabricated in our office" if the office will make it; "continue existing night guard; fit and wear pattern to be reassessed" if the patient keeps a current guard; otherwise "full-coverage hard acrylic splint for nighttime wear, to be fabricated by REFERRER". Only if a splint or night guard was discussed.
+"- Referral to physical therapy for jaw and cervical exercises, manual therapy and posture training." if physical therapy is recommended.
+"- Consider " followed by "trigger point injections to the masticatory muscles" or "botulinum toxin injection to the masseter and temporalis muscles (off-label use discussed)", then " if symptoms persist." Only if injections were discussed as a next step.
+"- Referral to " followed by the referrals joined with commas and "and", using these terms: orofacial pain, sleep medicine, rheumatology, otolaryngology, behavioral health, then a full stop. Only if a referral was made.
+"- Imaging ordered: " followed by "MRI of the bilateral TMJs (open and closed mouth)" and/or "CBCT of the TMJs", joined with "and", then a full stop. Only if imaging was ordered.
+"- Next visit: " followed by "SIDE TMJ arthrocentesis" or "SIDE TMJ arthroscopy", then " under " and the anesthesia, "local anesthesia", "IV sedation" or "general anesthesia", defaulting to "local anesthesia", then a full stop. Here SIDE is the side to be treated. Only if a procedure is planned.
+"- Follow-up " followed by the interval, then "; sooner if symptoms worsen." Use the stated interval if one was said, for example "in 2 weeks", "in 4-6 weeks to assess response to therapy" or "in 3 months". If none was stated, use "after MRI to review results and discuss further management" when an MRI is ordered, otherwise "in 6-8 weeks to assess response to conservative therapy". Omit if a procedure is being scheduled and no follow-up was stated.
+"- If symptoms persist despite 3-6 months of conservative care, further imaging and minimally invasive joint procedures such as arthrocentesis will be considered." if a procedure such as arthrocentesis or arthroscopy was mentioned as a possible future option and is not being scheduled now.
+Then, only if another specific plan item was explicitly discussed and is not covered above, add it as one short bullet.)
+
+"Thomas Beckstrom"
