@@ -42,7 +42,9 @@
 Apply these without asking; add new ones here as they are settled.
 
 - **Exam lines**: use the Templater form defaults when they weren't mentioned (oral hygiene good,
-  soft tissues WNL, opening adequate, face symmetric).
+  soft tissues WNL, opening adequate, face symmetric; implant consult: opposing dentition
+  "restored natural dentition", occlusion "stable and reproducible"). Exception: the implant
+  smile line prints only when stated.
 - **Referring provider**: print the line only when someone is explicitly stated to have referred
   the patient; a provider who is merely mentioned doesn't count.
 - **PMH, medications, allergies**: print "***" when not discussed. PMH lists only conditions that
@@ -119,8 +121,8 @@ Apply these without asking; add new ones here as they are settled.
   "no pericoronal pathology"), but bone level only when mentioned.
 - **Pathway plan defaults**: a pathway's follow-up interval, chlorhexidine and urgency lines apply
   when unstated, but an antibiotic prints only when it was mentioned.
-- **Anesthesia default**: the extraction consult defaults to "local anesthesia" when not stated;
-  the third molar consult prints "***".
+- **Anesthesia default**: the extraction and implant consults default to "local anesthesia" when
+  not stated; the third molar consult prints "***".
 - **Pathology impression**: the level of concern and the differential are both inferred
   conservatively from clear findings when the surgeon doesn't state them, with "***" when there is
   no basis. A concerning level always brings squamous cell carcinoma or malignancy into the
@@ -132,3 +134,15 @@ Apply these without asking; add new ones here as they are settled.
   "***" unless stated.
 - **No imaging**: when every lesion is soft tissue, print the form's "No imaging indicated" line;
   when there is a lesion in bone and no read was given, print "- ***".
+- **Per-site implant lines** (edentulous span exam and CBCT): print only the descriptors stated;
+  a site with none prints "Site XX: ***". Never fill in "adequate" (ridge form, keratinized
+  tissue, bone height or width, restorative space).
+- **Judgments stay in the assessment**: "nonrestorable" never prints in an exam line, even where
+  the Templater form offers it there (extraction and implant consults).
+- **Implant CBCT normal lines** are region-aware: "Maxillary sinuses clear..." by default only
+  when a planned site is in the maxilla and no sinus disease was read; "No other pathology..."
+  by default; the condyles and adjacent-teeth periapical lines only when stated. The header is
+  "CBCT reviewed:" unless only other images were reviewed or the CBCT is still to be obtained.
+- **Implant HPI goals** default to "a fixed replacement and improved chewing function" when goals
+  weren't discussed.
+- **Implant interim prosthesis** prints only when an interim replacement was discussed.
