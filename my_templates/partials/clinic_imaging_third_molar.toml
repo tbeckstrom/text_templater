@@ -1,28 +1,35 @@
 # SNIPPET: clinic_imaging_third_molar   PREFIX: tm_img
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # One box per tooth to extract. Pericoronal status preselects the normal
-# finding; every other descriptor drops out until picked, and a vital
-# structure is only mentioned once picked (its proximity defaults to "in
-# close proximity to").
+# finding; every other descriptor drops out until picked. The vital structure
+# follows from the tooth (18/28 sinus, 38/48 canal) unless picked, and its
+# proximity defaults to "in close proximity to". Incomplete root development
+# picked on every tooth prints once as a summary line.
 name = "Snippet: Imaging - third molar consult"
 use_partials = ["common_extraction_case"]
 
 body = """
+{%- set immature = [b.tooth for b in tm_img_teeth if b.incomplete_roots] -%}
+{%- set all_immature = immature and immature | length == tm_img_teeth | length -%}
 {%- if tm_img_imaging_modality %}- Images reviewed: {% for v in tm_img_imaging_modality %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}
 {% endif %}
 {%- for b in tm_img_teeth %}
+{%- set vs = b.vital_structure if b.vital_structure else ("maxillary sinus" if b.tooth in ["18", "28"] else ("inferior alveolar canal" if b.tooth in ["38", "48"] else "")) -%}
 {%- set parts = [
   (b.angulation ~ " angulation") if b.angulation else "",
   b.coverage_text if b.coverage else "",
   ((b.root_form[:-1] | join(sep=", ")) ~ " and " ~ b.root_form[-1] if b.root_form | length > 1 else b.root_form | first) ~ " roots" if b.root_form else "",
+  "incomplete root development" if b.incomplete_roots and not all_immature else "",
   b.pericoronal_text if b.pericoronal else "",
   b.second_molar_text if b.second_molar else "",
-  ("roots " ~ b.proximity ~ " the " ~ b.vital_structure) if b.proximity and b.vital_structure else "",
+  ("roots " ~ b.proximity ~ " the " ~ vs) if b.proximity and vs else "",
   ((b.canal_findings[:-1] | join(sep=", ")) ~ " and " ~ b.canal_findings[-1] if b.canal_findings | length > 1 else b.canal_findings | first) if b.canal_findings else "",
 ] -%}
 {%- set parts = [p for p in parts if p] -%}
 {% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
 {% endif %}{% endfor %}
+{%- if all_immature %}- Incomplete root development of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.
+{% endif %}
 {%- if tm_img_no_other_pathology %}- No other osseous pathology noted.
 {% endif %}"""
 
@@ -50,14 +57,6 @@ source = "ext_extract_teeth"
 source_as = "tooth"
 section = "Imaging - third molar consult"
 
-[[groups.speed_buttons]]
-label = "Canal close"
-values = { vital_structure = "inferior alveolar canal", proximity = "in close proximity to" }
-
-[[groups.speed_buttons]]
-label = "Sinus close"
-values = { vital_structure = "maxillary sinus", proximity = "in close proximity to" }
-
 [[groups.fields]]
 key = "angulation"
 label = "Angulation"
@@ -80,6 +79,12 @@ key = "root_form"
 label = "Root form"
 type = "multiselect"
 options = ["fused", "curved or dilacerated", "divergent", "hooked", "ankylosed", "***"]
+
+[[groups.fields]]
+key = "incomplete_roots"
+label = "Incomplete root development"
+type = "checkbox"
+default = false
 
 [[groups.fields]]
 key = "pericoronal"
@@ -105,7 +110,7 @@ options = [
 
 [[groups.fields]]
 key = "vital_structure"
-label = "Vital structure"
+label = "Vital structure (blank = from the tooth)"
 type = "dropdown"
 options = ["inferior alveolar canal", "maxillary sinus", "***"]
 

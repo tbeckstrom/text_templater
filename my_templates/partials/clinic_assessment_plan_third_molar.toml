@@ -3,7 +3,9 @@
 # "Next procedure" drives the coronectomy and surgical-approach sentences, its
 # plan bullet and the specific risks. Risk factors from the history add their
 # plan bullets automatically (each can also be ticked by hand). Plan lines are
-# left out until picked ("***" is a deliberate choice). The pathway presets
+# left out until picked ("***" is a deliberate choice). The anesthesia ends
+# the next procedure line. "Insufficient space for eruption" is added when the
+# imaging charts a partial or complete bony impaction. The pathway presets
 # that fill this section live in the note.
 name = "Snippet: Assessment & plan - third molar consult"
 use_partials = ["common_extraction_case", "clinic_risks_third_molar"]
@@ -13,14 +15,28 @@ body = """
 {%- set alts = tm_ap_alternatives_text -%}
 {%- set coronectomy = "coronectomy" in np or tm_ap_coronectomy_sentence -%}
 {%- set teeth = ext_teeth_tooth_word ~ " " ~ ext_teeth_list -%}
+{%- set sedated = tm_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] -%}
+{%- set cannabis = soc_cannabis is defined and soc_cannabis -%}
+{%- set bony = tm_img_teeth is defined and [b for b in tm_img_teeth if b.coverage in ["Partial bony", "Complete bony"]] -%}
+{%- set problems_str = tm_ap_problems_text | join(sep="|") -%}
+{%- if bony and "insufficient space for eruption" not in tm_ap_problems_text -%}{%- set problems_str = problems_str ~ "|insufficient space for eruption" -%}{%- endif -%}
+{%- set problems = [v for v in problems_str | split(pat="|") if v] -%}
+{%- set rec = [
+  ("Extraction of " ~ teeth ~ " is recommended.") if tm_ap_extraction_rec else "",
+  tm_ap_rationale_text | join(sep=" ") if tm_ap_rationale_text else "",
+  ("Given the close proximity of the roots to the inferior alveolar canal, coronectomy of tooth " ~ tm_ap_fdi_tooth_for_coronectomy ~ " is recommended to reduce the risk of inferior alveolar nerve injury. The risks of root migration and a possible second surgery were discussed.") if coronectomy else "",
+  "A surgical approach with sectioning of the crown and bone removal as needed is anticipated." if "surgical extraction" in np else "",
+  ("Cannabis use was noted; " ~ ext_dm_phrase ~ " was counseled that regular cannabis use may reduce the effectiveness of sedation and increase anesthetic requirements, and abstinence for at least 2 weeks before surgery was recommended.") if cannabis and sedated else "",
+] -%}
+{%- set rec = [r for r in rec if r] -%}
 {%- set lines = [
-  ("Next procedure: " ~ ((np[:-1] | join(sep=", ")) ~ " and " ~ np[-1] if np | length > 1 else np | first) ~ ", " ~ teeth ~ ".") if np else "",
-  ("Anesthesia: " ~ tm_ap_anesthesia_plan_text ~ ".") if tm_ap_anesthesia_plan else "",
+  ("Next procedure: " ~ ((np[:-1] | join(sep=", ")) ~ " and " ~ np[-1] if np | length > 1 else np | first) ~ ", " ~ teeth ~ (" under " ~ tm_ap_anesthesia_plan_text if tm_ap_anesthesia_plan else "") ~ ".") if np else "",
   ("Antibiotics: " ~ tm_ap_antibiotics_text ~ ".") if tm_ap_antibiotics else "",
   ("Analgesia: " ~ tm_ap_analgesia_text | replace(from="[[tm_ap_opioid_dose_and_quantity]]", to=tm_ap_opioid_dose_and_quantity) ~ ".") if tm_ap_analgesia else "",
   "Chlorhexidine 0.12% rinse BID beginning the day after surgery for 1 week." if tm_ap_chlorhexidine_bullet else "",
   "Work or school note provided." if tm_ap_work_note else "",
   "Tobacco cessation counseling provided; advised to avoid smoking for at least 72 hours after surgery to reduce the risk of dry socket." if tm_ap_tobacco_bullet or (ext_hx_tobacco_use is defined and ext_hx_tobacco_use in ["current", "vaping"]) else "",
+  "Advised to abstain from cannabis for at least 2 weeks before sedation." if tm_ap_cannabis_bullet or (cannabis and sedated) else "",
   "Increased dry socket risk with oral contraceptive use reviewed." if tm_ap_ocp_bullet or (ext_hx_other_risk_factors is defined and ext_hx_other_risks is defined and ext_hx_other_risk_factors and "Oral contraceptives" in ext_hx_other_risks) else "",
   "Perioperative anticoagulant/antiplatelet management to be coordinated with the prescribing provider; local hemostatic measures planned." if tm_ap_anticoag_bullet or (ext_hx_anticoag_use is defined and ext_hx_anticoag_use == "Yes") else "",
   "Hemostatic management to be coordinated with hematology prior to surgery." if tm_ap_bleeding_bullet or (ext_hx_bleeding_disorder is defined and ext_hx_bleeding_disorder == "Yes") else "",
@@ -28,13 +44,15 @@ body = """
   "MRONJ precautions: atraumatic technique with primary closure where feasible, and close follow-up until mucosal healing." if tm_ap_antiresorptive_bullet or (ext_hx_antiresorptive is defined and ext_hx_antiresorptive in ["Oral bisphosphonate", "IV BP / denosumab"]) else "",
   "Radiation oncology records requested to confirm dose to the surgical sites; ORN precautions with atraumatic technique, primary closure, and close follow-up." if tm_ap_radiation_bullet or (ext_hx_hn_radiation is defined and ext_hx_hn_radiation == "Yes") else "",
   "Antibiotic prophylaxis per current AHA or orthopedic guidance." if tm_ap_prophylaxis_bullet or (ext_hx_other_risk_factors is defined and ext_hx_other_risks is defined and ext_hx_other_risk_factors and ("Cardiac prophylaxis" in ext_hx_other_risks or "Prosthetic joint" in ext_hx_other_risks)) else "",
-  ("Consult note sent to " ~ ext_ref_name ~ ".") if tm_ap_consult_letter else "",
   ("Written informed consent to be reviewed and signed by " ~ ext_dm_phrase ~ " at the surgical visit.") if tm_ap_consent_bullet else "",
   ("Follow-up: " ~ tm_ap_follow_up_text ~ ".") if tm_ap_follow_up else "",
   tm_ap_next_step_text if tm_ap_next_step else "",
 ] -%}
 **ASSESSMENT:**
-{{ ext_pt_intro }} presenting with {% for v in tm_ap_problems_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% if not tm_ap_problems %}***{% endif %} of {{ teeth }}.{% if tm_ap_extraction_rec %} Extraction of {{ teeth }} is recommended.{% endif %}{% if tm_ap_rationale_text %} {{ tm_ap_rationale_text | join(sep=" ") }}{% endif %}{% if coronectomy %} Given the close proximity of the roots to the inferior alveolar canal, coronectomy of tooth {{ tm_ap_fdi_tooth_for_coronectomy }} is recommended to reduce the risk of inferior alveolar nerve injury. The risks of root migration and a possible second surgery were discussed.{% endif %}{% if "surgical extraction" in np %} A surgical approach with sectioning of the crown and bone removal as needed is anticipated.{% endif %}{% if alts %}
+{{ ext_pt_intro }} presenting with {% for v in problems %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% if not problems %}***{% endif %} of {{ teeth }}.{% if rec %}
+
+{{ rec | join(sep=" ") }}{% endif %}{% if alts %}
+
 Alternatives reviewed: {% if alts | length > 1 %}{{ alts[:-1] | join(sep="; ") }}; and {{ alts[-1] }}{% else %}{{ alts | first }}{% endif %}.{% endif %}
 {% include "clinic_risks_third_molar" %}
 After shared decision making, {{ ext_dm_phrase }} {{ tm_ap_patient_decision_text if tm_ap_patient_decision else "***" }}
@@ -141,14 +159,14 @@ default = ["surgical extraction"]
 
 [[fields]]
 key = "tm_ap_anesthesia_plan"
-label = "Anesthesia"
+label = "Anesthesia (ends the next procedure line)"
 section = "Plan"
 type = "dropdown"
 default = "IV sedation"
 options = [
   { label = "Local", text = "local anesthesia" },
   { label = "Nitrous", text = "local anesthesia with nitrous oxide" },
-  { label = "IV sedation", text = "local anesthesia with IV sedation; NPO and escort instructions reviewed" },
+  { label = "IV sedation", text = "IV sedation; NPO and escort instructions reviewed" },
   { label = "General anesthesia", text = "general anesthesia; NPO and escort instructions reviewed" },
   { label = "***", text = "***" },
 ]
@@ -207,6 +225,13 @@ type = "checkbox"
 default = false
 
 [[fields]]
+key = "tm_ap_cannabis_bullet"
+label = "+ Cannabis before sedation (automatic for cannabis use with sedation)"
+section = "Plan"
+type = "checkbox"
+default = false
+
+[[fields]]
 key = "tm_ap_ocp_bullet"
 label = "+ Oral contraceptive counseling (automatic for oral contraceptive use)"
 section = "Plan"
@@ -256,13 +281,6 @@ type = "checkbox"
 default = false
 
 [[fields]]
-key = "tm_ap_consult_letter"
-label = "Consult note to referring provider"
-section = "Plan"
-type = "checkbox"
-default = true
-
-[[fields]]
 key = "tm_ap_consent_bullet"
 label = "Consent at surgery"
 section = "Plan"
@@ -274,7 +292,6 @@ key = "tm_ap_follow_up"
 label = "Follow-up"
 section = "Plan"
 type = "dropdown"
-default = "1 week"
 options = [
   { label = "24-48 hours", text = "24-48 hours after surgery" },
   { label = "1 week", text = "1 week after surgery" },
@@ -288,9 +305,7 @@ key = "tm_ap_next_step"
 label = "Next step"
 section = "Plan"
 type = "dropdown"
-default = "Schedule"
 options = [
-  { label = "Schedule", text = "Schedule surgery." },
   { label = "Urgent", text = "Schedule urgently; return precautions reviewed for worsening swelling, fever, trismus, or difficulty swallowing or breathing." },
   { label = "Pending clearance", text = "Schedule after medical clearance is received." },
   { label = "***", text = "***" },

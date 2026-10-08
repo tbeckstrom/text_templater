@@ -14,6 +14,7 @@ body = """
 Risks, benefits, and alternatives were discussed with {{ ext_dm_phrase }}. Risks reviewed:
 - General surgical: {{ tm_risk_general }}.{% if specific %}
 - Specific to the planned procedure: {% if specific | length > 1 %}{{ specific[:-1] | join(sep="; ") }}; and {{ specific[-1] }}{% else %}{{ specific | first }}{% endif %}.{% endif %}
+
 It was explained that outcomes cannot be guaranteed. All questions were answered, and {{ ext_dm_phrase }} verbalized understanding.{% if ext_decision_maker in ["Parent", "Legal guardian", "Healthcare POA"] %} The patient participated in the discussion to the extent of their ability.{% endif %}"""
 
 # ------------------------------------------------------------ risk list ---

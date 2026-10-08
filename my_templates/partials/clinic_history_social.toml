@@ -1,0 +1,65 @@
+# SNIPPET: clinic_history_social   PREFIX: soc
+# Social history, printed after allergies by the history snippet when a note
+# uses this snippet (the third molar consult). Only what is present prints,
+# else "Reviewed and updated in chart as applicable." Tobacco status comes
+# from the risk factor chip; this adds its details.
+name = "Snippet: Social history"
+
+body = """
+{%- set tobacco = ext_hx_tobacco_use if ext_hx_tobacco_use is defined else "" -%}
+{%- set social = [
+  ("Tobacco: " ~ (tobacco ~ " smoker" if tobacco in ["former", "current"] else tobacco) ~ (", " ~ soc_tobacco_detail if soc_tobacco_detail else "")) if tobacco in ["former", "current", "vaping"] else "",
+  ("Alcohol: heavy" ~ (", " ~ soc_alcohol_detail if soc_alcohol_detail else "")) if soc_alcohol else "",
+  ("Cannabis: " ~ soc_cannabis ~ (", " ~ soc_cannabis_route if soc_cannabis_route else "")) if soc_cannabis else "",
+  ("Recreational drugs: " ~ soc_drugs) if soc_drugs else "",
+] -%}
+{%- set social = [l for l in social if l] -%}
+**SOCIAL HISTORY:**
+{% if social %}{% for l in social %}- {{ l }}{% if not loop.last %}
+{% endif %}{% endfor %}{% else %}Reviewed and updated in chart as applicable.{% endif %}
+"""
+
+[[fields]]
+key = "soc_tobacco_detail"
+label = "Tobacco details (blank = omitted)"
+section = "Social history"
+type = "text"
+default = ""
+visible_if = "ext_hx_tobacco_use is defined and ext_hx_tobacco_use in ['former', 'current', 'vaping']"
+
+[[fields]]
+key = "soc_alcohol"
+label = "+ Heavy alcohol use"
+section = "Social history"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "soc_alcohol_detail"
+label = "Alcohol details (blank = omitted)"
+section = "Social history"
+type = "text"
+default = ""
+visible_if = "soc_alcohol"
+
+[[fields]]
+key = "soc_cannabis"
+label = "Cannabis"
+section = "Social history"
+type = "dropdown"
+options = ["occasional", "weekly", "daily", "***"]
+
+[[fields]]
+key = "soc_cannabis_route"
+label = "Cannabis route"
+section = "Social history"
+type = "dropdown"
+options = ["smoked", "vaped", "edible", "***"]
+visible_if = "soc_cannabis"
+
+[[fields]]
+key = "soc_drugs"
+label = "Recreational drugs (blank = omitted)"
+section = "Social history"
+type = "text"
+default = ""

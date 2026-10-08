@@ -1,9 +1,9 @@
 # NOTE: clinic_note_third_molar_consult
 # Assembled from the third molar consult snippets, with the shared case facts
 # (age, teeth, referring provider, decision-maker) and the history reused from
-# the extraction consult.
+# the extraction consult, plus past surgical and social history.
 name = "Clinic - Third Molar Consult"
-use_partials = ["common_extraction_case", "clinic_hpi_third_molar", "clinic_history_extraction", "clinic_exam_third_molar", "clinic_imaging_third_molar", "clinic_assessment_plan_third_molar"]
+use_partials = ["common_extraction_case", "clinic_hpi_third_molar", "clinic_history_extraction", "clinic_history_surgical", "clinic_history_social", "clinic_exam_third_molar", "clinic_imaging_third_molar", "clinic_assessment_plan_third_molar"]
 # Imaging is read at the desk, so the printed sheet leaves it off.
 print_skip = ["Imaging - third molar consult"]
 
@@ -15,6 +15,8 @@ body = """
 **IMAGING:**
 {% include "clinic_imaging_third_molar" %}
 {% include "clinic_assessment_plan_third_molar" %}
+
+Thomas Beckstrom
 """
 
 # ---------------------------------------------------------- pathway presets ---

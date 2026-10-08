@@ -1,0 +1,33 @@
+# SNIPPET: clinic_history_surgical   PREFIX: psh
+# Past surgical history, printed after PMH by the history snippet when a note
+# uses this snippet (the third molar consult). Prior anesthesia problems are
+# appended. Blank falls back to "Reviewed and updated in chart as applicable."
+name = "Snippet: Past surgical history"
+
+body = """
+{%- set anes = psh_anesthesia_hx_text -%}
+{%- set anes = (("history of " if psh_history | trim else "History of ") ~ ((anes[:-1] | join(sep=", ")) ~ " and " ~ anes[-1] if anes | length > 1 else anes | first)) if anes else "" -%}
+{%- set psh = [p for p in [psh_history | trim, anes] if p] | join(sep="; ") -%}
+**PAST SURGICAL HISTORY:**
+{{ psh if psh else "Reviewed and updated in chart as applicable." }}
+"""
+
+[[fields]]
+key = "psh_history"
+label = "Past surgical history (blank = reviewed in chart)"
+section = "Past surgical history"
+type = "textarea"
+default = ""
+
+[[fields]]
+key = "psh_anesthesia_hx"
+label = "Prior anesthesia problems"
+section = "Past surgical history"
+type = "multiselect"
+options = [
+  { label = "PONV", text = "PONV" },
+  { label = "Difficult airway", text = "difficult airway" },
+  { label = "Malignant hyperthermia", text = "malignant hyperthermia" },
+  { label = "Family hx reactions", text = "family history of anesthesia reactions" },
+  { label = "***", text = "***" },
+]

@@ -1,21 +1,27 @@
 # SNIPPET: clinic_hpi_third_molar   PREFIX: tm_hpi
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # The one-liner is followed by short sentences that each drop out until
-# picked, starting with the surrogate decision-maker sentence.
+# picked, starting with the surrogate decision-maker sentence. Pertinent
+# negatives get their own paragraph.
 name = "Snippet: HPI - third molar consult"
 use_partials = ["common_extraction_case"]
 
 body = """
+{%- set symptoms = [v for v in tm_hpi_symptoms if v != "no symptoms"] -%}
+{%- set denied = tm_hpi_denied -%}
 {%- set details = [
   (ext_dm_reason_phrase ~ ", and " ~ ext_dm_phrase ~ " is present as the legal decision-maker.") if ext_dm_reason else "",
-  ("Patient reports " ~ ((tm_hpi_symptoms[:-1] | join(sep=", ")) ~ " and " ~ tm_hpi_symptoms[-1] if tm_hpi_symptoms | length > 1 else tm_hpi_symptoms | first) ~ ".") if tm_hpi_symptoms else "",
+  "Patient reports no symptoms currently." if "no symptoms" in tm_hpi_symptoms else "",
+  ("Patient reports " ~ ((symptoms[:-1] | join(sep=", ")) ~ " and " ~ symptoms[-1] if symptoms | length > 1 else symptoms | first) ~ ".") if symptoms else "",
   tm_hpi_prior_treatment_text | join(sep=" ") if tm_hpi_prior_treatment else "",
 ] -%}
 {%- set details = [d for d in details if d] -%}
 Reason for visit: {{ tm_hpi_reason_for_visit_text }}{% if ext_referring_provider %}
 Referring provider: {{ ext_referring_provider }}{% endif %}
 **HPI:**
-{{ ext_pt_intro }} presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}
+{{ ext_pt_intro }} presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}{% if denied %}
+
+No hx of {% if denied | length > 1 %}{{ denied[:-1] | join(sep=", ") }}, or {{ denied[-1] }}{% else %}{{ denied | first }}{% endif %} associated with {{ "these sites" if ext_extract_teeth | length > 1 else "this site" }}.{% endif %}
 """
 
 [[fields]]
@@ -49,6 +55,13 @@ options = [
 ]
 
 [[fields]]
+key = "tm_hpi_denied"
+label = "Denies (no hx of)"
+section = "HPI - third molar consult"
+type = "multiselect"
+options = ["facial swelling", "food trapping", "pain", "bad taste", "infection", "***"]
+
+[[fields]]
 key = "tm_hpi_prior_treatment"
 label = "Prior treatment"
 section = "HPI - third molar consult"
@@ -59,3 +72,8 @@ options = [
   { label = "OTC analgesics", text = "Pain managed with over-the-counter analgesics." },
   { label = "***", text = "***" },
 ]
+
+[[speed_buttons]]
+label = "Asymptomatic"
+section = "HPI - third molar consult"
+values = { tm_hpi_symptoms = ["no symptoms"], tm_hpi_denied = ["facial swelling", "food trapping", "pain"] }

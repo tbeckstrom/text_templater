@@ -1,8 +1,10 @@
 # SNIPPET: clinic_exam_third_molar   PREFIX: tm_exam
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # Every line is left out of the note until something is picked; "***" is a
-# deliberate choice, never the fallback. One box per tooth to extract. The
-# sedation evaluation is always shown, and its lines drop out until picked.
+# deliberate choice, never the fallback. One box per tooth to extract, each
+# always printing its line. The probing line covers the second molar next to
+# each charted third molar. The sedation evaluation shows only when the plan
+# is IV sedation or general anesthesia, preset to normal.
 name = "Snippet: Exam - third molar consult"
 use_partials = ["common_extraction_case"]
 
@@ -29,18 +31,30 @@ body = """
   ("ASA class: " ~ tm_exam_asa_class) if tm_exam_asa_class else "",
   ("Airway: " ~ airway | join(sep="; ")) if airway else "",
 ] -%}
+{%- set adj = tm_exam_adjacent_second_molars -%}
+{%- set wnl = [t for t in adj if t not in tm_exam_deep_pd] -%}
+{%- set deep = [t for t in adj if t in tm_exam_deep_pd] -%}
+{%- set probing = [
+  ("PD WNL at distal " ~ ("sites" if wnl | length > 1 else "site") ~ " of " ~ ((wnl[:-1] | join(sep=", ")) ~ " and " ~ wnl[-1] if wnl | length > 1 else wnl | first)) if wnl else "",
+  ("PD 5+ mm at distal of " ~ ((deep[:-1] | join(sep=", ")) ~ " and " ~ deep[-1] if deep | length > 1 else deep | first)) if deep else "",
+] -%}
+{%- set probing = [p for p in probing if p] -%}
+{%- set sedated = tm_ap_anesthesia_plan is defined and tm_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] -%}
 {%- for l in lines %}{% if l %}- {{ l }}
 {% endif %}{% endfor %}
 {%- for b in tm_exam_teeth %}
 {%- set parts = [
-  b.eruption if b.eruption else "",
+  b.eruption if b.eruption else "***",
   (b.tooth_findings_text[:-1] | join(sep=", ") ~ " and " ~ b.tooth_findings_text[-1] if b.tooth_findings_text | length > 1 else b.tooth_findings_text | first) if b.tooth_findings else "",
+  b.other_finding if b.other_finding else "",
 ] -%}
 {%- set parts = [p for p in parts if p] -%}
-{% if parts %}- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
-{% endif %}{% endfor %}
-{%- for l in sedation %}{% if l %}- {{ l }}
-{% endif %}{% endfor %}"""
+- Tooth {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endfor %}
+{%- if probing %}- {{ probing | join(sep="; ") }}
+{% endif %}
+{%- if sedated %}{% for l in sedation %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}{% endif %}"""
 
 # ---------------------------------------------------------- general exam ---
 
@@ -90,7 +104,7 @@ key = "tm_exam_extraoral_exam"
 label = "+ Extraoral/TMJ exam"
 section = "Exam - third molar consult"
 type = "checkbox"
-default = false
+default = true
 
 [[fields]]
 key = "tm_exam_face_status"
@@ -118,7 +132,6 @@ key = "tm_exam_lymph_nodes"
 label = "Cervical lymph nodes"
 section = "Exam - third molar consult"
 type = "dropdown"
-default = "nonpalpable"
 options = ["nonpalpable", "palpable and tender", "***"]
 visible_if = "tm_exam_extraoral_exam"
 
@@ -127,7 +140,6 @@ key = "tm_exam_tmj_status"
 label = "TMJs"
 section = "Exam - third molar consult"
 type = "dropdown"
-default = "non-tender without clicking or crepitus"
 options = ["non-tender without clicking or crepitus", "with clicking", "with crepitus", "***"]
 visible_if = "tm_exam_extraoral_exam"
 
@@ -152,6 +164,7 @@ values = { eruption = "gingiva-covered", tooth_findings = [] }
 key = "eruption"
 label = "Eruption"
 type = "dropdown"
+default = "not visible"
 options = ["fully erupted", "partially erupted", "gingiva-covered", "not visible", "***"]
 
 [[groups.fields]]
@@ -168,6 +181,29 @@ options = [
   { label = "***", text = "***" },
 ]
 
+[[groups.fields]]
+key = "other_finding"
+label = "Other finding (blank = omitted)"
+type = "text"
+default = ""
+
+# ------------------------------------------------ adjacent second molars ---
+
+[[fields]]
+key = "tm_exam_adjacent_second_molars"
+label = "Adjacent second molars"
+section = "Exam - third molar consult"
+type = "computed"
+visible_if = "false"
+compute = '[t for t in ["17" if "18" in ext_extract_teeth else "", "27" if "28" in ext_extract_teeth else "", "37" if "38" in ext_extract_teeth else "", "47" if "48" in ext_extract_teeth else ""] if t]'
+
+[[fields]]
+key = "tm_exam_deep_pd"
+label = "PD 5+ mm at distal of"
+section = "Exam - third molar consult"
+type = "multiselect"
+options = ["17", "27", "37", "47"]
+
 # ------------------------------------------------ sedation evaluation ---
 
 [[fields]]
@@ -175,14 +211,18 @@ key = "tm_exam_asa_class"
 label = "ASA class"
 section = "Sedation evaluation"
 type = "dropdown"
+default = "I"
 options = ["I", "II", "III", "IV", "***"]
+visible_if = "tm_ap_anesthesia_plan is defined and tm_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
 
 [[fields]]
 key = "tm_exam_mallampati"
 label = "Mallampati"
 section = "Sedation evaluation"
 type = "dropdown"
+default = "I"
 options = ["I", "II", "III", "IV", "***"]
+visible_if = "tm_ap_anesthesia_plan is defined and tm_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
 
 [[fields]]
 key = "tm_exam_bmi"
@@ -190,10 +230,13 @@ label = "BMI (optional)"
 section = "Sedation evaluation"
 type = "text"
 default = ""
+visible_if = "tm_ap_anesthesia_plan is defined and tm_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
 
 [[fields]]
 key = "tm_exam_neck_mobility"
 label = "Neck"
 section = "Sedation evaluation"
 type = "dropdown"
+default = "full range of motion"
 options = ["full range of motion", "limited extension", "***"]
+visible_if = "tm_ap_anesthesia_plan is defined and tm_ap_anesthesia_plan in ['IV sedation', 'General anesthesia']"
