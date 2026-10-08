@@ -142,7 +142,31 @@ Apply these without asking; add new ones here as they are settled.
 - **Implant CBCT normal lines** are region-aware: "Maxillary sinuses clear..." by default only
   when a planned site is in the maxilla and no sinus disease was read; "No other pathology..."
   by default; the condyles and adjacent-teeth periapical lines only when stated. The header is
-  "CBCT reviewed:" unless only other images were reviewed or the CBCT is still to be obtained.
+  "Images reviewed: " with the images, defaulting to "CBCT" when the type is unclear.
 - **Implant HPI goals** default to "a fixed replacement and improved chewing function" when goals
   weren't discussed.
 - **Implant interim prosthesis** prints only when an interim replacement was discussed.
+- **Tooth present vs missing** (implant consult): a tooth still in the mouth, even fractured to the
+  gum line or a retained root, is a tooth present ("Tooth XX:" lines), never an edentulous site.
+  "Was lost" is said only of teeth already gone.
+- **Tooth-present implant lines**: the HPI gives the tooth's history (prior RCT, how and when it
+  fractured) in at most 2 sentences, then "No current pain or other symptoms." unless symptoms
+  were mentioned; the prosthesis sentence is for edentulous sites only. Goals and the referral
+  request form a second HPI paragraph. The exam line uses the closed terms with the stated
+  extent ("fractured to gingival margin; retained root remains"). The CBCT line leads with the
+  structural finding, and bone and space descriptors print only when the read states them.
+- **Endodontically failed** means the root canal itself failed (persistent infection or a
+  periapical lesion); a root-filled tooth that fractured is just "fractured".
+- **Anesthesia history** (PSH, every consult): append only named complications: PONV, difficult
+  airway, malignant hyperthermia, prolonged emergence, emergence delirium, family history of
+  anesthesia reactions. Vague reactions ("felt strongly sedated") are dropped.
+- **Head and neck radiation outside the jaws**: when the surgeon states the oral cavity was
+  outside the field, the risk factor prints "no (oral cavity not in the field)" and
+  osteoradionecrosis drops out; when unclear, it stays "yes, ..." with the ORN risk.
+- **Soft tissue grafting** (implant consult): raised as a general possibility, it is one
+  assessment sentence; the plan bullet prints only when it was specifically recommended for the
+  site.
+- **Surgery-visit prescriptions** (implant consult): antibiotics and chlorhexidine never print in
+  the consult plan; they belong to the surgery note.
+- **Implant follow-up** defaults to "2-3 weeks post-operatively" whenever a next-visit procedure
+  is planned, with the provider only when named.

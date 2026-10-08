@@ -104,8 +104,9 @@ When in doubt, match it.
 - **Past surgical and social history** (third molar consult; `clinic_history_surgical` and
   `clinic_history_social`, which the extraction history prints only when the note uses them).
   The order is PMH, PSH, Medications, Allergies, Social History, then risk factors.
-  - PSH is a comma list of procedures, with prior anesthesia problems (PONV, difficult airway,
-    malignant hyperthermia, family history of anesthesia reactions) appended as "history of ...".
+  - PSH is a comma list of procedures, with named anesthesia complications only (PONV, difficult
+    airway, malignant hyperthermia, prolonged emergence, emergence delirium, family history of
+    anesthesia reactions) appended as "history of ...". Vague reactions are left out.
   - Social history prints a bullet only for what is present, with stated details: tobacco
     (status from the risk factor chip, plus details), heavy alcohol, cannabis (frequency, route)
     and recreational drugs. These are documented only, without counseling, except cannabis.

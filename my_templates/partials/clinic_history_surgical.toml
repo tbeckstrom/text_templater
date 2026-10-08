@@ -28,6 +28,8 @@ options = [
   { label = "PONV", text = "PONV" },
   { label = "Difficult airway", text = "difficult airway" },
   { label = "Malignant hyperthermia", text = "malignant hyperthermia" },
+  { label = "Prolonged emergence", text = "prolonged emergence" },
+  { label = "Emergence delirium", text = "emergence delirium" },
   { label = "Family hx reactions", text = "family history of anesthesia reactions" },
   { label = "***", text = "***" },
 ]
