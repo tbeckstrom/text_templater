@@ -35,8 +35,12 @@ it if Heidi's behaviour seems to have changed.
 - **Long condition lists get skipped.** With 12 risk items as prose, Heidi missed two whose
   conditions were met. A numbered list, with an instruction to decide yes or no for each item,
   fixes it.
-- **A token gets dropped when its value is missing**, so "AGE-year-old" became "Patient". Say
-  "never drop it; print *** in its place".
+- **A token gets dropped when its value is missing**, so "AGE-year-old" became "Patient" or
+  "The patient presenting", even with "never drop it". Give a worked example of both forms ("38-year-old
+  patient presenting..." / "***-year-old patient presenting...") and name the wrong form to avoid.
+- **Fixed term lists invite invented extras** (a "Caffeine" social line), and they also suppress
+  stated items that aren't on the list (stress as an aggravating factor). Say which lists are
+  closed ("never add other items") and which accept other stated items.
 - **"Not in close proximity" was inferred from vague talk.** Default to the conservative wording,
   and print the alternative only on a clear statement.
 - **Judgments leak into objective sections** ("not concerning"). Keep a global rule forbidding

@@ -44,7 +44,9 @@ Apply these without asking; add new ones here as they are settled.
 - **Exam lines**: use the Templater form defaults when they weren't mentioned (oral hygiene good,
   soft tissues WNL, opening adequate, face symmetric).
 - **PMH, medications, allergies**: print "***" when not discussed. A healthy patient gets "No
-  chronic medical conditions" / "None" / "NKDA".
+  chronic medical conditions" / "None" / "NKDA". PMH and medications are "- " bullets, one item
+  per line, with short detail only when it bears on the visit (e.g. migraine neurologic symptoms,
+  "started <1 month ago, tolerating well"). Every medication and supplement mentioned is listed.
 - **Risk factor chips** print "no" when the history was discussed and the factor never came up,
   and "***" when the history wasn't discussed at all.
 - **PSH and Social History**: list only what is present, with stated details. Otherwise print
@@ -73,7 +75,17 @@ Apply these without asking; add new ones here as they are settled.
 - **Vital structures**: default to "in close proximity". Print "not in close proximity" only on a
   clear statement.
 - **Incidental findings**: keep them as short descriptive clinical phrases, with any judgment
-  dropped.
+  dropped. Stated qualifiers stay ("very mild flattening"), and missing teeth are listed in FDI.
+- **Objective means examined**: the exam records only what the surgeon examined or measured. A
+  complaint the patient reports (e.g. "my bite has shifted") goes in the HPI.
 - **Extra context**: allow a little, only when it was said: at most 2 sentences in the HPI, 1 in
-  the assessment and 1 plan bullet.
+  the assessment and 1 plan bullet. HPI extras cover the prior treatment course only (when it was
+  done, how long it helped, why it stopped), never prior providers or life events.
+- **Alternatives** list only what was actually offered, defaulting to "observation and no
+  treatment". A procedure mentioned only as a future escalation isn't an alternative.
+- **Workup-first assessments**: when imaging is ordered to clarify the diagnosis, the assessment
+  gives the findings that prompted it ("Given ..., MRI was recommended ..."). Interim
+  management follows ("... while awaiting imaging").
+- **Social History** holds only its four items (tobacco, heavy alcohol, cannabis, recreational
+  drugs).
 - **Decision**: surgery being scheduled implies "wishes to proceed"; otherwise print "***".
