@@ -1251,7 +1251,7 @@ fn render_group(
     }
     // A selection-driven group has no manual add/remove — its blocks come and
     // go with the field named by `source`.
-    let driven = group.source.is_some();
+    let driven = group.is_driven();
 
     ui.add_space(4.0);
     ui.separator();

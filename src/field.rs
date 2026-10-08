@@ -292,15 +292,36 @@ pub fn apply_values(fields: &[FieldDef], values: &toml::Table, state: &mut FormS
 /// teeth). Instances for still-selected choices keep whatever
 /// has already been typed into them; deselecting a choice drops its instance.
 pub fn sync_source_group(group: &GroupDef, state: &FormState, groups_state: &mut GroupsState) {
-    let Some(source_key) = &group.source else {
+    if !group.is_driven() {
         return;
-    };
-    let selection: Vec<String> = match state.get(source_key) {
-        Some(FieldValue::MultiSelect(v)) if group.spans => crate::template::contiguous_spans(v),
-        Some(FieldValue::MultiSelect(v)) => v.clone(),
-        // A single-choice driver (dropdown) is treated as a one-item list.
-        Some(FieldValue::Text(s)) if !s.trim().is_empty() => vec![s.clone()],
-        _ => Vec::new(),
+    }
+    let mut picked: Vec<String> = Vec::new();
+    let mut multi = false;
+    for key in &group.source {
+        let items = match state.get(key) {
+            Some(FieldValue::MultiSelect(v)) => {
+                multi = true;
+                v.clone()
+            }
+            // A single-choice driver (dropdown) is treated as a one-item list.
+            Some(FieldValue::Text(s)) if !s.trim().is_empty() => vec![s.clone()],
+            _ => Vec::new(),
+        };
+        for item in items {
+            if !picked.contains(&item) {
+                picked.push(item);
+            }
+        }
+    }
+    // Several tooth lists read as one chart: FDI order across all of them.
+    if group.source.len() > 1 {
+        let fdi = &crate::template::FDI_TEETH;
+        picked.sort_by_key(|t| fdi.iter().position(|f| f == t).unwrap_or(usize::MAX));
+    }
+    let selection = if group.spans && multi {
+        crate::template::contiguous_spans(&picked)
+    } else {
+        picked
     };
 
     let existing = groups_state.entry(group.key.clone()).or_default();
@@ -1056,7 +1077,7 @@ mod new_capability_tests {
                 label: "Note".to_string(),
                 ..Default::default()
             }],
-            source: Some("teeth".to_string()),
+            source: vec!["teeth".into()],
             source_as: Some("tooth".to_string()),
             ..Default::default()
         };
@@ -1101,6 +1122,24 @@ mod new_capability_tests {
             .map(|i| i.source_item.clone().unwrap())
             .collect();
         assert_eq!(items, vec!["46", "35-37"]);
+    }
+
+    #[test]
+    fn a_group_driven_by_several_tooth_lists_reads_them_as_one_in_fdi_order() {
+        let (_, mut group) = tooth_group();
+        group.source = vec!["simple".into(), "surgical".into()];
+        let mut state = FormState::new();
+        state.insert("simple".into(), FieldValue::MultiSelect(vec!["11".into(), "36".into()]));
+        state.insert("surgical".into(), FieldValue::MultiSelect(vec!["21".into(), "48".into()]));
+        let mut groups_state = build_groups_state(std::slice::from_ref(&group));
+
+        sync_source_group(&group, &state, &mut groups_state);
+
+        let items: Vec<_> = groups_state["per_tooth"]
+            .iter()
+            .map(|i| i.source_item.clone().unwrap())
+            .collect();
+        assert_eq!(items, vec!["11", "21", "36", "48"]);
     }
 
     #[test]

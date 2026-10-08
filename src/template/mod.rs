@@ -246,9 +246,11 @@ pub struct GroupDef {
     #[serde(default)]
     pub speed_buttons: Vec<SpeedButtonDef>,
     /// Key of a `multiselect` field whose selection drives this group's
-    /// instances (one per selected choice, in declared option order).
-    #[serde(default)]
-    pub source: Option<String>,
+    /// instances (one per selected choice, in declared option order). A list
+    /// of `teeth` keys (`source = ["simple", "surgical"]`) merges their teeth
+    /// into one selection in FDI order. Empty for a manual add/remove group.
+    #[serde(default, deserialize_with = "one_or_many")]
+    pub source: Vec<String>,
     /// Name the driving choice is exposed under inside each instance
     /// (default `"item"`), e.g. `source_as = "tooth"` → `{{ p.tooth }}`.
     #[serde(default)]
@@ -273,7 +275,26 @@ pub struct GroupDef {
     pub print_label: Option<String>,
 }
 
+/// A group `source`, written as one key or a list of keys.
+fn one_or_many<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Raw {
+        One(String),
+        Many(Vec<String>),
+    }
+    Ok(match Raw::deserialize(deserializer)? {
+        Raw::One(key) => vec![key],
+        Raw::Many(keys) => keys,
+    })
+}
+
 impl GroupDef {
+    /// Whether a selection drives the instances (no manual add/remove).
+    pub fn is_driven(&self) -> bool {
+        !self.source.is_empty()
+    }
+
     /// What the driving choice is called inside each instance.
     pub fn source_as_key(&self) -> &str {
         self.source_as.as_deref().unwrap_or("item")

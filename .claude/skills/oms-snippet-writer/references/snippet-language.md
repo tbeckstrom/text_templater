@@ -138,6 +138,12 @@ In TEXT a TEETH placeholder reads as its teeth in FDI order, joined with "and" (
 - NAME.tooth / NAME.Tooth: "tooth" or "teeth"
 - NAME.count: the number of teeth
 
+To read two paint modes as one list (e.g. every tooth extracted, simple or surgical), define a combined TEETH. It draws no chart; it reads as the teeth of both lists in FDI order:
+
+TEETH: EXTRACT_TEETH (combines: SIMPLE_TEETH, SURGICAL_TEETH)
+
+It takes every suffix except .spans, works in conditions, and can drive a REPEAT ("each tooth of EXTRACT_TEETH" gives one block per tooth across both lists, in FDI order).
+
 REGIONS, for AUTO and conditions: maxillary posterior (14-18, 24-28), mandibular posterior (34-38, 44-48), esthetic zone (11-13, 21-23, 31-33, 41-43).
 
 ------------------------------------------------

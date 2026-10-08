@@ -592,7 +592,7 @@ mod tests {
         let spans = GroupDef {
             key: "spans".into(),
             label: "Edentulous span".into(),
-            source: Some("missing".into()),
+            source: vec!["missing".into()],
             source_as: Some("span".into()),
             spans: true,
             fields: vec![field("ridge", FieldType::Dropdown, &["Adequate", "Width deficient"])],
@@ -601,7 +601,7 @@ mod tests {
         let teeth = GroupDef {
             key: "teeth".into(),
             label: "Tooth".into(),
-            source: Some("missing".into()),
+            source: vec!["missing".into()],
             fields: vec![field("cond", FieldType::Multiselect, &["Fractured"])],
             ..Default::default()
         };

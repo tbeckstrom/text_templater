@@ -477,6 +477,9 @@ source_as = "tooth"          # -> {{ t.tooth }} in the body
 Blocks keep whatever you've typed into them when unrelated choices are added or removed, and they
 survive a draft/history round-trip. Source-driven groups have no Add/Remove buttons.
 
+`source` may also list several `teeth` fields, e.g. two paint modes of one odontogram:
+`source = ["simple_teeth", "surgical_teeth"]` gives one block per tooth across both, in FDI order.
+
 See `my_templates/oms_procedure_note.toml` for a large template using all of this together.
 
 ### Printed sheet

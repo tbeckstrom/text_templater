@@ -203,7 +203,7 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
         }
         // Driving a group is a use of the multiselect behind it.
         for g in &t.groups {
-            if let Some(source) = &g.source {
+            for source in &g.source {
                 readable.push('\n');
                 readable.push_str(source);
             }
@@ -239,7 +239,7 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
                 check_expressions(&mut lints, &t.id, f, &scope);
             }
 
-            if let Some(source) = &g.source {
+            for source in &g.source {
                 match t.fields.iter().find(|f| &f.key == source) {
                     None => lints.push(Lint {
                         subject: t.id.clone(),
@@ -259,6 +259,16 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
                             message: format!(
                                 "group '{}' is driven by '{source}', which is a {:?} — only \
                                  multiselect/dropdown can drive a group",
+                                g.key, f.field_type
+                            ),
+                        })
+                    }
+                    Some(f) if g.source.len() > 1 && f.field_type != FieldType::Teeth => {
+                        lints.push(Lint {
+                            subject: t.id.clone(),
+                            message: format!(
+                                "group '{}' merges '{source}', which is a {:?} — only teeth \
+                                 lists can be merged",
                                 g.key, f.field_type
                             ),
                         })
@@ -581,7 +591,7 @@ mod tests {
         t.groups = vec![GroupDef {
             key: "blocks".to_string(),
             label: "Block".to_string(),
-            source: Some("note".to_string()),
+            source: vec!["note".into()],
             ..Default::default()
         }];
         let lints = lint(&[t], &[]);
@@ -618,7 +628,7 @@ mod tests {
         t.groups = vec![GroupDef {
             key: "diagnoses".to_string(),
             label: "Diagnosis".to_string(),
-            source: Some("teeth".to_string()),
+            source: vec!["teeth".into()],
             ..Default::default()
         }];
         let lints = lint(std::slice::from_ref(&t), &[]);

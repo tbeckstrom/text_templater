@@ -98,6 +98,12 @@ Derived wording goes in hidden computed fields in the snippet that defines the T
 | NAME.tooth / .Tooth | `<key>_tooth_word` | `"teeth" if k \| length > 1 else "tooth"` |
 | NAME.count | `<key>_count` | `k \| length` |
 
+A combined TEETH (`TEETH: ALL (combines: A, B)`) draws no chart. It becomes a hidden computed
+field `<key>` with `compute = '[...a_key, ...b_key] | sort'` (FDI numbers sort into FDI order), so
+the helpers above work on it unchanged. It has no `<key>_spans`, so `.spans` isn't available. A
+REPEAT driven by it gets `source = ["<a key>", "<b key>"]`: the app merges the two lists into one
+block per tooth (or per span, with `spans = true`) in FDI order.
+
 A region flag is a hidden computed field. Sum the lengths when the region spans two TEETH lists:
 
 ```
@@ -111,8 +117,8 @@ The regions are:
 
 ## REPEAT driven by TEETH
 
-- **Group keys:** `[[groups]]` with `source = "<teeth key>"`, `source_as = "site"`, plus `spans = true`
-  for "each span of". Set `section` to the section the REPEAT is defined in, so its boxes sit
+- **Group keys:** `[[groups]]` with `source = "<teeth key>"` (a list of keys for a combined TEETH),
+  `source_as = "site"`, plus `spans = true` for "each span of". Set `section` to the section the REPEAT is defined in, so its boxes sit
   inside that heading.
 - **THIS_SITE** is `b.site`. THIS_SITE.Site is `{{ "Sites" if "-" in b.site else "Site" }}`.
 - **Other snippets** read a group by its key as a list of objects. A snippet that isn't guaranteed
