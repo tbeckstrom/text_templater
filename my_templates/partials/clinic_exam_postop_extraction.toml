@@ -1,0 +1,232 @@
+# SNIPPET: clinic_exam_postop_extraction   PREFIX: po_exam
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# Every extracted tooth gets its own line, preselected to normal healing.
+# Mandibular posterior sites bring in the neurosensory line and maxillary
+# posterior sites the sinus line (each can also be ticked by hand). Other
+# lines are left out until picked ("***" is a deliberate choice).
+name = "Snippet: Exam - postop extraction"
+use_partials = ["common_postop_extraction_case"]
+
+body = """
+{%- set neuro_shown = po_mand_posterior or po_exam_neurosensory_exam -%}
+{%- set oac_shown = po_max_posterior or po_exam_sinus_exam -%}
+{%- set nd = po_exam_neuro_distribution -%}
+{%- set nd_joined %}{% for v in nd %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% endset -%}
+{%- set lines = [
+  ("Extraoral: " ~ po_exam_extraoral_status_text | replace(from="[[po_exam_swelling_location_and_character]]", to=po_exam_swelling_location_and_character)) if po_exam_extraoral_status else "",
+  ("MIO: " ~ po_exam_mouth_opening_text | replace(from="[[po_exam_mio_mm]]", to=po_exam_mio_mm)) if po_exam_mouth_opening else "",
+  ("Sutures: " ~ po_exam_suture_status) if po_exam_suture_status else "",
+] -%}
+{%- set lines_after = [
+  ("Neurosensory: " ~ po_exam_neuro_status_text | replace(from="[[po_exam_laterality]]", to=po_exam_laterality) | replace(from="[[po_exam_neuro_distribution]]", to=nd_joined) | replace(from="[[po_exam_neuro_character]]", to=po_exam_neuro_character)) if neuro_shown and po_exam_neuro_status else "",
+  ("Sinus: " ~ po_exam_oac_status_text | replace(from="[[po_exam_oac_size_mm]]", to=po_exam_oac_size_mm)) if oac_shown and po_exam_oac_status else "",
+  (po_exam_imaging_type ~ ": " ~ po_exam_imaging_findings_text | replace(from="[[po_exam_retained_root_site]]", to=po_exam_retained_root_site)) if po_exam_postop_imaging and po_exam_imaging_type and po_exam_imaging_findings else "",
+] -%}
+{%- for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}
+{%- for b in po_exam_sites %}
+{%- set parts = [
+  b.site_findings_text | join(sep="; ") if b.site_findings else "",
+  b.other_finding,
+] -%}
+{%- set parts = [p for p in parts if p] -%}
+{% if parts %}- Site {{ b.tooth }}: {{ parts | join(sep="; ") }}
+{% endif %}{% endfor %}
+{%- for l in lines_after %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+# ---------------------------------------------------------- general exam ---
+
+[[fields]]
+key = "po_exam_extraoral_status"
+label = "Extraoral"
+section = "Exam - postop extraction"
+type = "dropdown"
+default = "No swelling"
+options = [
+  { label = "No swelling", text = "no facial swelling or lymphadenopathy" },
+  { label = "Mild residual swelling", text = "mild residual facial swelling, no lymphadenopathy" },
+  { label = "Significant swelling", text = "significant facial swelling, [[po_exam_swelling_location_and_character]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_exam_swelling_location_and_character"
+label = "Swelling location and character"
+section = "Exam - postop extraction"
+type = "text"
+default = "***"
+visible_if = "po_exam_extraoral_status == 'Significant swelling'"
+
+[[fields]]
+key = "po_exam_mouth_opening"
+label = "MIO"
+section = "Exam - postop extraction"
+type = "dropdown"
+options = [
+  { label = "Adequate", text = "adequate (>40 mm)" },
+  { label = "Limited", text = "limited, [[po_exam_mio_mm]] mm" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_exam_mio_mm"
+label = "MIO mm"
+section = "Exam - postop extraction"
+type = "text"
+default = "***"
+visible_if = "po_exam_mouth_opening == 'Limited'"
+
+[[fields]]
+key = "po_exam_suture_status"
+label = "Sutures"
+section = "Exam - postop extraction"
+type = "dropdown"
+options = ["intact", "resorbing", "loose", "none remaining", "***"]
+
+# ------------------------------------------ one box per extracted tooth ---
+
+[[groups]]
+key = "po_exam_sites"
+label = "Extraction site"
+source = "po_extracted_teeth"
+source_as = "tooth"
+section = "Exam - postop extraction"
+
+[[groups.fields]]
+key = "site_findings"
+label = "Findings"
+type = "multiselect"
+default = ["Healing well"]
+options = [
+  { label = "Healing well", text = "healing within normal limits, no erythema, purulence or exposed bone" },
+  { label = "Dry socket", text = "empty socket with exposed bone and fetid odor, tender to palpation" },
+  { label = "Infection", text = "erythema and swelling with purulent drainage" },
+  { label = "Delayed healing", text = "delayed soft tissue healing for the postoperative interval" },
+  { label = "Spicule/sequestrum", text = "exposed bony spicule or sequestrum" },
+  { label = "Dehiscence", text = "wound dehiscence" },
+  { label = "Retained root tip", text = "retained root fragment noted" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "other_finding"
+label = "Other finding (optional)"
+type = "text"
+default = ""
+
+# ------------------------- neurosensory (automatic for mandibular posterior) ---
+
+[[fields]]
+key = "po_exam_neurosensory_exam"
+label = "+ Neurosensory exam (automatic for mandibular posterior sites)"
+section = "Exam - postop extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "po_exam_neuro_status"
+label = "Neurosensory"
+section = "Exam - postop extraction"
+type = "dropdown"
+default = "Intact"
+options = [
+  { label = "Intact", text = "lip, chin and tongue sensation intact bilaterally to light touch" },
+  { label = "Altered", text = "altered sensation of the [[po_exam_laterality]] [[po_exam_neuro_distribution]], described as [[po_exam_neuro_character]]" },
+  { label = "***", text = "***" },
+]
+visible_if = "po_mand_posterior or po_exam_neurosensory_exam"
+
+[[fields]]
+key = "po_exam_laterality"
+label = "Side"
+section = "Exam - postop extraction"
+type = "dropdown"
+required = true
+options = ["right", "left", "bilateral"]
+visible_if = "(po_mand_posterior or po_exam_neurosensory_exam) and po_exam_neuro_status == 'Altered'"
+
+[[fields]]
+key = "po_exam_neuro_distribution"
+label = "Distribution"
+section = "Exam - postop extraction"
+type = "multiselect"
+options = ["lower lip", "chin", "tongue", "buccal gingiva", "***"]
+visible_if = "(po_mand_posterior or po_exam_neurosensory_exam) and po_exam_neuro_status == 'Altered'"
+
+[[fields]]
+key = "po_exam_neuro_character"
+label = "Described as"
+section = "Exam - postop extraction"
+type = "dropdown"
+required = true
+options = ["numbness", "tingling", "burning pain", "***"]
+visible_if = "(po_mand_posterior or po_exam_neurosensory_exam) and po_exam_neuro_status == 'Altered'"
+
+# ------------------------------- sinus (automatic for maxillary posterior) ---
+
+[[fields]]
+key = "po_exam_sinus_exam"
+label = "+ Sinus exam (automatic for maxillary posterior sites)"
+section = "Exam - postop extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "po_exam_oac_status"
+label = "Sinus"
+section = "Exam - postop extraction"
+type = "dropdown"
+default = "No OAC"
+options = [
+  { label = "No OAC", text = "no clinical signs of oroantral communication" },
+  { label = "OAC present", text = "oroantral communication present with positive nose-blow test, approximately [[po_exam_oac_size_mm]] mm" },
+  { label = "***", text = "***" },
+]
+visible_if = "po_max_posterior or po_exam_sinus_exam"
+
+[[fields]]
+key = "po_exam_oac_size_mm"
+label = "OAC size, mm"
+section = "Exam - postop extraction"
+type = "text"
+default = "***"
+visible_if = "(po_max_posterior or po_exam_sinus_exam) and po_exam_oac_status == 'OAC present'"
+
+# ------------------------------------------------ postop imaging (add-on) ---
+
+[[fields]]
+key = "po_exam_postop_imaging"
+label = "+ Postop imaging"
+section = "Postop imaging"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "po_exam_imaging_type"
+label = "Imaging"
+section = "Postop imaging"
+type = "dropdown"
+options = ["Periapical radiograph", "Panoramic radiograph", "CBCT", "***"]
+visible_if = "po_exam_postop_imaging"
+
+[[fields]]
+key = "po_exam_imaging_findings"
+label = "Imaging findings"
+section = "Postop imaging"
+type = "dropdown"
+default = "No retained fragments"
+options = [
+  { label = "No retained fragments", text = "extraction sockets without retained root fragments or foreign bodies" },
+  { label = "Retained root tip", text = "retained root fragment at site [[po_exam_retained_root_site]]" },
+  { label = "***", text = "***" },
+]
+visible_if = "po_exam_postop_imaging"
+
+[[fields]]
+key = "po_exam_retained_root_site"
+label = "Retained root site"
+section = "Postop imaging"
+type = "text"
+default = "***"
+visible_if = "po_exam_postop_imaging and po_exam_imaging_findings == 'Retained root tip'"

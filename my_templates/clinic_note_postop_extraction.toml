@@ -1,0 +1,36 @@
+# NOTE: clinic_note_postop_extraction
+# Assembled from the post-extraction follow-up snippets; common_postop_extraction_case
+# holds the facts they share (age, extracted teeth).
+name = "Clinic - Post-extraction Follow-up"
+use_partials = ["common_postop_extraction_case", "clinic_hpi_postop_extraction", "clinic_exam_postop_extraction", "clinic_assessment_plan_postop_extraction"]
+# Postop imaging is read at the desk, so the printed sheet leaves it off.
+print_skip = ["Postop imaging"]
+
+body = """
+{% include "common_postop_extraction_case" %}{% include "clinic_hpi_postop_extraction" %}
+**EXAMINATION:**
+{% include "clinic_exam_postop_extraction" %}
+{% include "clinic_assessment_plan_postop_extraction" %}
+Thomas Beckstrom
+"""
+
+# ---------------------------------------------------------- pathway presets ---
+# Top row of the form. Each sets the findings of every charted tooth (`each`;
+# chart the teeth first) and the subjective and plan pathway, replacing
+# whatever an earlier preset picked. The neurosensory and sinus lines are
+# left as charted.
+
+[[speed_buttons]]
+label = "Dry socket"
+values = { po_subj_patient_status = "Complaints", po_subj_postop_complaints = ["increasing pain", "bad taste or odor"], po_subj_denied_symptoms = ["fever", "chills"], po_exam_suture_status = "", po_ap_treatment_today = ["Irrigation + dressing"], po_ap_analgesia = "Ibuprofen + APAP", po_ap_antibiotics = "", po_ap_chlorhexidine_bullet = false, po_ap_follow_up = "2-3 days" }
+each.po_exam_sites = { site_findings = ["Dry socket"] }
+
+[[speed_buttons]]
+label = "Infection"
+values = { po_subj_patient_status = "Complaints", po_subj_postop_complaints = ["increasing pain", "persistent swelling", "bad taste or odor"], po_subj_denied_symptoms = ["difficulty swallowing", "difficulty breathing"], po_exam_suture_status = "", po_ap_treatment_today = [], po_ap_analgesia = "Ibuprofen + APAP", po_ap_antibiotics = "Amoxicillin", po_ap_chlorhexidine_bullet = true, po_ap_follow_up = "1 week" }
+each.po_exam_sites = { site_findings = ["Infection"] }
+
+[[speed_buttons]]
+label = "Suture removal - routine"
+values = { po_subj_patient_status = "Doing well", po_subj_postop_complaints = [], po_subj_denied_symptoms = ["fever", "chills", "active bleeding", "increasing swelling", "altered sensation"], po_exam_suture_status = "intact", po_ap_treatment_today = ["Suture removal"], po_ap_analgesia = "", po_ap_antibiotics = "", po_ap_chlorhexidine_bullet = false, po_ap_follow_up = "as needed" }
+each.po_exam_sites = { site_findings = ["Healing well"] }

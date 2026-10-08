@@ -1,0 +1,61 @@
+# SNIPPET: common_postop_extraction_case   PREFIX: po
+# The facts every post-extraction follow-up section shares, entered once at
+# the top of the form: age and the extracted teeth. The hidden computed fields
+# turn them into ready-made wording and region flags the other snippets reuse.
+body = ""
+
+[[fields]]
+key = "po_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = ""
+
+[[fields]]
+key = "po_extracted_teeth"
+label = "Extracted teeth"
+section = "Case"
+type = "teeth"
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "po_extracted_teeth_list"
+label = "Extracted teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(po_extracted_teeth[:-1] | join(sep=", ")) ~ " and " ~ po_extracted_teeth[-1] if po_extracted_teeth | length > 1 else (po_extracted_teeth | first if po_extracted_teeth else "***")'
+
+[[fields]]
+key = "po_extracted_teeth_tooth_word"
+label = "tooth/teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if po_extracted_teeth | length > 1 else "tooth"'
+
+[[fields]]
+key = "po_mand_posterior"
+label = "Mandibular posterior tooth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in po_extracted_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 else ""'
+
+[[fields]]
+key = "po_max_posterior"
+label = "Maxillary posterior tooth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ([t for t in po_extracted_teeth if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 else ""'
+
+[[fields]]
+key = "po_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(po_patient_age ~ "-year-old patient") if po_patient_age else "Patient"'

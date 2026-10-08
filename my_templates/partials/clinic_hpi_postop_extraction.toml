@@ -1,0 +1,116 @@
+# SNIPPET: clinic_hpi_postop_extraction   PREFIX: po_subj
+# Generated from the snippet language - see .claude/skills/snippet-to-toml.
+# The opener states the interval, the extracted teeth and any adjuncts done
+# at surgery; "doing well" is preselected and "Complaints" swaps in the
+# complaint chips. Pertinent negatives get their own paragraph.
+name = "Snippet: Subjective - postop extraction"
+use_partials = ["common_postop_extraction_case"]
+
+body = """
+{%- set adj = po_subj_surgery_adjuncts -%}
+{%- set details = [
+  ("with " ~ ((adj[:-1] | join(sep=", ")) ~ " and " ~ adj[-1] if adj | length > 1 else adj | first)) if adj else "",
+  ("on " ~ po_subj_surgery_date) if po_subj_surgery_date else "",
+] -%}
+{%- set details = [d for d in details if d] -%}
+{%- set complaints = po_subj_postop_complaints -%}
+{%- set complaints_joined %}{% for v in complaints %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% endset -%}
+{%- set denied = po_subj_denied_symptoms -%}
+Reason for visit: {{ po_subj_visit_reason_text }}
+**SUBJECTIVE:**
+{{ po_pt_intro }} presents {{ po_subj_postop_interval }} s/p extraction of {{ po_extracted_teeth_tooth_word }} {{ po_extracted_teeth_list }}{% if details %} {{ details | join(sep=" ") }}{% endif %}.{% if po_subj_patient_status %} {{ po_subj_patient_status_text | replace(from="[[po_subj_postop_complaints]]", to=complaints_joined) | replace(from="[[po_subj_onset_and_course]]", to=po_subj_onset_and_course) | trim }}{% endif %}{% if denied %}
+
+Denies {% for v in denied %}{% if not loop.first %}{% if loop.last %} or {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.{% endif %}
+"""
+
+[[fields]]
+key = "po_subj_visit_reason"
+label = "Reason for visit"
+section = "Subjective - postop extraction"
+type = "dropdown"
+default = "Postop follow-up"
+options = [
+  { label = "Postop follow-up", text = "Postoperative follow-up" },
+  { label = "Postop concern", text = "Postoperative concern" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_subj_postop_interval"
+label = "Interval since surgery"
+section = "Subjective - postop extraction"
+type = "dropdown"
+default = "1 week"
+options = ["1 week", "2 weeks", "3 weeks", "4-6 weeks", "***"]
+
+[[fields]]
+key = "po_subj_surgery_adjuncts"
+label = "Adjuncts at surgery"
+section = "Subjective - postop extraction"
+type = "multiselect"
+options = ["socket preservation", "alveoloplasty", "primary closure", "PRF", "***"]
+
+[[fields]]
+key = "po_subj_surgery_date"
+label = "Surgery date (optional)"
+section = "Subjective - postop extraction"
+type = "text"
+default = ""
+
+[[fields]]
+key = "po_subj_patient_status"
+label = "Patient reports"
+section = "Subjective - postop extraction"
+type = "dropdown"
+default = "Doing well"
+options = [
+  { label = "Doing well", text = "Patient reports doing well with minimal discomfort." },
+  { label = "Complaints", text = "Patient reports [[po_subj_postop_complaints]]. [[po_subj_onset_and_course]]" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_subj_postop_complaints"
+label = "Complaints"
+section = "Subjective - postop extraction"
+type = "multiselect"
+options = [
+  "increasing pain",
+  "persistent swelling",
+  "bleeding",
+  "bad taste or odor",
+  "numbness",
+  "limited opening",
+  "food trapping",
+  "***",
+]
+visible_if = "po_subj_patient_status == 'Complaints'"
+
+[[fields]]
+key = "po_subj_onset_and_course"
+label = "Onset and course (optional)"
+section = "Subjective - postop extraction"
+type = "text"
+default = ""
+visible_if = "po_subj_patient_status == 'Complaints'"
+
+[[fields]]
+key = "po_subj_denied_symptoms"
+label = "Denies"
+section = "Subjective - postop extraction"
+type = "multiselect"
+options = [
+  "fever",
+  "chills",
+  "active bleeding",
+  "increasing swelling",
+  "altered sensation",
+  "difficulty swallowing",
+  "difficulty breathing",
+  "***",
+]
+
+[[speed_buttons]]
+label = "Routine negatives"
+section = "Subjective - postop extraction"
+values = { po_subj_denied_symptoms = ["fever", "chills", "active bleeding", "increasing swelling", "altered sensation"] }

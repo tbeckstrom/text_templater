@@ -1,0 +1,136 @@
+# SNIPPET: clinic_assessment_plan_postop_extraction   PREFIX: po_ap
+# Generated from the snippet language - see .claude/skills/snippet-to-toml,
+# with the assessment written by hand: it reads the exam's per-tooth findings
+# and prints one sentence per finding, naming the teeth/sites that have it
+# ("Healing as expected following extraction of tooth 48. Alveolar osteitis
+# of site 38."). Altered sensation and an OAC add their own sentence. Plan
+# lines are left out until picked; nerve monitoring and sinus precautions
+# follow the exam (each can also be ticked by hand). The pathway presets that
+# fill this section live in the note. The exam is read only when the note
+# includes it (`is defined`), so the snippet also renders on its own.
+name = "Snippet: Assessment and plan - postop extraction"
+use_partials = ["common_postop_extraction_case"]
+
+body = """
+{%- set exam = po_exam_sites is defined and po_exam_neuro_status is defined and po_exam_neurosensory_exam is defined and po_exam_laterality is defined and po_exam_neuro_distribution is defined and po_exam_oac_status is defined and po_exam_sinus_exam is defined -%}
+{%- set sites = po_exam_sites if exam else [] -%}
+{%- set neuro_altered = exam and (po_mand_posterior or po_exam_neurosensory_exam) and po_exam_neuro_status == "Altered" -%}
+{%- set oac_present = exam and (po_max_posterior or po_exam_sinus_exam) and po_exam_oac_status == "OAC present" -%}
+{%- set lat = po_exam_laterality if exam else "" -%}
+{%- set nd = po_exam_neuro_distribution if exam else [] -%}
+{%- set nd_joined %}{% for v in nd %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% endset -%}
+{%- set dx_defs = [
+  "Healing well|Healing as expected following extraction of|tooth",
+  "Dry socket|Alveolar osteitis of|site",
+  "Infection|Postoperative infection of|site",
+  "Delayed healing|Delayed healing of|site",
+  "Spicule/sequestrum|Exposed bony spicule or sequestrum at|site",
+  "Dehiscence|Wound dehiscence at|site",
+  "Retained root tip|Retained root fragment at|site",
+] -%}
+{%- set dx_text %}{% for d in dx_defs %}{% set p = d | split(pat="|") %}{% set ts = [b.tooth for b in sites if p | first in b.site_findings] %}{% if ts %} {{ p | nth(n=1) }} {% if p | last == "tooth" %}{{ "teeth" if ts | length > 1 else "tooth" }}{% else %}{{ "sites" if ts | length > 1 else "site" }}{% endif %} {{ (ts[:-1] | join(sep=", ")) ~ " and " ~ ts[-1] if ts | length > 1 else ts | first }}.{% endif %}{% endfor %}{% if neuro_altered and lat and nd %} Postoperative neurosensory disturbance of the {{ lat }} {{ nd_joined }}.{% endif %}{% if oac_present %} Oroantral communication.{% endif %}{% if po_ap_additional_assessment %} {{ po_ap_additional_assessment }}{% endif %}{% endset -%}
+{%- set dx_text = dx_text | trim -%}
+{%- set lines = [
+  ("Treatment today: " ~ po_ap_treatment_today_text | join(sep=" ") | replace(from="[[po_ap_i_d_location]]", to=po_ap_i_d_location)) if po_ap_treatment_today else "",
+  "Postoperative instructions reviewed; continue soft diet and warm salt water rinses as directed." if po_ap_instructions_bullet else "",
+  ("Analgesia: " ~ po_ap_analgesia_text ~ ".") if po_ap_analgesia else "",
+  ("Antibiotics: " ~ po_ap_antibiotics_text ~ ".") if po_ap_antibiotics else "",
+  "Chlorhexidine 0.12% rinse BID for 1 week." if po_ap_chlorhexidine_bullet else "",
+  "Neurosensory change reviewed with the patient; will monitor with serial neurosensory exams, with referral for microneurosurgical evaluation if no meaningful improvement by 3 months." if po_ap_nerve_monitoring or neuro_altered else "",
+  "Sinus precautions reviewed: no nose blowing, sneeze with mouth open, no straws or smoking." if po_ap_sinus_precautions or oac_present else "",
+  ("Follow-up: " ~ po_ap_follow_up ~ ".") if po_ap_follow_up else "",
+] -%}
+**ASSESSMENT:**{% if dx_text %}
+{{ dx_text }}{% endif %}
+
+**PLAN:**
+{% for l in lines %}{% if l %}- {{ l }}
+{% endif %}{% endfor %}"""
+
+[[fields]]
+key = "po_ap_additional_assessment"
+label = "Additional assessment (optional)"
+section = "Assessment and plan - postop extraction"
+type = "text"
+default = ""
+
+[[fields]]
+key = "po_ap_treatment_today"
+label = "Treatment today"
+section = "Assessment and plan - postop extraction"
+type = "multiselect"
+options = [
+  { label = "Suture removal", text = "Remaining sutures removed." },
+  { label = "Irrigation + dressing", text = "Affected socket gently irrigated with sterile saline and a medicated dressing (Alvogyl) placed." },
+  { label = "Sequestrum removed", text = "Loose bony sequestrum removed." },
+  { label = "Spicule smoothed", text = "Sharp bony spicule smoothed with a bone file under local anesthesia." },
+  { label = "I&D", text = "Incision and drainage of the [[po_ap_i_d_location]] performed under local anesthesia with purulent drainage obtained, and the wound irrigated." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_ap_i_d_location"
+label = "I&D location"
+section = "Assessment and plan - postop extraction"
+type = "text"
+default = "***"
+visible_if = "'I&D' in po_ap_treatment_today"
+
+[[fields]]
+key = "po_ap_instructions_bullet"
+label = "Instructions reviewed"
+section = "Assessment and plan - postop extraction"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "po_ap_analgesia"
+label = "Analgesia"
+section = "Assessment and plan - postop extraction"
+type = "dropdown"
+options = [
+  { label = "Ibuprofen + APAP", text = "ibuprofen 600 mg PO q6h and acetaminophen 500 mg PO q6h as needed" },
+  { label = "APAP only", text = "acetaminophen 1000 mg PO q6h as needed, not to exceed 3 g per day" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_ap_antibiotics"
+label = "Antibiotics"
+section = "Assessment and plan - postop extraction"
+type = "dropdown"
+options = [
+  { label = "Complete course", text = "complete the prescribed course" },
+  { label = "Amoxicillin", text = "amoxicillin 500 mg PO TID for 7 days" },
+  { label = "Clindamycin", text = "clindamycin 300 mg PO QID for 7 days (penicillin allergy)" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "po_ap_chlorhexidine_bullet"
+label = "Chlorhexidine rinse"
+section = "Assessment and plan - postop extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "po_ap_nerve_monitoring"
+label = "+ Nerve monitoring (automatic for altered sensation)"
+section = "Assessment and plan - postop extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "po_ap_sinus_precautions"
+label = "+ Sinus precautions (automatic for OAC)"
+section = "Assessment and plan - postop extraction"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "po_ap_follow_up"
+label = "Follow-up"
+section = "Assessment and plan - postop extraction"
+type = "dropdown"
+default = "as needed"
+options = ["as needed", "2-3 days", "1 week", "2 weeks", "***"]
