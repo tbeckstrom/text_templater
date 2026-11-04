@@ -109,6 +109,8 @@ pub fn sheet_body(
             .speed_buttons
             .iter()
             .filter(|sb| sb.section.as_deref() == Some(name))
+            // Copying teeth between charts is a form shortcut, not a choice.
+            .filter(|sb| sb.copy_teeth.is_empty())
             .collect();
         if !here.is_empty() {
             body.push_str("<div class=\"btns\">");

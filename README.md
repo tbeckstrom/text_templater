@@ -404,6 +404,17 @@ than erroring — a speed button always does what it can with the rest.
 A speed button can also (or instead) append pre-filled instances to a repeatable group — see
 below.
 
+`copy_teeth` copies teeth from one odontogram to another. It maps a `teeth` field to the `teeth`
+fields it takes teeth from. A tooth already charted on the target's chart, in either paint mode,
+stays where it is:
+
+```toml
+[[speed_buttons]]
+label = "Copy diagnosis teeth as extractions"
+section = "Procedure"
+copy_teeth = { ext = ["diagnosis_teeth", "carious_teeth"] }
+```
+
 ### Repeatable groups
 
 For a section that can occur any number of times per note — e.g. one "Procedure Step" per tooth
@@ -428,8 +439,8 @@ type = "dropdown"
 options = ["Extraction", "Implant", "Bone Graft"]
 ```
 
-This renders as its own section below the regular fields, with "+ Add Procedure Step" appending a
-new instance (each its own little form, with a "Remove" button) and no limit on how many you can
+This renders as its own section below the regular fields, with "+ Add Procedure Step" (above the
+blocks, so it stays put) appending a new instance (each its own little form, with a "Remove" button) and no limit on how many you can
 add — including zero. In `body`, the group's key is an array of objects, one per instance, with
 each field as a property:
 
@@ -459,6 +470,10 @@ does. See `examples/templates/oral_surgery.toml` for a complete example.
 
 A group can also carry its own `[[groups.speed_buttons]]`, which fill in **only the block they sit
 in** — handy when each block is one of a handful of stereotyped procedures.
+
+`compact = true` on a group draws its blocks tightly: each label sits beside its control, every
+multiselect's choices wrap side by side, the block's speed buttons share its heading row, and a
+block with a single field fits on one line after its heading.
 
 #### Groups driven by a selection
 

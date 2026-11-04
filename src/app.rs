@@ -1015,6 +1015,7 @@ fn render_field(
     state: &mut FormState,
     visibility: &Visibility,
     scope: Scope,
+    compact: bool,
 ) {
     if !visibility.is_visible(field.visible_if.as_ref(), scope) {
         return;
@@ -1023,16 +1024,41 @@ fn render_field(
     if siblings.iter().any(|f| f.linked.as_deref() == Some(field.key.as_str())) {
         return;
     }
+    // Compact: label and control share a row (an odontogram can't).
+    if compact && field.field_type != FieldType::Teeth {
+        ui.horizontal_top(|ui| {
+            field_label(ui, field, true);
+            field_control(ui, field, siblings, state, true);
+        });
+        ui.add_space(2.0);
+        return;
+    }
     // A linked chart names both of its lists in its own paint-mode row.
     let labelled_by_chart = field.field_type == FieldType::Teeth && field.linked.is_some();
-    ui.horizontal(|ui| {
-        if !labelled_by_chart {
-            ui.label(&field.label);
-        }
-        if field.required {
-            ui.colored_label(egui::Color32::from_rgb(200, 60, 60), "*");
-        }
-    });
+    ui.horizontal(|ui| field_label(ui, field, !labelled_by_chart));
+    field_control(ui, field, siblings, state, false);
+    ui.add_space(8.0);
+}
+
+/// A field's label (when `show_label`) and its required-field star.
+fn field_label(ui: &mut egui::Ui, field: &FieldDef, show_label: bool) {
+    if show_label {
+        ui.label(&field.label);
+    }
+    if field.required {
+        ui.colored_label(egui::Color32::from_rgb(200, 60, 60), "*");
+    }
+}
+
+/// The widget that edits a field's value. `compact` lays every
+/// multiselect's choices side by side, however long their labels.
+fn field_control(
+    ui: &mut egui::Ui,
+    field: &FieldDef,
+    siblings: &[FieldDef],
+    state: &mut FormState,
+    compact: bool,
+) {
     match field.field_type {
         FieldType::Text => {
             if let Some(FieldValue::Text(s)) = state.get_mut(&field.key) {
@@ -1096,10 +1122,11 @@ fn render_field(
                     }
                 };
                 // Short labels sit side by side; sentence-length ones stack.
-                let compact = field
-                    .option_labels()
-                    .all(|l| l.chars().count() <= COMPACT_LABEL_CHARS);
-                if compact {
+                let side_by_side = compact
+                    || field
+                        .option_labels()
+                        .all(|l| l.chars().count() <= COMPACT_LABEL_CHARS);
+                if side_by_side {
                     ui.horizontal_wrapped(|ui| checkboxes(ui));
                 } else {
                     checkboxes(ui);
@@ -1151,7 +1178,6 @@ fn render_field(
             }
         }
     }
-    ui.add_space(8.0);
 }
 
 /// Draws `fields` in order, grouping each run of consecutive fields sharing a
@@ -1187,7 +1213,7 @@ fn render_fields_in_sections(
 
         let Some(section) = section else {
             for field in run {
-                render_field(ui, field, fields, state, visibility, Scope::Form);
+                render_field(ui, field, fields, state, visibility, Scope::Form, false);
             }
             continue;
         };
@@ -1219,7 +1245,7 @@ fn render_fields_in_sections(
                     });
                 }
                 for field in run {
-                    render_field(ui, field, fields, state, visibility, Scope::Form);
+                    render_field(ui, field, fields, state, visibility, Scope::Form, false);
                 }
                 for group in groups
                     .iter()
@@ -1239,7 +1265,8 @@ fn is_field_section(fields: &[FieldDef], section: Option<&str>) -> bool {
 }
 
 /// Renders one repeatable group as a list of add/remove-able instances, each
-/// a mini form using the same [`render_field`] as the top-level fields.
+/// a mini form using the same [`render_field`] as the top-level fields. The
+/// Add button sits above the blocks, so it stays put as blocks are added.
 fn render_group(
     ui: &mut egui::Ui,
     group: &GroupDef,
@@ -1255,49 +1282,83 @@ fn render_group(
 
     ui.add_space(4.0);
     ui.separator();
-    ui.strong(&group.label);
+    ui.horizontal(|ui| {
+        ui.strong(&group.label);
+        if !driven && ui.button(format!("+ Add {}", group.label)).clicked() {
+            add_group_instance(groups_state, group);
+        }
+    });
+
+    // A compact block with one (non-chart) field puts it on its heading's line.
+    let inline_field = match group.fields.as_slice() {
+        [only] if group.compact && only.field_type != FieldType::Teeth => Some(only),
+        _ => None,
+    };
 
     let instances = groups_state.entry(group.key.clone()).or_default();
     let mut remove_index = None;
     for (i, instance) in instances.iter_mut().enumerate() {
         let scope = Scope::Instance(instance.id);
+        let title = match (&instance.source_item, group.compact) {
+            (Some(item), true) => format!("{item}:"),
+            (Some(item), false) => format!("{} — {item}", group.label),
+            (None, _) => format!("{} {}", group.label, i + 1),
+        };
         ui.push_id(instance.id, |ui| {
             ui.group(|ui| {
-                ui.horizontal(|ui| {
-                    match &instance.source_item {
-                        Some(item) => ui.label(format!("{} — {item}", group.label)),
-                        None => ui.label(format!("{} {}", group.label, i + 1)),
-                    };
+                if let Some(field) = inline_field {
+                    ui.horizontal_top(|ui| {
+                        ui.strong(&title);
+                        if !driven && ui.small_button("Remove").clicked() {
+                            remove_index = Some(i);
+                        }
+                        if visibility.is_visible(field.visible_if.as_ref(), scope) {
+                            field_label(ui, field, false);
+                            field_control(ui, field, &group.fields, &mut instance.values, true);
+                        }
+                    });
+                    return;
+                }
+                let mut speed_buttons = |ui: &mut egui::Ui| {
+                    for sb in &group.speed_buttons {
+                        if !visibility.is_visible(sb.visible_if.as_ref(), scope) {
+                            continue;
+                        }
+                        if ui.button(&sb.label).clicked() {
+                            // Scoped to this block: fills in this block's
+                            // own fields, leaving every other one alone.
+                            apply_values(&group.fields, &sb.values, &mut instance.values);
+                        }
+                    }
+                };
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(&title);
                     if !driven && ui.small_button("Remove").clicked() {
                         remove_index = Some(i);
                     }
+                    if group.compact {
+                        speed_buttons(ui);
+                    }
                 });
-                if !group.speed_buttons.is_empty() {
-                    ui.horizontal_wrapped(|ui| {
-                        for sb in &group.speed_buttons {
-                            if !visibility.is_visible(sb.visible_if.as_ref(), scope) {
-                                continue;
-                            }
-                            if ui.button(&sb.label).clicked() {
-                                // Scoped to this block: fills in this block's
-                                // own fields, leaving every other one alone.
-                                apply_values(&group.fields, &sb.values, &mut instance.values);
-                            }
-                        }
-                    });
+                if !group.compact && !group.speed_buttons.is_empty() {
+                    ui.horizontal_wrapped(|ui| speed_buttons(ui));
                 }
                 for field in &group.fields {
-                    render_field(ui, field, &group.fields, &mut instance.values, visibility, scope);
+                    render_field(
+                        ui,
+                        field,
+                        &group.fields,
+                        &mut instance.values,
+                        visibility,
+                        scope,
+                        group.compact,
+                    );
                 }
             });
         });
     }
     if let Some(i) = remove_index {
         instances.remove(i);
-    }
-
-    if !driven && ui.button(format!("+ Add {}", group.label)).clicked() {
-        add_group_instance(groups_state, group);
     }
     ui.add_space(4.0);
 }

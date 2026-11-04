@@ -235,7 +235,7 @@ pub fn add_group_instance(groups_state: &mut GroupsState, group: &GroupDef) {
 }
 
 /// Applies a speed button: overwrites any top-level fields named in
-/// `sb.values`, sets `sb.each`'s values in every existing instance of the
+/// `sb.values`, adds `sb.copy_teeth`'s source teeth to their targets, sets `sb.each`'s values in every existing instance of the
 /// groups it names, then (if `sb.group` names one of `groups`) appends one new
 /// instance per table in `sb.group_values`. Unmatched keys (typos, a field
 /// that's since been removed) and type mismatches are silently skipped
@@ -248,6 +248,31 @@ pub fn apply_speed_button(
     groups_state: &mut GroupsState,
 ) {
     apply_values(fields, &sb.values, state);
+
+    for (target_key, sources) in &sb.copy_teeth {
+        let Some(target) = fields.iter().find(|f| &f.key == target_key) else {
+            continue;
+        };
+        // The other paint mode of the target's odontogram, either way round.
+        let partner = target.linked.clone().or_else(|| {
+            fields
+                .iter()
+                .find(|f| f.linked.as_deref() == Some(target_key))
+                .map(|f| f.key.clone())
+        });
+        let list = |state: &FormState, key: &str| match state.get(key) {
+            Some(FieldValue::MultiSelect(v)) => v.clone(),
+            _ => Vec::new(),
+        };
+        let charted = partner.map(|k| list(state, &k)).unwrap_or_default();
+        let mut picked = list(state, target_key);
+        for tooth in sources.iter().flat_map(|k| list(state, k)) {
+            if !charted.contains(&tooth) {
+                toggle_multiselect(target, &mut picked, &tooth, true);
+            }
+        }
+        state.insert(target_key.clone(), FieldValue::MultiSelect(picked));
+    }
 
     for (group_key, values) in &sb.each {
         let (Some(group), Some(values)) =
@@ -783,6 +808,62 @@ mod tests {
             FieldValue::MultiSelect(v) => assert_eq!(v, &vec!["Fever".to_string()]),
             other => panic!("expected MultiSelect, got {other:?}"),
         }
+    }
+
+    fn teeth_field(key: &str, linked: Option<&str>) -> FieldDef {
+        FieldDef {
+            key: key.to_string(),
+            label: key.to_string(),
+            field_type: FieldType::Teeth,
+            options: crate::template::FDI_TEETH
+                .iter()
+                .map(|t| crate::template::OptionDef { label: t.to_string(), text: None })
+                .collect(),
+            linked: linked.map(str::to_string),
+            ..Default::default()
+        }
+    }
+
+    fn teeth(list: &[&str]) -> FieldValue {
+        FieldValue::MultiSelect(list.iter().map(|t| t.to_string()).collect())
+    }
+
+    fn picked(state: &FormState, key: &str) -> Vec<String> {
+        match state.get(key) {
+            Some(FieldValue::MultiSelect(v)) => v.clone(),
+            other => panic!("expected MultiSelect, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn speed_button_copies_teeth_into_a_chart_leaving_its_other_mode_alone() {
+        let fields = vec![
+            teeth_field("dx", Some("carious")),
+            teeth_field("carious", None),
+            teeth_field("ext", Some("coronectomy")),
+            teeth_field("coronectomy", None),
+        ];
+        let mut state = build_form_state(&fields);
+        state.insert("dx".into(), teeth(&["38", "16"]));
+        state.insert("carious".into(), teeth(&["21"]));
+        state.insert("ext".into(), teeth(&["46"]));
+        state.insert("coronectomy".into(), teeth(&["38"]));
+
+        let sb = SpeedButtonDef {
+            label: "Copy".to_string(),
+            copy_teeth: [("ext".to_string(), vec!["dx".to_string(), "carious".to_string()])]
+                .into_iter()
+                .collect(),
+            ..Default::default()
+        };
+        let (groups, mut groups_state) = no_groups();
+        apply_speed_button(&sb, &fields, &mut state, &groups, &mut groups_state);
+
+        // Added in FDI order; 38 was already a coronectomy, so it stays one.
+        assert_eq!(picked(&state, "ext"), ["16", "21", "46"]);
+        assert_eq!(picked(&state, "coronectomy"), ["38"]);
+        // The source chart is untouched.
+        assert_eq!(picked(&state, "dx"), ["38", "16"]);
     }
 
     fn procedure_group() -> GroupDef {

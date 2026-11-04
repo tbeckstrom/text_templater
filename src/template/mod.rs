@@ -218,6 +218,12 @@ pub struct SpeedButtonDef {
     /// button is clicked (e.g. one value for each charted span's box).
     #[serde(default)]
     pub each: toml::Table,
+    /// `teeth` field key -> the `teeth` fields whose teeth it gains when the
+    /// button is clicked, e.g. `copy_teeth = { ext = ["dx", "carious"] }`.
+    /// A tooth already charted on the target's odontogram (in either paint
+    /// mode) keeps where it is.
+    #[serde(default)]
+    pub copy_teeth: std::collections::BTreeMap<String, Vec<String>>,
     /// Tera expression; the button is only shown while it evaluates truthy.
     #[serde(default)]
     pub visible_if: Option<String>,
@@ -267,6 +273,11 @@ pub struct GroupDef {
     /// [`contiguous_spans`]) instead of one per tooth.
     #[serde(default)]
     pub spans: bool,
+    /// Draws each block tightly: labels beside their controls, every
+    /// multiselect's choices wrapped side by side, and a one-field block on
+    /// a single line after its heading.
+    #[serde(default)]
+    pub compact: bool,
     /// `print = false` leaves the whole group off the printed sheet.
     #[serde(default)]
     pub print: Option<bool>,

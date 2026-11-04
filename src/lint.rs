@@ -352,6 +352,17 @@ pub fn lint(templates: &[TemplateDef], partials: &[PartialDef]) -> Vec<Lint> {
                     });
                 }
             }
+            for key in sb.copy_teeth.iter().flat_map(|(k, v)| std::iter::once(k).chain(v)) {
+                if !t.fields.iter().any(|f| &f.key == key && f.field_type == FieldType::Teeth) {
+                    lints.push(Lint {
+                        subject: t.id.clone(),
+                        message: format!(
+                            "speed button '{}' copies teeth with '{key}', which is not a teeth field",
+                            sb.label
+                        ),
+                    });
+                }
+            }
             for (group_key, values) in &sb.each {
                 let Some(g) = t.groups.iter().find(|g| &g.key == group_key) else {
                     lints.push(Lint {
@@ -537,6 +548,24 @@ mod tests {
         let lints = lint(&[t], &[]);
         assert_eq!(lints.len(), 1);
         assert!(lints[0].message.contains("gone"));
+    }
+
+    #[test]
+    fn a_speed_button_copying_teeth_with_a_non_teeth_field_is_flagged() {
+        let mut t = template(
+            "{{ ext }}{{ dx }}{{ note }}",
+            vec![field("ext", FieldType::Teeth), field("dx", FieldType::Teeth), field("note", FieldType::Text)],
+        );
+        t.speed_buttons = vec![crate::template::SpeedButtonDef {
+            label: "Copy".to_string(),
+            copy_teeth: [("ext".to_string(), vec!["dx".to_string(), "note".to_string()])]
+                .into_iter()
+                .collect(),
+            ..Default::default()
+        }];
+        let lints = lint(&[t], &[]);
+        assert_eq!(lints.len(), 1, "{lints:?}");
+        assert!(lints[0].message.contains("'note'"));
     }
 
     #[test]
