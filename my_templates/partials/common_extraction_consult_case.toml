@@ -1,0 +1,44 @@
+# SNIPPET: common_extraction_consult_case   PREFIX: ext_case
+# Per-tooth quick picks for the extraction consult, entered at the top of the
+# form beside the teeth to extract. The HPI, exam, imaging and assessment
+# sections each read them, adding to whatever is picked by hand there.
+use_partials = ["common_extraction_case"]
+body = ""
+
+# ------------------------------------------------ one line per tooth ---
+# Wording per pick:
+#   non-restorable caries        exam "carious", imaging "caries"
+#   non-restorable retained root exam "fractured", imaging "fractured"
+#   Failed Endo                  imaging "prior RCT" and "PARL"
+#   TTP                          exam "tenderness to percussion"
+#   hx of infection              HPI "history of infection associated with ..."
+#   PARL                         imaging "PARL"
+#   prior endo                   imaging "prior RCT"
+#   Perio                        exam "gingival erythema, 5+ mm probing depths"
+#   Bone loss                    exam and imaging "significant bone loss"
+# Caries, retained root and perio/bone loss also describe the tooth in the
+# assessment (grossly carious, retained root, periodontally involved).
+
+[[groups]]
+key = "ext_case_teeth"
+label = "Quick findings"
+source = ["ext_extract_teeth", "ext_simple_teeth"]
+source_as = "tooth"
+section = "Case"
+compact = true
+
+[[groups.fields]]
+key = "picks"
+label = "Quick findings"
+type = "multiselect"
+options = [
+  "non-restorable caries",
+  "non-restorable retained root",
+  "Failed Endo",
+  "TTP",
+  "hx of infection",
+  "PARL",
+  "prior endo",
+  "Perio",
+  "Bone loss",
+]

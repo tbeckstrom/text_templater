@@ -64,7 +64,7 @@ default = true
 [[groups]]
 key = "tm_img_teeth"
 label = "Tooth"
-source = "ext_extract_teeth"
+source = ["ext_extract_teeth", "ext_simple_teeth"]
 source_as = "tooth"
 section = "Imaging - third molar consult"
 

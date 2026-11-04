@@ -29,7 +29,7 @@ visible_if = "ext_decision_maker == 'Parent'"
 [[groups]]
 key = "tm_case_teeth"
 label = "Quick findings"
-source = "ext_extract_teeth"
+source = ["ext_extract_teeth", "ext_simple_teeth"]
 source_as = "tooth"
 section = "Case"
 compact = true

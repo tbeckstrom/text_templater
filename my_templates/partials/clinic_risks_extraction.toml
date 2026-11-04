@@ -27,7 +27,7 @@ label = "Next procedure components"
 section = "Risks - extraction"
 type = "computed"
 visible_if = "false"
-compute = 'ext_ap_next_procedure if ext_ap_next_procedure is defined else []'
+compute = '[...(["simple extraction"] if ext_simple_teeth else []), ...(["surgical extraction"] if ext_extract_teeth else []), ...(ext_ap_next_procedure if ext_ap_next_procedure is defined else [])]'
 
 [[fields]]
 key = "ext_risk_general"

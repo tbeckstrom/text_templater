@@ -1,19 +1,22 @@
 # SNIPPET: clinic_hpi_extraction   PREFIX: ext_hpi
 # Generated from the snippet language - see .claude/skills/snippet-to-toml.
 # The one-liner is followed by short sentences that each drop out until
-# picked, starting with the surrogate decision-maker sentence. Pertinent
+# picked, starting with the surrogate decision-maker sentence; a quick-picked
+# "hx of infection" adds its own. Pertinent
 # negatives get their own paragraph.
 name = "Snippet: HPI - extraction consult"
-use_partials = ["common_extraction_case"]
+use_partials = ["common_extraction_case", "common_extraction_consult_case"]
 
 body = """
 {%- set symptoms = [v for v in ext_hpi_symptoms if v != "no symptoms"] -%}
 {%- set denied = ext_hpi_denied -%}
+{%- set infected = [c.tooth for c in ext_case_teeth if "hx of infection" in c.picks] -%}
 {%- set details = [
   (ext_dm_reason_phrase ~ ", and " ~ ext_dm_phrase ~ " is present as the legal decision-maker.") if ext_dm_reason else "",
   "Patient reports no symptoms currently." if "no symptoms" in ext_hpi_symptoms else "",
   ("Patient reports " ~ ((symptoms[:-1] | join(sep=", ")) ~ " and " ~ symptoms[-1] if symptoms | length > 1 else symptoms | first) ~ ".") if symptoms else "",
   ("Onset approximately " ~ ext_hpi_onset ~ ".") if ext_hpi_onset else "",
+  ("Reports a history of infection associated with " ~ (("tooth " ~ infected | first) if infected | length == 1 else ("teeth " ~ (infected[:-1] | join(sep=", ")) ~ " and " ~ infected[-1])) ~ ".") if infected else "",
   ext_hpi_prior_treatment_text | join(sep=" ") if ext_hpi_prior_treatment else "",
   ext_hpi_replacement_interest_text if ext_hpi_replacement_interest else "",
 ] -%}
@@ -24,7 +27,7 @@ Referring provider: {{ ext_referring_provider }}{% endif %}
 {{ ext_pt_intro }} presenting for evaluation of {{ ext_teeth_tooth_word }} {{ ext_teeth_list }}.{% if details %} {{ details | join(sep=" ") }}{% endif %}{% if ext_hpi_additional_history and ext_hpi_additional_history_2 %}
 {{ ext_hpi_additional_history_2 }}{% endif %}{% if denied %}
 
-No hx of {% for v in denied %}{% if not loop.first %}{% if loop.last %} or {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %} associated with {{ "these sites" if ext_extract_teeth | length > 1 else "this site" }}.{% endif %}
+No hx of {% for v in denied %}{% if not loop.first %}{% if loop.last %} or {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %} associated with {{ "these sites" if ext_all_teeth | length > 1 else "this site" }}.{% endif %}
 """
 
 [[fields]]

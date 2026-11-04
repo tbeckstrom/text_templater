@@ -3,15 +3,28 @@
 # One box per tooth to extract. Periapical status preselects the normal
 # finding, and bone level prints only once picked. A vital structure is only
 # mentioned once picked, and its proximity defaults to "in close proximity to".
+# The quick picks at the top add their findings first; a PARL among them
+# replaces the default "no periapical pathology".
 name = "Snippet: Imaging - extraction consult"
-use_partials = ["common_extraction_case"]
+use_partials = ["common_extraction_case", "common_extraction_consult_case"]
 
 body = """
 {%- if ext_img_imaging_modality %}- Images reviewed: {% for v in ext_img_imaging_modality %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}
 {% endif %}
 {%- for b in ext_img_teeth %}
+{%- set quick = [c.picks for c in ext_case_teeth if c.tooth == b.tooth] -%}
+{%- set quick = quick | first if quick else [] -%}
+{%- set seen = [
+  "caries" if "non-restorable caries" in quick else "",
+  "fractured" if "non-restorable retained root" in quick else "",
+  "prior RCT" if "prior endo" in quick or "Failed Endo" in quick else "",
+  "PARL" if "PARL" in quick or "Failed Endo" in quick else "",
+  "significant bone loss" if "Bone loss" in quick else "",
+] -%}
+{%- set parl = "PARL" in seen -%}
 {%- set parts = [
-  b.periapical_status_text | replace(from="[[lesion_size_mm]]", to=b.lesion_size_mm) if b.periapical_status else "",
+  [v for v in seen if v] | join(sep=", "),
+  b.periapical_status_text | replace(from="[[lesion_size_mm]]", to=b.lesion_size_mm) if b.periapical_status and not (parl and b.periapical_status == "No PA pathology") else "",
   b.bone_level_text if b.bone_level else "",
   ((b.root_features[:-1] | join(sep=", ")) ~ " and " ~ b.root_features[-1] if b.root_features | length > 1 else b.root_features | first) if b.root_features else "",
   ("roots " ~ b.proximity ~ " the " ~ b.vital_structure) if b.proximity and b.vital_structure else "",
@@ -42,7 +55,7 @@ default = true
 [[groups]]
 key = "ext_img_teeth"
 label = "Tooth"
-source = "ext_extract_teeth"
+source = ["ext_extract_teeth", "ext_simple_teeth"]
 source_as = "tooth"
 section = "Imaging - extraction consult"
 

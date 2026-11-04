@@ -19,7 +19,7 @@ body = """
 {%- set cor = tm_case_coronectomy_teeth -%}
 {%- set coronectomy = "coronectomy" in np or tm_ap_coronectomy_sentence or cor -%}
 {%- set cor_phrase = (("tooth " ~ cor | first) if cor | length == 1 else ("teeth " ~ (cor[:-1] | join(sep=", ")) ~ " and " ~ cor[-1])) if cor else ("tooth " ~ tm_ap_fdi_tooth_for_coronectomy) -%}
-{%- set rest = [t for t in ext_extract_teeth if t not in cor] -%}
+{%- set rest = [t for t in ext_all_teeth if t not in cor] -%}
 {%- set rest_phrase = (("tooth " ~ rest | first) if rest | length == 1 else ("teeth " ~ (rest[:-1] | join(sep=", ")) ~ " and " ~ rest[-1])) if rest else "" -%}
 {%- set np_rest = [p for p in np if p != "coronectomy"] -%}
 {%- set np_parts = [

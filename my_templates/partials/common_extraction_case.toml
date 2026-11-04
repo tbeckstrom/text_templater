@@ -1,7 +1,7 @@
 # SNIPPET: common_extraction_case   PREFIX: ext
 # The facts every extraction consult section shares, entered once at the top
-# of the form: age, teeth to extract, referring provider and who makes the
-# decisions. The hidden computed fields turn them into ready-made wording the
+# of the form: age, teeth to extract (one chart, painted surgical by default
+# or simple), referring provider and who makes the decisions. The hidden computed fields turn them into ready-made wording the
 # other snippets reuse.
 body = ""
 
@@ -14,7 +14,14 @@ default = "***"
 
 [[fields]]
 key = "ext_extract_teeth"
-label = "Teeth to extract"
+label = "Surgical exo"
+section = "Case"
+type = "teeth"
+linked = "ext_simple_teeth"
+
+[[fields]]
+key = "ext_simple_teeth"
+label = "Simple exo"
 section = "Case"
 type = "teeth"
 
@@ -75,12 +82,20 @@ values = { ext_decision_maker = "Parent", ext_dm_reason = "Minor" }
 # Hidden (visible_if = "false"): these exist only for the note bodies.
 
 [[fields]]
+key = "ext_all_teeth"
+label = "Teeth to extract (simple and surgical)"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '[...ext_extract_teeth, ...ext_simple_teeth] | sort'
+
+[[fields]]
 key = "ext_teeth_list"
 label = "Teeth to extract"
 section = "Case"
 type = "computed"
 visible_if = "false"
-compute = '(ext_extract_teeth[:-1] | join(sep=", ")) ~ " and " ~ ext_extract_teeth[-1] if ext_extract_teeth | length > 1 else (ext_extract_teeth | first if ext_extract_teeth else "***")'
+compute = '(ext_all_teeth[:-1] | join(sep=", ")) ~ " and " ~ ext_all_teeth[-1] if ext_all_teeth | length > 1 else (ext_all_teeth | first if ext_all_teeth else "***")'
 
 [[fields]]
 key = "ext_teeth_tooth_word"
@@ -88,7 +103,7 @@ label = "tooth/teeth"
 section = "Case"
 type = "computed"
 visible_if = "false"
-compute = '"teeth" if ext_extract_teeth | length > 1 else "tooth"'
+compute = '"teeth" if ext_all_teeth | length > 1 else "tooth"'
 
 [[fields]]
 key = "ext_ref_name"
@@ -120,7 +135,7 @@ label = "Mandibular posterior tooth"
 section = "Case"
 type = "computed"
 visible_if = "false"
-compute = '"1" if ([t for t in ext_extract_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 else ""'
+compute = '"1" if ([t for t in ext_all_teeth if t in ["34", "35", "36", "37", "38", "44", "45", "46", "47", "48"]] | length) > 0 else ""'
 
 [[fields]]
 key = "ext_max_posterior"
@@ -128,7 +143,7 @@ label = "Maxillary posterior tooth"
 section = "Case"
 type = "computed"
 visible_if = "false"
-compute = '"1" if ([t for t in ext_extract_teeth if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 else ""'
+compute = '"1" if ([t for t in ext_all_teeth if t in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]] | length) > 0 else ""'
 
 [[fields]]
 key = "ext_pt_intro"

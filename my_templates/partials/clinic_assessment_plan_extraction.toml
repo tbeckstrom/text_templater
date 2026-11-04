@@ -9,10 +9,12 @@
 # bullet and the specific risks; the anesthesia ends that line. Risk factors
 # from the history add their plan bullets automatically (each can also be
 # ticked by hand). Plan lines are left out until picked ("***" is a
-# deliberate choice). The pathway presets that fill this section live in the
-# note.
+# deliberate choice). The extractions in the next procedure line come from
+# the chart's simple and surgical paint; "Next procedure" adds the rest. Quick
+# picks (caries, retained root, perio/bone loss) also describe the teeth. The
+# pathway presets that fill this section live in the note.
 name = "Snippet: Assessment & plan - extraction consult"
-use_partials = ["common_extraction_case", "clinic_risks_extraction"]
+use_partials = ["common_extraction_case", "common_extraction_consult_case", "clinic_risks_extraction"]
 
 body = """
 {%- set np = ext_ap_next_procedure -%}
@@ -21,14 +23,24 @@ body = """
 {%- set sedated = ext_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] -%}
 {%- set cannabis = soc_cannabis is defined and soc_cannabis -%}
 {%- set adj = ["grossly carious", "fractured", "periodontally involved", "mobile"] -%}
+{%- set q_caries = [c.tooth for c in ext_case_teeth if "non-restorable caries" in c.picks] -%}
+{%- set q_root = [c.tooth for c in ext_case_teeth if "non-restorable retained root" in c.picks] -%}
+{%- set q_perio = [c.tooth for c in ext_case_teeth if "Perio" in c.picks or "Bone loss" in c.picks] -%}
 {%- if ext_exam_teeth is defined -%}
-{%- set tp_items = [("retained root" if "retained root" in b.conditions else (([a for a in adj if a in b.conditions] | join(sep=", ")) if [a for a in adj if a in b.conditions] else "nonrestorable")) ~ "|" ~ b.tooth for b in ext_exam_teeth] -%}
+{%- set tp_items = [("retained root" if "retained root" in b.conditions or b.tooth in q_root else (([a for a in adj if a in b.conditions or (a == "grossly carious" and b.tooth in q_caries) or (a == "periodontally involved" and b.tooth in q_perio)] | join(sep=", ")) if [a for a in adj if a in b.conditions or (a == "grossly carious" and b.tooth in q_caries) or (a == "periodontally involved" and b.tooth in q_perio)] else "nonrestorable")) ~ "|" ~ b.tooth for b in ext_exam_teeth] -%}
 {%- else -%}
-{%- set tp_items = ["nonrestorable|" ~ t for t in ext_extract_teeth] -%}
+{%- set tp_items = ["nonrestorable|" ~ t for t in ext_all_teeth] -%}
 {%- endif -%}
 {%- set tp_descs = [i | split(pat="|") | first for i in tp_items] | unique -%}
+{%- set simple = ext_simple_teeth -%}
+{%- set surgical = ext_extract_teeth -%}
+{%- set exo_parts = [
+  ("simple extraction of " ~ (("tooth " ~ simple | first) if simple | length == 1 else ("teeth " ~ (simple[:-1] | join(sep=", ")) ~ " and " ~ simple[-1]))) if simple else "",
+  ("surgical extraction of " ~ (("tooth " ~ surgical | first) if surgical | length == 1 else ("teeth " ~ (surgical[:-1] | join(sep=", ")) ~ " and " ~ surgical[-1]))) if surgical else "",
+] -%}
+{%- set np_parts = [...[p for p in exo_parts if p], ...np] -%}
 {%- set adjunct = [
-  "A surgical approach with sectioning and bone removal as needed is anticipated." if "surgical extraction" in np else "",
+  "A surgical approach with sectioning and bone removal as needed is anticipated." if surgical else "",
   "Alveoloplasty will smooth the ridge for prosthesis fabrication." if "alveoloplasty" in np else "",
   "Socket preservation will limit ridge resorption ahead of implant placement." if "socket preservation" in np else "",
   "Incision and drainage will decompress the associated abscess." if "incision and drainage" in np else "",
@@ -42,7 +54,7 @@ body = """
 ] -%}
 {%- set rec = [r for r in rec if r] -%}
 {%- set lines = [
-  ("Next procedure: " ~ ((np[:-1] | join(sep=", ")) ~ " and " ~ np[-1] if np | length > 1 else np | first) ~ ", " ~ teeth ~ (" under " ~ ext_ap_anesthesia_plan_text if ext_ap_anesthesia_plan else "") ~ ".") if np else "",
+  ("Next procedure: " ~ ((np_parts[:-1] | join(sep=", ")) ~ " and " ~ np_parts[-1] if np_parts | length > 1 else np_parts | first) ~ (" under " ~ ext_ap_anesthesia_plan_text if ext_ap_anesthesia_plan else "") ~ ".") if np_parts else "",
   ("Antibiotics: " ~ ext_ap_antibiotics_text ~ ".") if ext_ap_antibiotics else "",
   ("Analgesia: " ~ ext_ap_analgesia_text | replace(from="[[ext_ap_opioid_dose_and_quantity]]", to=ext_ap_opioid_dose_and_quantity) ~ ".") if ext_ap_analgesia else "",
   "Chlorhexidine 0.12% rinse BID beginning the day after surgery for 1 week." if ext_ap_chlorhexidine_bullet else "",
@@ -152,12 +164,10 @@ options = [
 
 [[fields]]
 key = "ext_ap_next_procedure"
-label = "Next procedure (drives the specific risks)"
+label = "Next procedure, besides the extractions charted (drives the specific risks)"
 section = "Plan"
 type = "multiselect"
 options = [
-  "simple extraction",
-  "surgical extraction",
   "alveoloplasty",
   "socket preservation",
   "incision and drainage",
