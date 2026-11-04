@@ -23,6 +23,7 @@ body = """
 [[groups]]
 key = "blocks"
 label = "Procedure Block"
+compact = true
 
 [[groups.speed_buttons]]
 label = "Md 3rd Molar, vertical section"
@@ -35,6 +36,10 @@ values = { soft_tissue = ["Flap w/ DB release"], ostectomy_sectioning = ["Remove
 [[groups.speed_buttons]]
 label = "Normal Ext"
 values = { soft_tissue = ["Severed PDL w/ #9"], ostectomy_sectioning = [], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "Irrigated"], closure = [] }
+
+[[groups.speed_buttons]]
+label = "Light Surgical"
+values = { soft_tissue = ["Flap adjacent to tooth"], ostectomy_sectioning = ["Removed buccal bone w/ rongeur"], elevator_forcep = ["Luxated and delivered tooth"], socket = ["No tooth structure", "Curretted", "Smoothed", "Irrigated"], closure = [] }
 
 [[groups.speed_buttons]]
 label = "Surgical Ext"
@@ -93,6 +98,7 @@ type = "multiselect"
 options = [
   { label = "Removed overlying bone w/ periosteal", text = "Using #9 periosteal elevator, removed overlying bone to expose tooth" },
   { label = "Removed buccal bone", text = "Removed buccal bone with periosteal elevator" },
+  { label = "Removed buccal bone w/ rongeur", text = "Removed small amount of buccal bone with rongeur for access" },
   { label = "Uncovered crown with round bur", text = "Overlying bone was removed with a round bur to expose the crown of the tooth" },
   { label = "Buccal Trough", text = "Using a tapered fissure bur, buccal trough was created adjacent to [[each]] tooth" },
   { label = "Sectioned horizontally", text = "The tooth was then sectioned at the CEJ with a fissure bur and the coronal portion of the tooth was delivered with elevators and forceps" },

@@ -38,13 +38,11 @@ Same as preoperative
 {% endif %}
 {%- if alveoloplasty %}Alveoloplasty of {{ alveoloplasty_quadrants }}
 {% endif %}
-{%- if biopsy %}Biopsy of {{ biopsy_site }}
-{% endif %}
 **SURGEON:**
 Thomas Beckstrom DDS, MD
 
 **ANESTHESIA:**
-{% if ivga %}GA sedation (total anesthesia time = {{ ga_time }} minutes), see anesthesia records for full report
+{% if ivga %}IV sedation (total anesthesia time = {{ ga_time }} minutes), see anesthesia records for full report
 {% endif %}
 {%- if nitrous_used %}Anxiolysis with N2O/O2
 {% endif %}
@@ -53,16 +51,14 @@ Local anesthesia with:
 {% endif %}
 {%- if "Bupivacaine 0.5% w/ epi" in local_used %}1.7mL 0.5% bupivacaine with 1:200,000 epinephrine x {{ bupivacaine_carps }} {% if bupivacaine_carps > 1 %}carpules{% else %}carpule{% endif %}
 {% endif %}
-{%- if "Articaine 4% w/ epi" in local_used %}1.7mL 4% articaine with 1:200,000 epinephrine x {{ articaine_carps }} {% if articaine_carps > 1 %}carpules{% else %}carpule{% endif %}
+{%- if "Articaine 4% w/ epi" in local_used %}1.7mL 4% articaine with 1:100,000 epinephrine x {{ articaine_carps }} {% if articaine_carps > 1 %}carpules{% else %}carpule{% endif %}
 {% endif %}
-{%- if "Mepivacaine plain" in local_used %}1.7mL 3% mepivacaine plain x {{ mepivacaine_carps }} {% if mepivacaine_carps > 1 %}carpules{% else %}carpule{% endif %}
+{%- if "Prilocaine 4% plain" in local_used %}1.7mL 4% prilocaine plain x {{ prilocaine_carps }} {% if prilocaine_carps > 1 %}carpules{% else %}carpule{% endif %}
 {% endif %}
 {%- if "Topical" in local_used %}Topical anesthetic applied prior to injections
 {% endif %}
 **SPECIMEN:**
 {% if ext %}Dentition for disposal
-{% endif %}
-{%- if biopsy %}{{ biopsy_site }}
 {% endif %}
 {%- if ivga %}
 ASA: {{ asa }}
@@ -83,7 +79,6 @@ ASA: {{ asa }}
 {% if coronectomy and coronectomy_indications_text %}Coronectomy as above indicated {{<and_list items={coronectomy_indications_text}/>}}. {% endif %}
 {%- if ext and ext_indications_text %}Extractions as above are indicated {{<and_list items={ext_indications_text}/>}}. {% endif %}
 {%- if alveoloplasty and alveoloplasty_indications_text %}Alveoloplasty as above is indicated {{<and_list items={alveoloplasty_indications_text}/>}}. {% endif %}
-{%- if biopsy %}Biopsy as above indicated to characterize the lesion and guide appropriate treatment planning. {% endif %}
 
 The health history and indications for the operation were reviewed and an examination was performed. {% set unchanged = ["health history" if not ("history" in interval_changes) else "", "exam" if not ("exam" in interval_changes) else "", "treatment plan" if not ("treatment plan" in interval_changes) else ""] %}{% set unchanged = [u for u in unchanged if u != ""] %}{% if unchanged %}There have been no changes in the {{<and_list items={unchanged}/>}} since the last visit. {% endif %}{% if "history" in interval_changes %}The patient reports interval changes to health history including {{ history_changes }}. {% endif %}{% if "exam" in interval_changes %}Exam today notable for {{ exam_changes }}. {% endif %}{% if "treatment plan" in interval_changes %}We discussed the following changes to the treatment plan: {{ treatment_plan_changes }}. {% endif %}{% if decision_maker != "patient" %}Confirmed the plan of treatment with the {{ decision_maker }}. {% endif %}We again reviewed the details of the procedure and R/B/A, all questions invited and answered prior to starting. Informed consent obtained.{% if ivga %} NPO status confirmed.{% if pt_sex == "female" and pt_age < 50 %} Denies pregnancy.{% endif %}{% endif %}
 {% if auscultated_heart_lungs %}
@@ -101,8 +96,8 @@ Throat screen and bite block removed. Placed gauze pressure dressings. {% if nit
 **POST-OPERATIVE INSTRUCTIONS:** Given both verbally and in written statements.
 
 **POST-OPERATIVE MEDICATIONS:**
-{% for m in post_op_medications %}{{ m }}
-{% endfor %}
+See chart
+
 **PLAN/FOLLOW UP:**
 - follow up prn
 """
@@ -193,26 +188,12 @@ label = "Alveoloplasty quadrants"
 type = "text"
 visible_if = "alveoloplasty"
 
-[[fields]]
-key = "biopsy"
-section = "Procedure"
-label = "Biopsy"
-type = "checkbox"
-
-[[fields]]
-key = "biopsy_site"
-section = "Procedure"
-label = "Biopsy site"
-type = "text"
-visible_if = "biopsy"
-
 # ------------------------------------------------------------- anesthesia ---
 [[fields]]
 key = "nitrous_used"
 section = "Anesthesia"
 label = "Nitrous (N2O/O2)"
 type = "checkbox"
-default = true
 
 [[fields]]
 key = "ivga"
@@ -252,7 +233,7 @@ key = "local_used"
 section = "Anesthesia"
 label = "Local anesthetic"
 type = "multiselect"
-options = ["Lidocaine 2% w/ epi", "Bupivacaine 0.5% w/ epi", "Articaine 4% w/ epi", "Mepivacaine plain", "Topical"]
+options = ["Lidocaine 2% w/ epi", "Bupivacaine 0.5% w/ epi", "Articaine 4% w/ epi", "Prilocaine 4% plain", "Topical"]
 default = ["Lidocaine 2% w/ epi", "Topical"]
 
 [[fields]]
@@ -286,14 +267,14 @@ max = 20
 visible_if = "'Articaine 4% w/ epi' in local_used"
 
 [[fields]]
-key = "mepivacaine_carps"
+key = "prilocaine_carps"
 section = "Anesthesia"
-label = "Mepivacaine carpules"
+label = "Prilocaine carpules"
 type = "number"
 default = 1
 min = 1
 max = 20
-visible_if = "'Mepivacaine plain' in local_used"
+visible_if = "'Prilocaine 4% plain' in local_used"
 
 # A read-only tally shown while filling the form (handy against max-dose
 # limits). It isn't referenced in `body`, so the note text is unaffected.
@@ -302,7 +283,7 @@ key = "total_local_ml"
 section = "Anesthesia"
 label = "Total local anesthetic (mL)"
 type = "computed"
-compute = "((lidocaine_carps if 'Lidocaine 2% w/ epi' in local_used else 0) + (bupivacaine_carps if 'Bupivacaine 0.5% w/ epi' in local_used else 0) + (articaine_carps if 'Articaine 4% w/ epi' in local_used else 0) + (mepivacaine_carps if 'Mepivacaine plain' in local_used else 0)) * 1.7"
+compute = "((lidocaine_carps if 'Lidocaine 2% w/ epi' in local_used else 0) + (bupivacaine_carps if 'Bupivacaine 0.5% w/ epi' in local_used else 0) + (articaine_carps if 'Articaine 4% w/ epi' in local_used else 0) + (prilocaine_carps if 'Prilocaine 4% plain' in local_used else 0)) * 1.7"
 
 # ----------------------------------------------------------------- vitals ---
 [[fields]]
@@ -440,23 +421,13 @@ options = [
   { label = "difficult sedation", text = "At this point, the procedure was prolonged due to the notable surgical difficulty experienced so far given factors such as dense cortical bone, root morphology, and unfavorable tooth angulation. The patient was becoming agitated and moving - which was increasingly refractory to additional local anesthesia and boluses of propofol. Decision was made to abort the procedure to maintain safe environment and will plan to complete remaining portions of the procedure at the next appointment." },
 ]
 
-[[fields]]
-key = "post_op_medications"
-section = "Description of Procedure"
-label = "Post-op medications"
-type = "multiselect"
-default = ["Acetaminophen 1000mg q6h PRN pain", "Ibuprofen 600mg q6h PRN pain", "Chlorhexidine oral rinse BID x 2 weeks"]
-options = [
-  "Acetaminophen 1000mg q6h PRN pain",
-  "Acetaminophen 1000mg q8h PRN pain",
-  "Acetaminophen-codeine 300-30mg (Tylenol #3) 1-2 tabs q4-6h PRN pain",
-  "Ibuprofen 600mg q6h PRN pain",
-  "Ibuprofen 400mg q6h PRN pain",
-  "Oxycodone 5mg q6h PRN pain",
-  "Chlorhexidine oral rinse BID x 2 weeks",
-  "Ondansetron PRN nausea",
-  "Amoxicillin 500mg TID x 5 days",
-]
+# -------------------------------------------------------------- procedure ---
+# Sits above the procedure chart: every tooth charted for diagnosis (either
+# paint mode) is painted as an extraction, unless already charted there.
+[[speed_buttons]]
+label = "Copy diagnosis teeth as extractions"
+section = "Procedure"
+copy_teeth = { ext = ["diagnosis_teeth", "carious_teeth"] }
 
 # --------------------------------------------------------- anesthesia time ---
 [[speed_buttons]]
@@ -485,17 +456,20 @@ visible_if = "ivga"
 values = { ga_time = 120 }
 
 # --- Per-tooth diagnosis: driven by the `diagnosis_teeth` multiselect, so
-# --- picking teeth up top creates exactly one diagnosis row per tooth.
+# --- picking teeth up top creates exactly one diagnosis row per tooth, drawn
+# --- in the Diagnosis section right under the chart.
 [[groups]]
 key = "tooth_diagnoses"
 label = "Diagnosis"
 source = "diagnosis_teeth"
 source_as = "tooth"
+section = "Diagnosis"
+compact = true
 
 [[groups.fields]]
 key = "diagnosis"
 label = "Diagnosis"
 type = "multiselect"
 required = true
-options = ["symptomatic", "carious", "periodontally compromised", "PBI", "CBI", "soft tissue impacted", "malposed"]
+options = ["symptomatic", "carious", "fractured", "failed endo", "non-restorable", "hopeless prognosis", "periodontally compromised", "PBI", "CBI", "soft tissue impacted", "malposed"]
 
