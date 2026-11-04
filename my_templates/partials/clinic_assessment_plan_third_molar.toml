@@ -5,32 +5,46 @@
 # plan bullets automatically (each can also be ticked by hand). Plan lines are
 # left out until picked ("***" is a deliberate choice). The anesthesia ends
 # the next procedure line. "Insufficient space for eruption" is added when the
-# imaging charts a partial or complete bony impaction. The pathway presets
-# that fill this section live in the note.
+# imaging charts a partial or complete bony impaction (by hand or quick pick).
+# Every plan gives the same rationale; teeth quick-picked for coronectomy add
+# the coronectomy sentence and get their own part of the next procedure line.
+# With a parent present, the discussion is "with the patient and family". The
+# pathway presets that fill this section live in the note.
 name = "Snippet: Assessment & plan - third molar consult"
-use_partials = ["common_extraction_case", "clinic_risks_third_molar"]
+use_partials = ["common_extraction_case", "common_third_molar_case", "clinic_risks_third_molar"]
 
 body = """
 {%- set np = tm_ap_next_procedure -%}
 {%- set alts = tm_ap_alternatives_text -%}
-{%- set coronectomy = "coronectomy" in np or tm_ap_coronectomy_sentence -%}
+{%- set cor = tm_case_coronectomy_teeth -%}
+{%- set coronectomy = "coronectomy" in np or tm_ap_coronectomy_sentence or cor -%}
+{%- set cor_phrase = (("tooth " ~ cor | first) if cor | length == 1 else ("teeth " ~ (cor[:-1] | join(sep=", ")) ~ " and " ~ cor[-1])) if cor else ("tooth " ~ tm_ap_fdi_tooth_for_coronectomy) -%}
+{%- set rest = [t for t in ext_extract_teeth if t not in cor] -%}
+{%- set rest_phrase = (("tooth " ~ rest | first) if rest | length == 1 else ("teeth " ~ (rest[:-1] | join(sep=", ")) ~ " and " ~ rest[-1])) if rest else "" -%}
+{%- set np_rest = [p for p in np if p != "coronectomy"] -%}
+{%- set np_parts = [
+  (((np_rest[:-1] | join(sep=", ")) ~ " and " ~ np_rest[-1] if np_rest | length > 1 else np_rest | first) ~ " of " ~ rest_phrase) if np_rest and rest else "",
+  ("coronectomy of " ~ cor_phrase) if cor else "",
+] -%}
+{%- set np_parts = [p for p in np_parts if p] -%}
 {%- set teeth = ext_teeth_tooth_word ~ " " ~ ext_teeth_list -%}
 {%- set sedated = tm_ap_anesthesia_plan in ["IV sedation", "General anesthesia"] -%}
 {%- set cannabis = soc_cannabis is defined and soc_cannabis -%}
-{%- set bony = tm_img_teeth is defined and [b for b in tm_img_teeth if b.coverage in ["Partial bony", "Complete bony"]] -%}
+{%- set bony = (tm_img_teeth is defined and [b for b in tm_img_teeth if b.coverage in ["Partial bony", "Complete bony"]]) or [b for b in tm_case_teeth if "PB, partial" in b.picks or "PB, unerupted" in b.picks or "FB" in b.picks] -%}
 {%- set problems_str = tm_ap_problems_text | join(sep="|") -%}
 {%- if bony and "insufficient space for eruption" not in tm_ap_problems_text -%}{%- set problems_str = problems_str ~ "|insufficient space for eruption" -%}{%- endif -%}
 {%- set problems = [v for v in problems_str | split(pat="|") if v] -%}
 {%- set rec = [
-  ("Extraction of " ~ teeth ~ " is recommended.") if tm_ap_extraction_rec else "",
-  tm_ap_rationale_text | join(sep=" ") if tm_ap_rationale_text else "",
-  ("Given the close proximity of the roots to the inferior alveolar canal, coronectomy of tooth " ~ tm_ap_fdi_tooth_for_coronectomy ~ " is recommended to reduce the risk of inferior alveolar nerve injury. The risks of root migration and a possible second surgery were discussed.") if coronectomy else "",
+  ("Extraction of " ~ (rest_phrase if cor else teeth) ~ " is recommended.") if tm_ap_extraction_rec and (rest or not cor) else "",
+  "Treatment was discussed as a means of reducing the likelihood of future pericoronitis, caries, periodontal disease, or pathology, with generally lower surgical risk and faster recovery at a younger age.",
+  ("Given the close proximity of the roots to the inferior alveolar canal, coronectomy of " ~ cor_phrase ~ " is recommended to reduce the risk of inferior alveolar nerve injury. The risks of root migration and a possible second surgery were discussed.") if coronectomy else "",
   "A surgical approach with sectioning of the crown and bone removal as needed is anticipated." if "surgical extraction" in np else "",
-  ("Cannabis use was noted; " ~ ext_dm_phrase ~ " was counseled that regular cannabis use may reduce the effectiveness of sedation and increase anesthetic requirements, and abstinence for at least 2 weeks before surgery was recommended.") if cannabis and sedated else "",
+  ("Cannabis use was noted; " ~ tm_case_discussed_with ~ (" were" if tm_case_family else " was") ~ " counseled that regular cannabis use may reduce the effectiveness of sedation and increase anesthetic requirements, and abstinence for at least 2 weeks before surgery was recommended.") if cannabis and sedated else "",
 ] -%}
 {%- set rec = [r for r in rec if r] -%}
 {%- set lines = [
-  ("Next procedure: " ~ ((np[:-1] | join(sep=", ")) ~ " and " ~ np[-1] if np | length > 1 else np | first) ~ ", " ~ teeth ~ (" under " ~ tm_ap_anesthesia_plan_text if tm_ap_anesthesia_plan else "") ~ ".") if np else "",
+  ("Next procedure: " ~ (np_parts | join(sep=" and ")) ~ (" under " ~ tm_ap_anesthesia_plan_text if tm_ap_anesthesia_plan else "") ~ ".") if cor and np_parts else "",
+  ("Next procedure: " ~ ((np[:-1] | join(sep=", ")) ~ " and " ~ np[-1] if np | length > 1 else np | first) ~ ", " ~ teeth ~ (" under " ~ tm_ap_anesthesia_plan_text if tm_ap_anesthesia_plan else "") ~ ".") if np and not cor else "",
   ("Antibiotics: " ~ tm_ap_antibiotics_text ~ ".") if tm_ap_antibiotics else "",
   ("Analgesia: " ~ tm_ap_analgesia_text | replace(from="[[tm_ap_opioid_dose_and_quantity]]", to=tm_ap_opioid_dose_and_quantity) ~ ".") if tm_ap_analgesia else "",
   "Chlorhexidine 0.12% rinse BID beginning the day after surgery for 1 week." if tm_ap_chlorhexidine_bullet else "",
@@ -44,7 +58,7 @@ body = """
   "MRONJ precautions: atraumatic technique with primary closure where feasible, and close follow-up until mucosal healing." if tm_ap_antiresorptive_bullet or (ext_hx_antiresorptive is defined and ext_hx_antiresorptive in ["Oral bisphosphonate", "IV BP / denosumab"]) else "",
   "Radiation oncology records requested to confirm dose to the surgical sites; ORN precautions with atraumatic technique, primary closure, and close follow-up." if tm_ap_radiation_bullet or (ext_hx_hn_radiation is defined and ext_hx_hn_radiation == "Yes") else "",
   "Antibiotic prophylaxis per current AHA or orthopedic guidance." if tm_ap_prophylaxis_bullet or (ext_hx_other_risk_factors is defined and ext_hx_other_risks is defined and ext_hx_other_risk_factors and ("Cardiac prophylaxis" in ext_hx_other_risks or "Prosthetic joint" in ext_hx_other_risks)) else "",
-  ("Written informed consent to be reviewed and signed by " ~ ext_dm_phrase ~ " at the surgical visit.") if tm_ap_consent_bullet else "",
+  ("Written informed consent to be reviewed and signed by " ~ tm_case_signer ~ " at the surgical visit.") if tm_ap_consent_bullet else "",
   ("Follow-up: " ~ tm_ap_follow_up_text ~ ".") if tm_ap_follow_up else "",
   tm_ap_next_step_text if tm_ap_next_step else "",
 ] -%}
@@ -55,7 +69,7 @@ body = """
 
 Alternatives reviewed: {% if alts | length > 1 %}{{ alts[:-1] | join(sep="; ") }}; and {{ alts[-1] }}{% else %}{{ alts | first }}{% endif %}.{% endif %}
 {% include "clinic_risks_third_molar" %}
-After shared decision making, {{ ext_dm_phrase }} {{ tm_ap_patient_decision_text if tm_ap_patient_decision else "***" }}
+After shared decision making, {{ tm_case_discussed_with }} {% if tm_ap_patient_decision %}{% if tm_case_family %}{{ tm_ap_patient_decision_text | replace(from="wishes", to="wish") | replace(from="declines", to="decline") }}{% else %}{{ tm_ap_patient_decision_text }}{% endif %}{% else %}***{% endif %}
 
 **PLAN:**
 {%- for l in lines %}{% if l %}
@@ -86,20 +100,6 @@ type = "checkbox"
 default = true
 
 [[fields]]
-key = "tm_ap_rationale"
-label = "Rationale"
-section = "Assessment & plan - third molar consult"
-type = "multiselect"
-options = [
-  { label = "Pericoronitis", text = "Extraction will eliminate the source of recurrent pericoronal infection." },
-  { label = "Second molar", text = "Removal will reduce the risk of caries and periodontal disease affecting the adjacent second molar." },
-  { label = "Pathology", text = "Removal will eliminate the risk of a pericoronal cyst or other associated pathology." },
-  { label = "Ortho", text = "Removal is required to allow the planned orthodontic or orthognathic treatment." },
-  { label = "Prophylactic", text = "In the absence of symptoms, removal was discussed as a means of reducing the likelihood of future pericoronitis, caries, periodontal disease, or pathology, with generally lower surgical risk and faster recovery at a younger age." },
-  { label = "***", text = "***" },
-]
-
-[[fields]]
 key = "tm_ap_coronectomy_sentence"
 label = "+ Coronectomy discussion"
 section = "Assessment & plan - third molar consult"
@@ -112,7 +112,7 @@ label = "FDI tooth for coronectomy"
 section = "Assessment & plan - third molar consult"
 type = "text"
 default = "***"
-visible_if = "'coronectomy' in tm_ap_next_procedure or tm_ap_coronectomy_sentence"
+visible_if = "('coronectomy' in tm_ap_next_procedure or tm_ap_coronectomy_sentence) and not tm_case_coronectomy_teeth"
 
 [[fields]]
 key = "tm_ap_alternatives"

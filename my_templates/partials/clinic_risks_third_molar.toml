@@ -7,15 +7,15 @@
 # The risk list is built once, in the hidden computed fields below, so the
 # note and the printed sheet read the same list.
 name = "Snippet: Risks - third molar extraction"
-use_partials = ["common_extraction_case"]
+use_partials = ["common_extraction_case", "common_third_molar_case"]
 
 body = """
 {%- set specific = tm_risk_specific -%}
-Risks, benefits, and alternatives were discussed with {{ ext_dm_phrase }}. Risks reviewed:
+Risks, benefits, and alternatives were discussed with {{ tm_case_discussed_with }}. Risks reviewed:
 - General surgical: {{ tm_risk_general }}.{% if specific %}
 - Specific to the planned procedure: {% if specific | length > 1 %}{{ specific[:-1] | join(sep="; ") }}; and {{ specific[-1] }}{% else %}{{ specific | first }}{% endif %}.{% endif %}
 
-It was explained that outcomes cannot be guaranteed. All questions were answered, and {{ ext_dm_phrase }} verbalized understanding.{% if ext_decision_maker in ["Parent", "Legal guardian", "Healthcare POA"] %} The patient participated in the discussion to the extent of their ability.{% endif %}"""
+It was explained that outcomes cannot be guaranteed. All questions were answered, and {{ tm_case_discussed_with }} verbalized understanding."""
 
 # ------------------------------------------------------------ risk list ---
 # Built once here for both the note and the printed sheet (where each risk
@@ -27,7 +27,7 @@ label = "Next procedure components"
 section = "Risks - third molar extraction"
 type = "computed"
 visible_if = "false"
-compute = 'tm_ap_next_procedure if tm_ap_next_procedure is defined else []'
+compute = '[...(tm_ap_next_procedure if tm_ap_next_procedure is defined else []), ...(["coronectomy"] if [b for b in tm_case_teeth if "coronectomy" in b.picks] else [])]'
 
 [[fields]]
 key = "tm_risk_general"

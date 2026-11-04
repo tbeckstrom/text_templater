@@ -3,10 +3,12 @@
 # One box per tooth to extract. Pericoronal status preselects the normal
 # finding; every other descriptor drops out until picked. The vital structure
 # follows from the tooth (18/28 sinus, 38/48 canal) unless picked, and its
-# proximity defaults to "in close proximity to". Incomplete root development
+# proximity defaults to "in close proximity to". The quick picks at the top
+# give the coverage unless it's picked here, and a quick-picked coronectomy
+# reads "roots overlapping the IAN". Incomplete root development
 # picked on every tooth prints once as a summary line.
 name = "Snippet: Imaging - third molar consult"
-use_partials = ["common_extraction_case"]
+use_partials = ["common_extraction_case", "common_third_molar_case"]
 
 body = """
 {%- set immature = [b.tooth for b in tm_img_teeth if b.incomplete_roots] -%}
@@ -14,15 +16,24 @@ body = """
 {%- if tm_img_imaging_modality %}- Images reviewed: {% for v in tm_img_imaging_modality %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}
 {% endif %}
 {%- for b in tm_img_teeth %}
+{%- set quick = [c.picks for c in tm_case_teeth if c.tooth == b.tooth] -%}
+{%- set quick = quick | first if quick else [] -%}
+{%- set seen = [
+  "erupted" if "erupted" in quick else "",
+  "malposed" if "partial erupted" in quick else "",
+  "PBI" if "PB, partial" in quick or "PB, unerupted" in quick else "",
+  "FBI" if "FB" in quick else "",
+] -%}
+{%- set seen = [v for v in seen if v] -%}
 {%- set vs = b.vital_structure if b.vital_structure else ("maxillary sinus" if b.tooth in ["18", "28"] else ("inferior alveolar canal" if b.tooth in ["38", "48"] else "")) -%}
 {%- set parts = [
   (b.angulation ~ " angulation") if b.angulation else "",
-  b.coverage_text if b.coverage else "",
+  b.coverage_text if b.coverage else seen | join(sep=", "),
   ((b.root_form[:-1] | join(sep=", ")) ~ " and " ~ b.root_form[-1] if b.root_form | length > 1 else b.root_form | first) ~ " roots" if b.root_form else "",
   "incomplete root development" if b.incomplete_roots and not all_immature else "",
   b.pericoronal_text if b.pericoronal else "",
   b.second_molar_text if b.second_molar else "",
-  ("roots " ~ b.proximity ~ " the " ~ vs) if b.proximity and vs else "",
+  "roots overlapping the IAN" if "coronectomy" in quick else (("roots " ~ b.proximity ~ " the " ~ vs) if b.proximity and vs else ""),
   ((b.canal_findings[:-1] | join(sep=", ")) ~ " and " ~ b.canal_findings[-1] if b.canal_findings | length > 1 else b.canal_findings | first) if b.canal_findings else "",
 ] -%}
 {%- set parts = [p for p in parts if p] -%}
@@ -65,7 +76,7 @@ options = ["mesioangular", "distoangular", "vertical", "horizontal", "***"]
 
 [[groups.fields]]
 key = "coverage"
-label = "Coverage"
+label = "Coverage (blank = from the quick picks)"
 type = "dropdown"
 options = [
   { label = "Soft tissue", text = "soft tissue impaction" },

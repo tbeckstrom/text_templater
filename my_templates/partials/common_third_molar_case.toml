@@ -1,0 +1,76 @@
+# SNIPPET: common_third_molar_case   PREFIX: tm_case
+# Third molar consult facts entered at the top of the form, beside the teeth
+# to extract: which parent came along, and per-tooth quick picks that the
+# exam, imaging and assessment/plan sections each read. A choice made by hand
+# in those sections wins over the quick pick. The hidden computed fields turn
+# them into ready-made wording.
+use_partials = ["common_extraction_case"]
+body = ""
+
+[[fields]]
+key = "tm_case_parent"
+label = "Here with their"
+section = "Case"
+type = "dropdown"
+default = "parent"
+options = ["mother", "father", "parent"]
+visible_if = "ext_decision_maker == 'Parent'"
+
+# ------------------------------------------------ one line per tooth ---
+# Exam / imaging wording per pick:
+#   erupted          -> erupted / erupted
+#   partial erupted  -> partially erupted, non-hygienic / malposed
+#   PB, partial      -> partially erupted, non-hygienic / PBI
+#   PB, unerupted    -> not visible / PBI
+#   FB               -> not visible / FBI
+#   Perio            -> 5+ mm probing depth at the distal of the adjacent tooth
+#   coronectomy      -> roots overlapping the IAN, plus the coronectomy plan
+
+[[groups]]
+key = "tm_case_teeth"
+label = "Quick findings"
+source = "ext_extract_teeth"
+source_as = "tooth"
+section = "Case"
+compact = true
+
+[[groups.fields]]
+key = "picks"
+label = "Quick findings"
+type = "multiselect"
+options = ["erupted", "partial erupted", "PB, partial", "PB, unerupted", "FB", "Perio", "coronectomy"]
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "tm_case_coronectomy_teeth"
+label = "Coronectomy teeth"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '[b.tooth for b in tm_case_teeth if "coronectomy" in b.picks]'
+
+[[fields]]
+key = "tm_case_family"
+label = "Here with family"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"1" if ext_decision_maker == "Parent" else ""'
+
+[[fields]]
+key = "tm_case_discussed_with"
+label = "Discussed with"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"the patient and family" if ext_decision_maker == "Parent" else ext_dm_phrase'
+
+[[fields]]
+key = "tm_case_signer"
+label = "Consent signer"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '''("the patient's " ~ tm_case_parent ~ " (" ~ ext_dm_name ~ ")") if ext_decision_maker == "Parent" else ext_dm_phrase'''
