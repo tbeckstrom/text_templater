@@ -1,0 +1,137 @@
+# SNIPPET: op_header_biopsy   PREFIX: bx_hdr
+# Header block of the soft tissue biopsy procedure note: per-site diagnosis,
+# procedure and specimen lines (from the site boxes in common_bx_case, with a
+# Michel's medium line for a DIF site), anesthesia and vitals.
+name = "Snippet: Header - biopsy"
+use_partials = ["common_bx_case"]
+
+body = """
+**PREPROCEDURE DIAGNOSIS:**
+{% for b in bx_sites %}
+{%- set nm = [(b.site_side ~ " " ~ b.site_location) if b.site_side and b.site_location else "", b.site_detail_e_g_adjacent_to_36] -%}
+{%- set nm = [n for n in nm if n] | join(sep=", ") -%}
+{% if b.clinical_impression %}Lesion of the {{ nm }} - {{ b.clinical_impression_text | join(sep=", ") }}
+{% endif %}{% endfor %}
+{%- if bx_hdr_additional_diagnosis %}{{ bx_hdr_additional_diagnosis }}
+{% endif %}
+**POSTPROCEDURE DIAGNOSIS:**
+Same as preoperative, pending histopathologic evaluation
+
+**PROCEDURE:**
+{% for b in bx_sites %}
+{%- set nm = [(b.site_side ~ " " ~ b.site_location) if b.site_side and b.site_location else "", b.site_detail_e_g_adjacent_to_36] -%}
+{%- set nm = [n for n in nm if n] | join(sep=", ") -%}
+Biopsy, {{ nm }} ({{ b.biopsy_type_text | replace(from="[[punch_size]]", to=b.punch_size) }})
+{% endfor %}
+**SURGEON:**
+Thomas Beckstrom DDS, MD
+
+**ANESTHESIA:**
+{% for l in bx_sedation_lines %}{{ l }}
+{% endfor %}
+{%- set local = bx_hdr_local_agents_text | join(sep="\n") | replace(from="[[bx_hdr_lido_carps]]", to=bx_hdr_lido_carps) | replace(from="[[bx_hdr_arti_carps]]", to=bx_hdr_arti_carps) | replace(from="[[bx_hdr_bupi_carps]]", to=bx_hdr_bupi_carps) | replace(from="[[bx_hdr_mepi_carps]]", to=bx_hdr_mepi_carps) -%}
+Local anesthesia with:
+{{ local }}
+
+**SPECIMEN:**
+{% for b in bx_sites %}
+{%- set nm = [(b.site_side ~ " " ~ b.site_location) if b.site_side and b.site_location else "", b.site_detail_e_g_adjacent_to_36] -%}
+{%- set nm = [n for n in nm if n] | join(sep=", ") -%}
+Soft tissue, {{ nm }} ({{ b.biopsy_type_text | replace(from="[[punch_size]]", to=b.punch_size) }} biopsy), in 10% formalin to {{ bx_path_lab }}
+{% if b.dif_specimen %}Perilesional tissue, {{ nm }}, in Michel's medium to {{ bx_path_lab }} for direct immunofluorescence
+{% endif %}{% endfor %}
+**VITALS:**
+{{ bx_hdr_vitals_line_text | replace(from="[[bx_hdr_bp]]", to=bx_hdr_bp) | replace(from="[[bx_hdr_hr]]", to=bx_hdr_hr) }}
+"""
+
+# ----------------------------------------------------------- diagnosis ---
+
+[[fields]]
+key = "bx_hdr_additional_diagnosis"
+label = "Additional diagnosis"
+section = "Header - biopsy"
+type = "text"
+default = ""
+
+# ---------------------------------------------------------- anesthesia ---
+
+[[fields]]
+key = "bx_hdr_local_agents"
+label = "Local anesthetic"
+section = "Header - biopsy"
+type = "multiselect"
+default = ["Lidocaine 2%", "Topical"]
+options = [
+  { label = "Lidocaine 2%", text = "1.7 mL 2% lidocaine with 1:100,000 epinephrine x [[bx_hdr_lido_carps]]" },
+  { label = "Articaine 4%", text = "1.7 mL 4% articaine with 1:100,000 epinephrine x [[bx_hdr_arti_carps]]" },
+  { label = "Bupivacaine 0.5%", text = "1.7 mL 0.5% bupivacaine with 1:200,000 epinephrine x [[bx_hdr_bupi_carps]]" },
+  { label = "Mepivacaine 3% plain", text = "1.7 mL 3% mepivacaine plain x [[bx_hdr_mepi_carps]]" },
+  { label = "Topical", text = "Topical anesthetic applied prior to injections" },
+]
+
+[[fields]]
+key = "bx_hdr_lido_carps"
+label = "Lidocaine"
+section = "Header - biopsy"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "***"]
+visible_if = "'Lidocaine 2%' in bx_hdr_local_agents"
+
+[[fields]]
+key = "bx_hdr_arti_carps"
+label = "Articaine"
+section = "Header - biopsy"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "***"]
+visible_if = "'Articaine 4%' in bx_hdr_local_agents"
+
+[[fields]]
+key = "bx_hdr_bupi_carps"
+label = "Bupivacaine"
+section = "Header - biopsy"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "***"]
+visible_if = "'Bupivacaine 0.5%' in bx_hdr_local_agents"
+
+[[fields]]
+key = "bx_hdr_mepi_carps"
+label = "Mepivacaine"
+section = "Header - biopsy"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "***"]
+visible_if = "'Mepivacaine 3% plain' in bx_hdr_local_agents"
+
+# -------------------------------------------------------------- vitals ---
+
+[[fields]]
+key = "bx_hdr_vitals_line"
+label = "Vitals"
+section = "Header - biopsy"
+type = "dropdown"
+default = "WNL"
+options = [
+  { label = "WNL", text = "BP: WNL, HR: WNL" },
+  { label = "Values", text = "BP: [[bx_hdr_bp]], HR: [[bx_hdr_hr]]" },
+  { label = "Anesthesia record", text = "See anesthesia record for details" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "bx_hdr_bp"
+label = "BP"
+section = "Header - biopsy"
+type = "text"
+default = "***"
+visible_if = "bx_hdr_vitals_line == 'Values'"
+
+[[fields]]
+key = "bx_hdr_hr"
+label = "HR"
+section = "Header - biopsy"
+type = "text"
+default = "***"
+visible_if = "bx_hdr_vitals_line == 'Values'"

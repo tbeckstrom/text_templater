@@ -1,0 +1,262 @@
+# SNIPPET: common_bx_case   PREFIX: bx
+# The facts every soft tissue biopsy procedure section shares, entered once at
+# the top of the form: age, PMH, sedation adds, pathology lab and the biopsy
+# site boxes. The site boxes (bx_sites) are entered here and printed by the
+# header, indications and procedure snippets, each in its own wording.
+body = ""
+
+[[fields]]
+key = "bx_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "bx_patient_pmh"
+label = "PMH"
+section = "Case"
+type = "text"
+default = ""
+
+[[fields]]
+key = "bx_nitrous"
+label = "+ Nitrous"
+section = "Case"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "bx_iv_sedation"
+label = "+ IV sedation"
+section = "Case"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "bx_ga_time"
+label = "Total anesthesia time (min)"
+section = "Case"
+type = "dropdown"
+required = true
+options = ["30", "45", "60", "90", "120", "***"]
+visible_if = "bx_iv_sedation"
+
+[[fields]]
+key = "bx_asa_class"
+label = "ASA class"
+section = "Case"
+type = "dropdown"
+default = "I"
+options = ["I", "II", "III", "IV", "***"]
+visible_if = "bx_iv_sedation"
+
+[[fields]]
+key = "bx_path_lab"
+label = "Pathology lab"
+section = "Case"
+type = "dropdown"
+default = "BC Oral Biopsy Service"
+options = ["BC Oral Biopsy Service", "***"]
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "bx_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'bx_patient_age ~ "-year-old patient"'
+
+[[fields]]
+key = "bx_pmh_sentence"
+label = "PMH sentence"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '("Medical history significant for " ~ bx_patient_pmh ~ ".") if bx_patient_pmh else ""'
+
+[[fields]]
+key = "bx_sedation_lines"
+label = "Sedation lines"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '''[l for l in [
+  "IV sedation, see anesthesia record for full report" if bx_iv_sedation else "",
+  ("Total anesthesia time: " ~ bx_ga_time ~ " minutes") if bx_iv_sedation and bx_ga_time else "",
+  ("ASA class: " ~ bx_asa_class) if bx_iv_sedation and bx_asa_class else "",
+  "Anxiolysis with N2O/O2" if bx_nitrous else "",
+] if l]'''
+
+[[fields]]
+key = "bx_specimen_sentence"
+label = "Specimen sentence"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"The specimen was placed in 10% formalin and submitted to " ~ bx_path_lab ~ " for histopathologic evaluation."'
+
+# ---------------------------------------------------------- biopsy sites ---
+# One box per site, added with "+ Add Biopsy site".
+
+[[groups]]
+key = "bx_sites"
+label = "Biopsy site"
+section = "Case"
+
+[[groups.speed_buttons]]
+label = "Fibroma excision"
+values = { clinical_impression = ["Irritation fibroma"], biopsy_type = "Excisional", closure = "4-0 chromic gut", photos_size = false, salivary_glands = false, margins = false, dif_specimen = false }
+
+[[groups.speed_buttons]]
+label = "Lip mucocele"
+values = { site_location = "lower lip", clinical_impression = ["Mucocele"], biopsy_type = "Excisional", closure = "4-0 chromic gut", photos_size = false, salivary_glands = true, margins = false, dif_specimen = false }
+
+[[groups.speed_buttons]]
+label = "Leukoplakia incisional"
+values = { clinical_impression = ["Leukoplakia", "r/o SCC"], biopsy_type = "Incisional", closure = "4-0 chromic gut", photos_size = true, salivary_glands = false, margins = false, dif_specimen = false }
+
+[[groups.speed_buttons]]
+label = "Lichenoid + DIF"
+values = { clinical_impression = ["Lichenoid lesion"], biopsy_type = "Incisional", closure = "4-0 chromic gut", photos_size = false, salivary_glands = false, margins = false, dif_specimen = true }
+
+[[groups.fields]]
+key = "site_side"
+label = "Side"
+type = "dropdown"
+required = true
+options = ["right", "left", "midline", "***"]
+
+[[groups.fields]]
+key = "site_location"
+label = "Location"
+type = "dropdown"
+required = true
+options = ["lower lip", "buccal mucosa", "lateral tongue", "ventral tongue", "floor of mouth", "hard palate", "soft palate", "gingiva", "vestibule", "***"]
+
+[[groups.fields]]
+key = "site_detail_e_g_adjacent_to_36"
+label = "Site detail, e.g. adjacent to 36"
+type = "text"
+default = ""
+
+[[groups.fields]]
+key = "clinical_impression"
+label = "Clinical impression"
+type = "multiselect"
+options = [
+  { label = "Irritation fibroma", text = "irritation fibroma" },
+  { label = "Mucocele", text = "mucocele" },
+  { label = "Squamous papilloma", text = "squamous papilloma" },
+  { label = "Leukoplakia", text = "leukoplakia" },
+  { label = "Erythroplakia", text = "erythroplakia" },
+  { label = "Erythroleukoplakia", text = "erythroleukoplakia" },
+  { label = "Pyogenic granuloma", text = "pyogenic granuloma" },
+  { label = "Nonhealing ulcer", text = "nonhealing ulcer" },
+  { label = "Pigmented lesion", text = "pigmented lesion" },
+  { label = "Lichenoid lesion", text = "lichenoid lesion" },
+  { label = "r/o SCC", text = "rule out squamous cell carcinoma" },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "biopsy_type"
+label = "Biopsy type"
+type = "dropdown"
+default = "Excisional"
+options = [
+  { label = "Excisional", text = "excisional" },
+  { label = "Incisional", text = "incisional" },
+  { label = "Punch", text = "[[punch_size]] mm punch" },
+]
+
+[[groups.fields]]
+key = "punch_size"
+label = "Punch size (mm)"
+type = "dropdown"
+default = "4"
+options = ["3", "4", "5", "6", "***"]
+visible_if = "biopsy_type == 'Punch'"
+
+[[groups.fields]]
+key = "photos_size"
+label = "+ Photos / size"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "lesion_size_mm_e_g_8_x_5"
+label = "Lesion size mm, e.g. 8 x 5"
+type = "text"
+default = "***"
+visible_if = "photos_size"
+
+[[groups.fields]]
+key = "salivary_glands"
+label = "+ Minor salivary glands"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "margins"
+label = "+ Margins / orientation"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "margin_marker"
+label = "Suture marks the margin"
+type = "dropdown"
+default = "superior"
+options = ["superior", "anterior", "medial", "***"]
+visible_if = "margins"
+
+[[groups.fields]]
+key = "dif_specimen"
+label = "+ DIF specimen"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "lip_nerve"
+label = "+ Mental nerve line"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "fom_structures"
+label = "+ Duct / lingual nerve line"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "hemostasis"
+label = "Hemostasis"
+type = "dropdown"
+default = "local pressure"
+options = ["local pressure", "electrocautery", "a hemostatic agent", "***"]
+
+[[groups.fields]]
+key = "closure"
+label = "Closure"
+type = "dropdown"
+default = "4-0 chromic gut"
+options = [
+  { label = "4-0 chromic gut", text = "The site was closed primarily with 4-0 chromic gut suture in [[suture_pattern]] fashion." },
+  { label = "4-0 Vicryl", text = "The site was closed primarily with 4-0 Vicryl suture in [[suture_pattern]] fashion." },
+  { label = "5-0 Vicryl", text = "The site was closed primarily with 5-0 Vicryl suture in [[suture_pattern]] fashion." },
+  { label = "3-0 silk", text = "The site was closed primarily with 3-0 silk suture in [[suture_pattern]] fashion." },
+  { label = "Secondary intention", text = "The site was left to heal by secondary intention." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "suture_pattern"
+label = "Suture pattern"
+type = "dropdown"
+default = "simple interrupted"
+options = ["simple interrupted", "continuous running", "horizontal mattress", "***"]
+visible_if = "closure in ['4-0 chromic gut', '4-0 Vicryl', '5-0 Vicryl', '3-0 silk']"

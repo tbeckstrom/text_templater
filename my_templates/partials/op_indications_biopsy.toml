@@ -1,0 +1,110 @@
+# SNIPPET: op_indications_biopsy   PREFIX: bx_ind
+# History and indications for the soft tissue biopsy procedure note. The
+# definitive-removal sentence is derived from any excisional site box (or
+# ticked by hand); NPO confirmation is derived from IV sedation.
+name = "Snippet: History and indications - biopsy"
+use_partials = ["common_bx_case"]
+
+body = """
+{%- set sites = ["a lesion of the " ~ ([n for n in [(b.site_side ~ " " ~ b.site_location) if b.site_side and b.site_location else "", b.site_detail_e_g_adjacent_to_36] if n] | join(sep=", ")) for b in bx_sites] -%}
+{%- set types = [b.biopsy_type for b in bx_sites] -%}
+**HISTORY AND INDICATIONS:**
+{{ bx_pt_intro }} presenting for biopsy of {% if sites %}{% for v in sites %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}{% else %}***{% endif %}.
+{% if bx_pmh_sentence %}{{ bx_pmh_sentence }}
+{% endif %}
+{%- if bx_ind_indications %}Biopsy is indicated {% for v in bx_ind_indications_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.
+{% endif %}
+{%- if "Excisional" in types or bx_ind_definitive_removal %}Excisional biopsy was planned to provide both diagnosis and definitive removal of the lesion.
+{% endif %}The health history and indications for the procedure were reviewed and an examination was performed.{% if bx_ind_interval_changes_text %} {{ bx_ind_interval_changes_text | join(sep=" ") | replace(from="[[bx_ind_history_changes]]", to=bx_ind_history_changes) | replace(from="[[bx_ind_exam_changes]]", to=bx_ind_exam_changes) | replace(from="[[bx_ind_plan_changes]]", to=bx_ind_plan_changes) }}{% endif %}{% if bx_ind_surrogate %} The plan of treatment was confirmed with {{ bx_ind_surrogate_role }}, {{ bx_ind_surrogate_name }}.{% endif %} The details of the procedure and its risks, benefits and alternatives were again reviewed, and all questions were invited and answered prior to starting. Informed consent was obtained.{% if bx_iv_sedation %} NPO status was confirmed.{% endif %}
+{%- if bx_ind_auscultation %}
+Heart and lungs auscultated prior to beginning: RRR, lungs CTAB.{% endif %}
+"""
+
+[[fields]]
+key = "bx_ind_indications"
+label = "Indications"
+section = "History and indications"
+type = "multiselect"
+default = ["Diagnosis", "Rule out malignancy"]
+options = [
+  { label = "Diagnosis", text = "to establish a definitive histopathologic diagnosis" },
+  { label = "Rule out malignancy", text = "to rule out dysplasia or malignancy" },
+  { label = "Persisting", text = "given persistence of the lesion after removal of local irritants" },
+  { label = "Symptomatic", text = "given symptoms and repeated trauma to the lesion during function" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "bx_ind_definitive_removal"
+label = "+ Definitive removal"
+section = "History and indications"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "bx_ind_interval_changes"
+label = "Interval changes"
+section = "History and indications"
+type = "multiselect"
+default = ["No changes"]
+options = [
+  { label = "No changes", text = "There have been no changes in the health history, examination or treatment plan since the last visit." },
+  { label = "History changed", text = "The patient reports interval changes to the health history including [[bx_ind_history_changes]]." },
+  { label = "Exam changed", text = "The examination today is notable for [[bx_ind_exam_changes]]." },
+  { label = "Plan changed", text = "The following changes to the treatment plan were discussed: [[bx_ind_plan_changes]]." },
+]
+
+[[fields]]
+key = "bx_ind_history_changes"
+label = "History changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'History changed' in bx_ind_interval_changes"
+
+[[fields]]
+key = "bx_ind_exam_changes"
+label = "Exam changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Exam changed' in bx_ind_interval_changes"
+
+[[fields]]
+key = "bx_ind_plan_changes"
+label = "Plan changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Plan changed' in bx_ind_interval_changes"
+
+[[fields]]
+key = "bx_ind_surrogate"
+label = "+ Surrogate decision-maker"
+section = "History and indications"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "bx_ind_surrogate_role"
+label = "Surrogate"
+section = "History and indications"
+type = "dropdown"
+default = "the patient's parent"
+options = ["the patient's parent", "the patient's legal guardian", "the patient's healthcare power of attorney", "***"]
+visible_if = "bx_ind_surrogate"
+
+[[fields]]
+key = "bx_ind_surrogate_name"
+label = "Surrogate name"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "bx_ind_surrogate"
+
+[[fields]]
+key = "bx_ind_auscultation"
+label = "+ Heart/lungs auscultated"
+section = "History and indications"
+type = "checkbox"
+default = false

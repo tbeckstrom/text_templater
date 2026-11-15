@@ -1,0 +1,16 @@
+# NOTE: op_note_biopsy
+# Soft tissue biopsy procedure note assembled from the bx snippets;
+# common_bx_case holds the facts they share (age, PMH, sedation, pathology lab
+# and the biopsy site boxes).
+name = "Procedure - Soft tissue biopsy"
+use_partials = ["common_bx_case", "op_header_biopsy", "op_indications_biopsy", "op_procedure_biopsy", "op_postop_biopsy"]
+
+body = """
+{% include "common_bx_case" %}**ORAL AND MAXILLOFACIAL SURGERY PROCEDURE NOTE**
+
+{% include "op_header_biopsy" %}
+{% include "op_indications_biopsy" %}
+{% include "op_procedure_biopsy" %}
+{% include "op_postop_biopsy" %}
+Thomas Beckstrom
+"""

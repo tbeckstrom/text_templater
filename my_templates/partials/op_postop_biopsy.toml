@@ -1,0 +1,53 @@
+# SNIPPET: op_postop_biopsy   PREFIX: bx_post
+# Post-op instructions, medications (OTC analgesia preselected), the
+# pathology-results bullet (on) and follow-up, which starts unpicked.
+name = "Snippet: Post-op - biopsy"
+
+body = """
+**POST-OPERATIVE INSTRUCTIONS:** Given both verbally and in writing.
+
+**POST-OPERATIVE MEDICATIONS:**
+{{ bx_post_postop_meds_text | join(sep="\n") }}
+
+**PLAN/FOLLOW UP:**
+{% if bx_post_path_results %}- Pathology results to be reviewed with the patient at follow-up.
+{% endif %}
+{%- if bx_post_follow_up %}- Follow up {{ bx_post_follow_up }}
+{% endif %}
+{%- if bx_post_additional_plan %}- {{ bx_post_additional_plan }}
+{% endif %}"""
+
+[[fields]]
+key = "bx_post_postop_meds"
+label = "Post-op medications"
+section = "Post-op - biopsy"
+type = "multiselect"
+default = ["Ibuprofen 400 OTC", "Acetaminophen 1000 OTC"]
+options = [
+  { label = "Ibuprofen 400 OTC", text = "Ibuprofen 400 mg (OTC) every 6 hours as needed for pain" },
+  { label = "Acetaminophen 1000 OTC", text = "Acetaminophen 1000 mg (OTC) every 6 hours as needed for pain, max 4000 mg/day" },
+  { label = "Chlorhexidine BID x2wk", text = "Chlorhexidine oral rinse BID x 2 weeks" },
+  { label = "Tylenol #3", text = "Acetaminophen-codeine 300-30 mg (Tylenol #3) 1-2 tabs every 4-6 hours as needed for severe pain" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "bx_post_path_results"
+label = "Path results bullet"
+section = "Post-op - biopsy"
+type = "checkbox"
+default = true
+
+[[fields]]
+key = "bx_post_follow_up"
+label = "Follow up"
+section = "Post-op - biopsy"
+type = "dropdown"
+options = ["in 1 week", "in 2 weeks", "as needed", "***"]
+
+[[fields]]
+key = "bx_post_additional_plan"
+label = "Additional plan"
+section = "Post-op - biopsy"
+type = "text"
+default = ""

@@ -1,0 +1,57 @@
+# SNIPPET: op_procedure_biopsy   PREFIX: bx_proc
+# Description of procedure for a soft tissue biopsy visit: opening, one
+# paragraph per site box from common_bx_case (technique by biopsy type,
+# location-derived protective lines, the site's adds, hemostasis, closure,
+# specimen), then the standard close.
+name = "Snippet: Procedure - biopsy"
+use_partials = ["common_bx_case"]
+
+body = """
+**DESCRIPTION OF PROCEDURE:**
+Timeout performed.{% if bx_proc_albuterol %} Two puffs of albuterol inhaler were administered prior to beginning the procedure.{% endif %}{% if bx_iv_sedation %} IV sedation was administered (see anesthesia record); the patient tolerated this well with good effect.{% endif %}{% if bx_nitrous %} 100% O2 was given via nasal hood at 5 L/min for greater than 5 minutes, followed by titration of N2O to 50%.{% endif %} Local anesthesia was administered as above.{% if bx_proc_airway_items_text %} {{ bx_proc_airway_items_text | join(sep=" ") }}{% endif %}
+{% for b in bx_sites %}
+{%- set nm = [(b.site_side ~ " " ~ b.site_location) if b.site_side and b.site_location else "", b.site_detail_e_g_adjacent_to_36] -%}
+{%- set nm = [n for n in nm if n] | join(sep=", ") -%}
+{%- set parts = [
+  ("Clinical photographs were obtained, and the lesion measured approximately " ~ b.lesion_size_mm_e_g_8_x_5 ~ " mm.") if b.photos_size else "",
+  "An elliptical incision was made around the lesion with a 15 blade, and the lesion was excised in its entirety at a depth sufficient to include its base." if b.biopsy_type == "Excisional" else "",
+  "An elliptical wedge of tissue including the most representative area of the lesion and a margin of adjacent normal-appearing tissue was excised with a 15 blade." if b.biopsy_type == "Incisional" else "",
+  "A punch biopsy instrument was used to obtain a full-thickness specimen from the most representative area of the lesion, which was released at its base with tissue scissors." if b.biopsy_type == "Punch" else "",
+  "Dissection was kept superficial to the orbicularis oris muscle, taking care to protect the labial branches of the mental nerve." if b.site_location == "lower lip" or b.lip_nerve else "",
+  "Dissection was performed with care to avoid the submandibular duct, lingual nerve and lingual vessels." if b.site_location in ["floor of mouth", "ventral tongue"] or b.fom_structures else "",
+  "Minor salivary glands at the base of the lesion were removed with the specimen to reduce the risk of recurrence." if b.salivary_glands else "",
+  ("Margins of approximately 2 mm of clinically normal tissue were included, and the specimen was oriented with a suture at the " ~ b.margin_marker ~ " margin.") if b.margins and b.margin_marker else "",
+  "A second specimen of perilesional tissue was obtained and placed in Michel's medium for direct immunofluorescence." if b.dif_specimen else "",
+  ("Hemostasis was achieved with " ~ b.hemostasis ~ ".") if b.hemostasis else "",
+  (b.closure_text | replace(from="[[suture_pattern]]", to=b.suture_pattern)) if b.closure else "",
+  bx_specimen_sentence,
+] -%}
+{%- if loop.first %}
+{% endif %}Biopsy, {{ nm }}: {{ [p for p in parts if p] | join(sep=" ") }}
+{% endfor %}
+Gauze pressure dressings were placed.{% if "Throat screen" in bx_proc_airway_items %} The throat screen was removed and the oropharynx was inspected.{% endif %}{% if bx_nitrous %} N2O was turned off and 100% O2 was administered for greater than 5 minutes.{% endif %} No complications. The patient remained stable throughout.{% if bx_proc_tolerated %} The patient tolerated the procedure well.{% endif %} At the conclusion of the procedure, the patient was fully awake, alert and stable for discharge, and the biopsy sites were hemostatic.{% if bx_iv_sedation %} The patient was discharged in the care of a responsible adult escort.{% endif %}
+"""
+
+[[fields]]
+key = "bx_proc_albuterol"
+label = "+ Pre-op albuterol"
+section = "Procedure - biopsy"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "bx_proc_airway_items"
+label = "Airway items"
+section = "Procedure - biopsy"
+type = "multiselect"
+options = [
+  { label = "Throat screen", text = "A throat screen was placed for airway protection." },
+  { label = "Bite block", text = "A bite block was used for stabilization." },
+]
+
+[[fields]]
+key = "bx_proc_tolerated"
+label = "Tolerated well"
+section = "Procedure - biopsy"
+type = "checkbox"
+default = true
