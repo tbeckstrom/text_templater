@@ -1,0 +1,168 @@
+# SNIPPET: op_header_implant   PREFIX: ipl_hdr
+# Header block of the implant placement procedure note: diagnosis and
+# procedure list derived from the procedure's site boxes (healed, immediate,
+# GBR, crestal sinus lift), anesthesia, specimen (immediate sites only) and
+# vitals.
+name = "Snippet: Header - implant placement"
+use_partials = ["common_implplace_case"]
+
+body = """
+{%- set has_proc = ipl_proc_healed_sites is defined and ipl_proc_healed_sites_list is defined and ipl_proc_healed_sites_site_word is defined -%}
+{%- set healed = ipl_proc_healed_sites if has_proc else ipl_implant_sites -%}
+{%- set healed_list = ipl_proc_healed_sites_list if has_proc else ipl_implant_sites_list -%}
+{%- set healed_word = ipl_proc_healed_sites_site_word if has_proc else ipl_implant_sites_site_word -%}
+{%- set immediate = ipl_proc_immediate_sites is defined and ipl_proc_immediate_sites_list is defined and ipl_proc_immediate_sites_tooth_word is defined and ipl_proc_immediate_sites -%}
+{%- set gbr = ipl_proc_gbr_sites is defined and ipl_proc_gbr_sites_list is defined and ipl_proc_gbr_sites_site_word is defined and ipl_proc_gbr_sites -%}
+{%- set sinus = ipl_proc_sinus_sites is defined and ipl_proc_sinus_sites_list is defined and ipl_proc_sinus_sites_site_word is defined and ipl_proc_sinus_sites -%}
+{%- set dx = [
+  (ipl_hdr_edentulism_type_text ~ ", " ~ healed_word ~ " " ~ healed_list) if ipl_hdr_edentulism_type and healed else "",
+  ("Nonrestorable " ~ ipl_proc_immediate_sites_tooth_word ~ " " ~ ipl_proc_immediate_sites_list) if immediate else "",
+  ipl_hdr_additional_diagnosis,
+] -%}
+{%- set procs = [
+  ("Fully guided endosseous implant placement, " ~ healed_word ~ " " ~ healed_list) if healed else "",
+  ("Extraction of " ~ ipl_proc_immediate_sites_tooth_word ~ " " ~ ipl_proc_immediate_sites_list ~ " with immediate fully guided endosseous implant placement") if immediate else "",
+  ("Guided bone regeneration, " ~ ipl_proc_gbr_sites_site_word ~ " " ~ ipl_proc_gbr_sites_list) if gbr else "",
+  ("Crestal sinus floor augmentation, " ~ ipl_proc_sinus_sites_site_word ~ " " ~ ipl_proc_sinus_sites_list) if sinus else "",
+] -%}
+{%- set local = ipl_hdr_local_agents_text | join(sep="\n") | replace(from="[[ipl_hdr_lido_carps]]", to=ipl_hdr_lido_carps) | replace(from="[[ipl_hdr_arti_carps]]", to=ipl_hdr_arti_carps) | replace(from="[[ipl_hdr_pril_carps]]", to=ipl_hdr_pril_carps) | replace(from="[[ipl_hdr_bupi_carps]]", to=ipl_hdr_bupi_carps) | replace(from="[[ipl_hdr_mepi_carps]]", to=ipl_hdr_mepi_carps) -%}
+**PREPROCEDURE DIAGNOSIS:**
+{% for l in dx %}{% if l %}{{ l }}
+{% endif %}{% endfor %}
+**POSTPROCEDURE DIAGNOSIS:**
+Same as preoperative
+
+**PROCEDURE:**
+{% for l in procs %}{% if l %}{{ l }}
+{% endif %}{% endfor %}
+**SURGEON:**
+Thomas Beckstrom DDS, MD
+
+**ANESTHESIA:**
+{% for l in ipl_sedation_lines %}{{ l }}
+{% endfor -%}
+Local anesthesia with:
+{{ local }}
+
+{% if immediate %}**SPECIMEN:**
+Dentition for disposal
+
+{% endif -%}
+**VITALS:**
+{{ ipl_hdr_vitals_line_text | replace(from="[[ipl_hdr_bp]]", to=ipl_hdr_bp) | replace(from="[[ipl_hdr_hr]]", to=ipl_hdr_hr) }}
+"""
+
+# ----------------------------------------------------------- diagnosis ---
+
+[[fields]]
+key = "ipl_hdr_edentulism_type"
+label = "Edentulism"
+section = "Header - implant placement"
+type = "dropdown"
+default = "Partial edentulism"
+options = [
+  { label = "Partial edentulism", text = "Partial edentulism" },
+  { label = "Complete - maxilla", text = "Complete edentulism of the maxilla" },
+  { label = "Complete - mandible", text = "Complete edentulism of the mandible" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ipl_hdr_additional_diagnosis"
+label = "Additional diagnosis"
+section = "Header - implant placement"
+type = "text"
+default = ""
+
+# ---------------------------------------------------------- anesthesia ---
+
+[[fields]]
+key = "ipl_hdr_local_agents"
+label = "Local anesthetic"
+section = "Anesthesia"
+type = "multiselect"
+default = ["Lidocaine 2%", "Topical"]
+options = [
+  { label = "Lidocaine 2%", text = "1.7 mL 2% lidocaine with 1:100,000 epinephrine x [[ipl_hdr_lido_carps]]" },
+  { label = "Articaine 4%", text = "1.7 mL 4% articaine with 1:100,000 epinephrine x [[ipl_hdr_arti_carps]]" },
+  { label = "Prilocaine 4% plain", text = "1.7 mL 4% prilocaine plain x [[ipl_hdr_pril_carps]]" },
+  { label = "Bupivacaine 0.5%", text = "1.7 mL 0.5% bupivacaine with 1:200,000 epinephrine x [[ipl_hdr_bupi_carps]]" },
+  { label = "Mepivacaine 3% plain", text = "1.7 mL 3% mepivacaine plain x [[ipl_hdr_mepi_carps]]" },
+  { label = "Topical", text = "Topical anesthetic applied prior to injections" },
+]
+
+[[fields]]
+key = "ipl_hdr_lido_carps"
+label = "Lidocaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Lidocaine 2%' in ipl_hdr_local_agents"
+
+[[fields]]
+key = "ipl_hdr_arti_carps"
+label = "Articaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Articaine 4%' in ipl_hdr_local_agents"
+
+[[fields]]
+key = "ipl_hdr_pril_carps"
+label = "Prilocaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Prilocaine 4% plain' in ipl_hdr_local_agents"
+
+[[fields]]
+key = "ipl_hdr_bupi_carps"
+label = "Bupivacaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Bupivacaine 0.5%' in ipl_hdr_local_agents"
+
+[[fields]]
+key = "ipl_hdr_mepi_carps"
+label = "Mepivacaine"
+section = "Anesthesia"
+type = "dropdown"
+default = "1 carpule"
+options = ["1 carpule", "2 carpules", "3 carpules", "4 carpules", "5 carpules", "6 carpules", "***"]
+visible_if = "'Mepivacaine 3% plain' in ipl_hdr_local_agents"
+
+# -------------------------------------------------- specimen and vitals ---
+
+[[fields]]
+key = "ipl_hdr_vitals_line"
+label = "Vitals"
+section = "Specimen and vitals"
+type = "dropdown"
+default = "WNL"
+options = [
+  { label = "WNL", text = "BP: WNL, HR: WNL" },
+  { label = "Values", text = "BP: [[ipl_hdr_bp]], HR: [[ipl_hdr_hr]]" },
+  { label = "Anesthesia record", text = "See anesthesia record for details" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ipl_hdr_bp"
+label = "BP"
+section = "Specimen and vitals"
+type = "text"
+default = "***"
+visible_if = "ipl_hdr_vitals_line == 'Values'"
+
+[[fields]]
+key = "ipl_hdr_hr"
+label = "HR"
+section = "Specimen and vitals"
+type = "text"
+default = "***"
+visible_if = "ipl_hdr_vitals_line == 'Values'"

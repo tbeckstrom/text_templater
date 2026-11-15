@@ -1,0 +1,105 @@
+# SNIPPET: common_implplace_case   PREFIX: ipl
+# The facts every implant placement procedure section shares, entered once
+# at the top of the form: age, PMH, the implant site chart and the sedation
+# adds. The hidden computed fields turn them into ready-made wording.
+body = ""
+
+[[fields]]
+key = "ipl_patient_age"
+label = "Age"
+section = "Case"
+type = "text"
+default = "***"
+
+[[fields]]
+key = "ipl_patient_pmh"
+label = "PMH"
+section = "Case"
+type = "text"
+default = ""
+
+[[fields]]
+key = "ipl_implant_sites"
+label = "Implant sites"
+section = "Case"
+type = "teeth"
+
+[[fields]]
+key = "ipl_nitrous"
+label = "+ Nitrous"
+section = "Case"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "ipl_iv_sedation"
+label = "+ IV sedation"
+section = "Case"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "ipl_ga_time"
+label = "Total anesthesia time (min)"
+section = "Case"
+type = "dropdown"
+required = true
+options = ["30", "45", "60", "90", "120", "***"]
+visible_if = "ipl_iv_sedation"
+
+[[fields]]
+key = "ipl_asa_class"
+label = "ASA class"
+section = "Case"
+type = "dropdown"
+default = "I"
+options = ["I", "II", "III", "IV", "***"]
+visible_if = "ipl_iv_sedation"
+
+# ---------------------------------------------------- derived wording ---
+# Hidden (visible_if = "false"): these exist only for the note bodies.
+
+[[fields]]
+key = "ipl_pt_intro"
+label = "Patient intro"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = 'ipl_patient_age ~ "-year-old patient"'
+
+[[fields]]
+key = "ipl_pmh_sentence"
+label = "PMH sentence"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '("Medical history significant for " ~ ipl_patient_pmh ~ ".") if ipl_patient_pmh else ""'
+
+[[fields]]
+key = "ipl_sedation_lines"
+label = "Sedation lines"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '''[l for l in [
+  "IV sedation, see anesthesia record for full report" if ipl_iv_sedation else "",
+  ("Total anesthesia time: " ~ ipl_ga_time ~ " minutes") if ipl_iv_sedation and ipl_ga_time else "",
+  ("ASA class: " ~ ipl_asa_class) if ipl_iv_sedation and ipl_asa_class else "",
+  "Anxiolysis with N2O/O2" if ipl_nitrous else "",
+] if l]'''
+
+[[fields]]
+key = "ipl_implant_sites_list"
+label = "Implant sites"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '(ipl_implant_sites[:-1] | join(sep=", ")) ~ " and " ~ ipl_implant_sites[-1] if ipl_implant_sites | length > 1 else (ipl_implant_sites | first if ipl_implant_sites else "")'
+
+[[fields]]
+key = "ipl_implant_sites_site_word"
+label = "site/sites"
+section = "Case"
+type = "computed"
+visible_if = "false"
+compute = '"sites" if ipl_implant_sites | length > 1 else "site"'

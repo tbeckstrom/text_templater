@@ -1,0 +1,112 @@
+# SNIPPET: op_indications_implant   PREFIX: ipl_ind
+# History and indications for the implant placement procedure note: who and
+# what (derived from the procedure's site boxes), indications, interval
+# changes, surrogate decision-maker and consent. NPO confirmation is derived
+# from IV sedation.
+name = "Snippet: History and indications - implant placement"
+use_partials = ["common_implplace_case"]
+
+body = """
+{%- set has_proc = ipl_proc_healed_sites is defined and ipl_proc_healed_sites_list is defined and ipl_proc_healed_sites_site_word is defined -%}
+{%- set healed = ipl_proc_healed_sites if has_proc else ipl_implant_sites -%}
+{%- set healed_list = ipl_proc_healed_sites_list if has_proc else ipl_implant_sites_list -%}
+{%- set healed_word = ipl_proc_healed_sites_site_word if has_proc else ipl_implant_sites_site_word -%}
+{%- set immediate = ipl_proc_immediate_sites is defined and ipl_proc_immediate_sites_list is defined and ipl_proc_immediate_sites_tooth_word is defined and ipl_proc_immediate_sites -%}
+{%- set procs = [
+  ("fully guided implant placement at " ~ healed_word ~ " " ~ healed_list) if healed else "",
+  ("extraction of " ~ ipl_proc_immediate_sites_tooth_word ~ " " ~ ipl_proc_immediate_sites_list ~ " with immediate fully guided implant placement") if immediate else "",
+  "guided bone regeneration" if ipl_proc_gbr_sites is defined and ipl_proc_gbr_sites else "",
+  "crestal sinus floor augmentation" if ipl_proc_sinus_sites is defined and ipl_proc_sinus_sites else "",
+] -%}
+{%- set procs = [p for p in procs if p] -%}
+**HISTORY AND INDICATIONS:**
+{{ ipl_pt_intro }} presenting for {% for v in procs %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.
+{% if ipl_pmh_sentence %}{{ ipl_pmh_sentence }}
+{% endif %}
+{%- if ipl_ind_indications_text %}Treatment as above is indicated {% for v in ipl_ind_indications_text %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}{{ v }}{% endfor %}.
+{% endif -%}
+The health history and indications for the procedure were reviewed and an examination was performed.{% if ipl_ind_interval_changes_text %} {{ ipl_ind_interval_changes_text | join(sep=" ") | replace(from="[[ipl_ind_history_changes]]", to=ipl_ind_history_changes) | replace(from="[[ipl_ind_exam_changes]]", to=ipl_ind_exam_changes) | replace(from="[[ipl_ind_plan_changes]]", to=ipl_ind_plan_changes) }}{% endif %}{% if ipl_ind_surrogate %} The plan of treatment was confirmed with {{ ipl_ind_surrogate_role }}, {{ ipl_ind_surrogate_name }}.{% endif %} The details of the procedure and its risks, benefits and alternatives were again reviewed, and all questions were invited and answered prior to starting. Informed consent was obtained.{% if ipl_iv_sedation %} NPO status was confirmed.{% endif %}
+{%- if ipl_ind_auscultation %}
+Heart and lungs auscultated prior to beginning: RRR, lungs CTAB.{% endif %}
+"""
+
+[[fields]]
+key = "ipl_ind_indications"
+label = "Indications"
+section = "History and indications"
+type = "multiselect"
+default = ["Restore function", "Restore esthetics"]
+options = [
+  { label = "Restore function", text = "to restore masticatory function" },
+  { label = "Restore esthetics", text = "to restore esthetics" },
+  { label = "Support prosthesis", text = "to support a fixed or removable prosthesis" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ipl_ind_interval_changes"
+label = "Interval changes"
+section = "History and indications"
+type = "multiselect"
+default = ["No changes"]
+options = [
+  { label = "No changes", text = "There have been no changes in the health history, examination or treatment plan since the last visit." },
+  { label = "History changed", text = "The patient reports interval changes to the health history including [[ipl_ind_history_changes]]." },
+  { label = "Exam changed", text = "The examination today is notable for [[ipl_ind_exam_changes]]." },
+  { label = "Plan changed", text = "The following changes to the treatment plan were discussed: [[ipl_ind_plan_changes]]." },
+]
+
+[[fields]]
+key = "ipl_ind_history_changes"
+label = "History changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'History changed' in ipl_ind_interval_changes"
+
+[[fields]]
+key = "ipl_ind_exam_changes"
+label = "Exam changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Exam changed' in ipl_ind_interval_changes"
+
+[[fields]]
+key = "ipl_ind_plan_changes"
+label = "Plan changes"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "'Plan changed' in ipl_ind_interval_changes"
+
+[[fields]]
+key = "ipl_ind_surrogate"
+label = "+ Surrogate decision-maker"
+section = "History and indications"
+type = "checkbox"
+default = false
+
+[[fields]]
+key = "ipl_ind_surrogate_role"
+label = "Surrogate"
+section = "History and indications"
+type = "dropdown"
+default = "the patient's parent"
+options = ["the patient's parent", "the patient's legal guardian", "the patient's healthcare power of attorney", "***"]
+visible_if = "ipl_ind_surrogate"
+
+[[fields]]
+key = "ipl_ind_surrogate_name"
+label = "Surrogate name"
+section = "History and indications"
+type = "text"
+default = "***"
+visible_if = "ipl_ind_surrogate"
+
+[[fields]]
+key = "ipl_ind_auscultation"
+label = "+ Heart/lungs auscultated"
+section = "History and indications"
+type = "checkbox"
+default = false

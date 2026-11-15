@@ -1,0 +1,375 @@
+# SNIPPET: op_procedure_implant   PREFIX: ipl_proc
+# Description of procedure for fully guided Straumann BLC/BLX placement.
+# Each charted site gets its own box: immediate socket, access, drilling
+# protocol, crestal sinus lift (maxillary posterior sites only), implant,
+# gap graft, GBR, healing and closure. The hidden computed site lists
+# (healed, immediate, GBR, sinus) are derived from the boxes for the header
+# and indications.
+name = "Snippet: Procedure - implant placement"
+use_partials = ["common_implplace_case"]
+
+body = """
+**DESCRIPTION OF PROCEDURE:**
+Timeout performed.{% if ipl_proc_preop_antibiotic %} {{ ipl_proc_preop_antibiotic_text }}{% endif %}{% if ipl_iv_sedation %} IV sedation was administered (see anesthesia record); the patient tolerated this well with good effect.{% endif %}{% if ipl_nitrous %} 100% O2 was given via nasal hood at 5 L/min for greater than 5 minutes, followed by titration of N2O to 50%.{% endif %} Local anesthesia was administered as above.
+The {{ ipl_proc_guide_support }} surgical guide, virtually planned from CBCT and intraoral scan data, was tried in and verified to be fully seated and stable.
+{% if ipl_proc_site_boxes %}
+{% for b in ipl_proc_site_boxes %}
+{%- set sinus = b.sinus_add and b.site in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"] -%}
+{%- set sinus_graft = (b.sinus_graft[:-1] | join(sep=", ")) ~ " and " ~ b.sinus_graft[-1] if b.sinus_graft | length > 1 else (b.sinus_graft | first if b.sinus_graft else "") -%}
+{%- set gap_graft = (b.gap_graft[:-1] | join(sep=", ")) ~ " and " ~ b.gap_graft[-1] if b.gap_graft | length > 1 else (b.gap_graft | first if b.gap_graft else "") -%}
+{%- set gbr_graft = (b.gbr_graft[:-1] | join(sep=", ")) ~ " and " ~ b.gbr_graft[-1] if b.gbr_graft | length > 1 else (b.gbr_graft | first if b.gbr_graft else "") -%}
+{%- set parts = [
+  ("Tooth " ~ b.site ~ " was extracted with care to preserve the alveolar walls.") if b.immediate else "",
+  "The socket was curetted of granulation tissue and irrigated with sterile saline." if b.immediate and b.socket_debridement else "",
+  ("The buccal plate was " ~ b.buccal_plate ~ ".") if b.immediate and b.buccal_plate else "",
+  b.access_text if b.access else "",
+  "The osteotomy was prepared through the guide sleeve with the Straumann guided surgical kit under copious irrigation, drilling sequentially to the final drill per the manufacturer's protocol.",
+  ("The " ~ b.bone_protocol ~ " bone drilling protocol was followed.") if b.bone_protocol else "",
+  (b.drill_adapt_text | join(sep=" ")) if b.drill_adapt else "",
+  "The osteotomy was carried to the planned depth short of the sinus floor, and the sinus floor was elevated through the osteotomy using the crestal sinus lift drill kit. The sinus membrane was confirmed intact." if sinus else "",
+  ("The elevated membrane was grafted with " ~ sinus_graft ~ ".") if sinus and sinus_graft else "",
+  "A Straumann " ~ b.implant_system ~ " " ~ b.implant_diameter ~ " x " ~ b.implant_length ~ " mm implant was placed through the guide to the planned depth and orientation, taking care to avoid adjacent roots and vital structures. Good primary stability was achieved at " ~ b.torque_ncm ~ " Ncm.",
+  ("The residual gap between the implant and the buccal plate was grafted with " ~ gap_graft ~ ".") if b.immediate and gap_graft else "",
+  (b.gbr_defect_text ~ " Guided bone regeneration was performed: " ~ gbr_graft ~ " was placed and covered with a resorbable collagen membrane " ~ b.gbr_tacks ~ ".") if b.gbr_add and b.gbr_defect and gbr_graft and b.gbr_tacks else "",
+  ("Graft: " ~ b.graft_product_and_lot ~ ".") if b.gbr_add and b.graft_product_and_lot else "",
+  (b.healing_text | replace(from="[[ha_diameter]]", to=b.ha_diameter) | replace(from="[[ha_gh]]", to=b.ha_gh) | replace(from="[[ha_height]]", to=b.ha_height)) if b.healing else "",
+  ("The flap was reapproximated with " ~ b.suture_material ~ " suture in " ~ b.suture_pattern ~ " fashion.") if b.access == "Crestal flap" and b.suture_material and b.suture_pattern else "",
+] -%}
+Site {{ b.site }}: {{ [p for p in parts if p] | join(sep=" ") }}
+{% endfor %}{% endif %}
+{% if ipl_proc_postop_imaging %}{{ ipl_proc_postop_imaging_text }}
+{% endif -%}
+Hemostasis was achieved and gauze pressure dressings were placed.{% if ipl_nitrous %} N2O was turned off and 100% O2 was administered for greater than 5 minutes.{% endif %} No complications. The patient remained stable throughout and tolerated the procedure well. At the conclusion of the procedure, the patient was fully awake, alert and stable for discharge, and the surgical sites were hemostatic.{% if ipl_iv_sedation %} The patient was discharged in the care of a responsible adult escort.{% endif %}
+"""
+
+[[fields]]
+key = "ipl_proc_preop_antibiotic"
+label = "Pre-op antibiotic"
+section = "Procedure - implant placement"
+type = "dropdown"
+default = "Amoxicillin 2 g"
+options = [
+  { label = "Amoxicillin 2 g", text = "Amoxicillin 2 g PO was administered 1 hour prior to the procedure." },
+  { label = "Clindamycin 600 mg", text = "Clindamycin 600 mg PO was administered 1 hour prior to the procedure." },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ipl_proc_guide_support"
+label = "Guide support"
+section = "Procedure - implant placement"
+type = "dropdown"
+default = "tooth-supported"
+options = ["tooth-supported", "mucosa-supported", "bone-supported"]
+
+[[fields]]
+key = "ipl_proc_postop_imaging"
+label = "Post-op imaging"
+section = "Completion"
+type = "dropdown"
+default = "PA"
+options = [
+  { label = "PA", text = "A post-operative periapical radiograph was obtained, confirming implant position consistent with the surgical plan." },
+  { label = "Pano", text = "A post-operative panoramic radiograph was obtained, confirming implant position consistent with the surgical plan." },
+  { label = "CBCT", text = "A post-operative CBCT was obtained, confirming implant position consistent with the surgical plan." },
+  { label = "***", text = "***" },
+]
+
+# ------------------------------------------------- derived site lists ---
+# Hidden (visible_if = "false"): read by the header and indications.
+
+[[fields]]
+key = "ipl_proc_healed_sites"
+label = "Healed sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '[b.site for b in ipl_proc_site_boxes if not b.immediate]'
+
+[[fields]]
+key = "ipl_proc_immediate_sites"
+label = "Immediate sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '[b.site for b in ipl_proc_site_boxes if b.immediate]'
+
+[[fields]]
+key = "ipl_proc_gbr_sites"
+label = "GBR sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '[b.site for b in ipl_proc_site_boxes if b.gbr_add]'
+
+[[fields]]
+key = "ipl_proc_sinus_sites"
+label = "Sinus lift sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '[b.site for b in ipl_proc_site_boxes if b.sinus_add and b.site in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]]'
+
+[[fields]]
+key = "ipl_proc_healed_sites_list"
+label = "Healed sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '(ipl_proc_healed_sites[:-1] | join(sep=", ")) ~ " and " ~ ipl_proc_healed_sites[-1] if ipl_proc_healed_sites | length > 1 else (ipl_proc_healed_sites | first if ipl_proc_healed_sites else "")'
+
+[[fields]]
+key = "ipl_proc_healed_sites_site_word"
+label = "site/sites (healed)"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '"sites" if ipl_proc_healed_sites | length > 1 else "site"'
+
+[[fields]]
+key = "ipl_proc_immediate_sites_list"
+label = "Immediate sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '(ipl_proc_immediate_sites[:-1] | join(sep=", ")) ~ " and " ~ ipl_proc_immediate_sites[-1] if ipl_proc_immediate_sites | length > 1 else (ipl_proc_immediate_sites | first if ipl_proc_immediate_sites else "")'
+
+[[fields]]
+key = "ipl_proc_immediate_sites_tooth_word"
+label = "tooth/teeth (immediate)"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '"teeth" if ipl_proc_immediate_sites | length > 1 else "tooth"'
+
+[[fields]]
+key = "ipl_proc_gbr_sites_list"
+label = "GBR sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '(ipl_proc_gbr_sites[:-1] | join(sep=", ")) ~ " and " ~ ipl_proc_gbr_sites[-1] if ipl_proc_gbr_sites | length > 1 else (ipl_proc_gbr_sites | first if ipl_proc_gbr_sites else "")'
+
+[[fields]]
+key = "ipl_proc_gbr_sites_site_word"
+label = "site/sites (GBR)"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '"sites" if ipl_proc_gbr_sites | length > 1 else "site"'
+
+[[fields]]
+key = "ipl_proc_sinus_sites_list"
+label = "Sinus lift sites"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '(ipl_proc_sinus_sites[:-1] | join(sep=", ")) ~ " and " ~ ipl_proc_sinus_sites[-1] if ipl_proc_sinus_sites | length > 1 else (ipl_proc_sinus_sites | first if ipl_proc_sinus_sites else "")'
+
+[[fields]]
+key = "ipl_proc_sinus_sites_site_word"
+label = "site/sites (sinus lift)"
+section = "Implant sites"
+type = "computed"
+visible_if = "false"
+compute = '"sites" if ipl_proc_sinus_sites | length > 1 else "site"'
+
+# ------------------------------------------------------ per-site boxes ---
+
+[[groups]]
+key = "ipl_proc_site_boxes"
+label = "Implant site"
+section = "Implant sites"
+source = "ipl_implant_sites"
+source_as = "site"
+
+[[groups.fields]]
+key = "immediate"
+label = "Immediate socket"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "socket_debridement"
+label = "Socket debrided"
+type = "checkbox"
+default = true
+visible_if = "immediate"
+
+[[groups.fields]]
+key = "buccal_plate"
+label = "Buccal plate"
+type = "dropdown"
+default = "intact"
+options = ["intact", "noted to have a dehiscence", "noted to have a fenestration", "***"]
+visible_if = "immediate"
+
+[[groups.fields]]
+key = "access"
+label = "Access"
+type = "dropdown"
+default = "Crestal flap"
+options = [
+  { label = "Crestal flap", text = "A crestal incision was made and a full thickness mucoperiosteal flap was reflected to expose the alveolar ridge." },
+  { label = "Tissue punch", text = "A tissue punch was used through the guide to remove the soft tissue overlying the implant site." },
+  { label = "Flapless", text = "No flap was elevated." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "bone_protocol"
+label = "Bone protocol"
+type = "dropdown"
+options = ["soft", "medium", "dense", "***"]
+
+[[groups.fields]]
+key = "drill_adapt"
+label = "Drilling adjustments"
+type = "multiselect"
+options = [
+  { label = "Underprepared", text = "The osteotomy was underprepared to enhance primary stability." },
+  { label = "Profile drill", text = "The crestal bone was prepared with the profile drill." },
+  { label = "Tap", text = "The osteotomy was tapped prior to implant placement." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "sinus_add"
+label = "+ Crestal sinus lift"
+type = "checkbox"
+default = false
+visible_if = 'site in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]'
+
+[[groups.fields]]
+key = "sinus_graft"
+label = "Sinus graft"
+type = "multiselect"
+options = ["particulate xenograft (Bio-Oss)", "particulate allograft", "autogenous bone harvested from the osteotomy", "***"]
+visible_if = 'sinus_add and site in ["14", "15", "16", "17", "18", "24", "25", "26", "27", "28"]'
+
+[[groups.fields]]
+key = "implant_system"
+label = "System"
+type = "dropdown"
+default = "BLC"
+options = ["BLC", "BLX"]
+
+[[groups.fields]]
+key = "implant_diameter"
+label = "Diameter (mm)"
+type = "dropdown"
+required = true
+options = ["3.5", "3.75", "4.0", "4.5", "5.0", "5.5", "***"]
+
+[[groups.fields]]
+key = "implant_length"
+label = "Length (mm)"
+type = "dropdown"
+required = true
+options = ["8", "10", "12", "14", "***"]
+
+[[groups.fields]]
+key = "torque_ncm"
+label = "Torque Ncm"
+type = "text"
+default = "***"
+
+[[groups.fields]]
+key = "gap_graft"
+label = "Gap graft"
+type = "multiselect"
+options = ["particulate xenograft (Bio-Oss)", "particulate allograft", "autogenous bone harvested from the osteotomy", "***"]
+visible_if = "immediate"
+
+[[groups.fields]]
+key = "gbr_add"
+label = "+ GBR"
+type = "checkbox"
+default = false
+
+[[groups.fields]]
+key = "gbr_defect"
+label = "GBR defect"
+type = "dropdown"
+required = true
+options = [
+  { label = "Dehiscence", text = "A buccal dehiscence with exposed implant threads was noted." },
+  { label = "Fenestration", text = "A buccal fenestration was noted." },
+  { label = "Contour", text = "The buccal ridge contour was deficient." },
+  { label = "***", text = "***" },
+]
+visible_if = "gbr_add"
+
+[[groups.fields]]
+key = "gbr_graft"
+label = "GBR graft"
+type = "multiselect"
+default = ["particulate xenograft (Bio-Oss)"]
+options = ["particulate xenograft (Bio-Oss)", "particulate allograft", "autogenous bone harvested from the osteotomy", "***"]
+visible_if = "gbr_add"
+
+[[groups.fields]]
+key = "gbr_tacks"
+label = "Membrane fixation"
+type = "dropdown"
+default = "without fixation"
+options = ["secured with tacks", "without fixation", "***"]
+visible_if = "gbr_add"
+
+[[groups.fields]]
+key = "graft_product_and_lot"
+label = "Graft product and lot"
+type = "text"
+default = ""
+visible_if = "gbr_add"
+
+[[groups.fields]]
+key = "healing"
+label = "Healing"
+type = "dropdown"
+default = "Healing abutment"
+options = [
+  { label = "Healing abutment", text = "A Straumann healing abutment (diameter [[ha_diameter]] mm, gingival height [[ha_gh]] mm, abutment height [[ha_height]] mm) was placed and hand-tightened." },
+  { label = "Cover screw", text = "A cover screw was placed." },
+  { label = "***", text = "***" },
+]
+
+[[groups.fields]]
+key = "ha_diameter"
+label = "HA diameter (mm)"
+type = "dropdown"
+required = true
+options = ["4", "5", "6.5", "***"]
+visible_if = "healing == 'Healing abutment'"
+
+[[groups.fields]]
+key = "ha_gh"
+label = "HA gingival height (mm)"
+type = "dropdown"
+required = true
+options = ["1.5", "2.5", "3.5", "***"]
+visible_if = "healing == 'Healing abutment'"
+
+[[groups.fields]]
+key = "ha_height"
+label = "HA abutment height (mm)"
+type = "dropdown"
+required = true
+options = ["2", "4", "6", "***"]
+visible_if = "healing == 'Healing abutment'"
+
+[[groups.fields]]
+key = "suture_material"
+label = "Suture"
+type = "dropdown"
+default = "4-0 Vicryl"
+options = ["4-0 Vicryl", "4-0 chromic gut", "4-0 PTFE", "***"]
+visible_if = "access == 'Crestal flap'"
+
+[[groups.fields]]
+key = "suture_pattern"
+label = "Suture pattern"
+type = "dropdown"
+default = "interrupted"
+options = ["interrupted", "continuous", "horizontal mattress", "***"]
+visible_if = "access == 'Crestal flap'"

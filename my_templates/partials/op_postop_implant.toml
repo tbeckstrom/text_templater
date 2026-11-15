@@ -1,0 +1,46 @@
+# SNIPPET: op_postop_implant   PREFIX: ipl_post
+# Post-op instructions, medications ("See chart" preselected) and follow-up
+# (2 weeks preselected).
+name = "Snippet: Post-op - implant placement"
+
+body = """
+**POST-OPERATIVE INSTRUCTIONS:** Given both verbally and in writing.
+
+**POST-OPERATIVE MEDICATIONS:**
+{{ ipl_post_postop_meds_text | join(sep="\n") }}
+
+**PLAN/FOLLOW UP:**
+{% if ipl_post_follow_up %}- Follow up {{ ipl_post_follow_up }}
+{% endif %}
+{%- if ipl_post_additional_plan %}- {{ ipl_post_additional_plan }}
+{% endif %}"""
+
+[[fields]]
+key = "ipl_post_postop_meds"
+label = "Post-op medications"
+section = "Post-op - implant placement"
+type = "multiselect"
+default = ["See chart"]
+options = [
+  { label = "See chart", text = "See chart" },
+  { label = "Ibuprofen 400 OTC", text = "Ibuprofen 400 mg (OTC) every 6 hours as needed for pain" },
+  { label = "Acetaminophen 1000 OTC", text = "Acetaminophen 1000 mg (OTC) every 6 hours as needed for pain, max 4000 mg/day" },
+  { label = "Chlorhexidine BID x2wk", text = "Chlorhexidine oral rinse BID x 2 weeks" },
+  { label = "Amoxicillin 500 TID x7d", text = "Amoxicillin 500 mg TID x 7 days" },
+  { label = "***", text = "***" },
+]
+
+[[fields]]
+key = "ipl_post_follow_up"
+label = "Follow up"
+section = "Post-op - implant placement"
+type = "dropdown"
+default = "in 2 weeks"
+options = ["as needed", "in 1 week", "in 2 weeks", "***"]
+
+[[fields]]
+key = "ipl_post_additional_plan"
+label = "Additional plan"
+section = "Post-op - implant placement"
+type = "text"
+default = ""

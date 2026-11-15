@@ -1,0 +1,37 @@
+# NOTE: op_note_implant
+# Fully guided implant placement procedure note assembled from the ipl
+# snippets; common_implplace_case holds the facts they share (age, PMH,
+# implant site chart, sedation). The pathway presets fill every site box,
+# so chart the sites first.
+name = "Procedure - Implant placement"
+use_partials = ["common_implplace_case", "op_header_implant", "op_indications_implant", "op_procedure_implant", "op_postop_implant"]
+
+body = """
+{% include "common_implplace_case" %}**ORAL AND MAXILLOFACIAL SURGERY PROCEDURE NOTE**
+
+{% include "op_header_implant" %}
+{% include "op_indications_implant" %}
+{% include "op_procedure_implant" %}
+{% include "op_postop_implant" %}
+Thomas Beckstrom
+"""
+
+[[speed_buttons]]
+label = "Healed site, HA"
+values = {}
+each.ipl_proc_site_boxes = { immediate = false, access = "Crestal flap", sinus_add = false, gap_graft = [], gbr_add = false, healing = "Healing abutment" }
+
+[[speed_buttons]]
+label = "Immediate implant"
+values = {}
+each.ipl_proc_site_boxes = { immediate = true, access = "Flapless", sinus_add = false, gap_graft = ["particulate xenograft (Bio-Oss)"], gbr_add = false, healing = "Healing abutment" }
+
+[[speed_buttons]]
+label = "Implant + GBR, cover screw"
+values = {}
+each.ipl_proc_site_boxes = { immediate = false, access = "Crestal flap", sinus_add = false, gap_graft = [], gbr_add = true, healing = "Cover screw" }
+
+[[speed_buttons]]
+label = "Implant + crestal sinus"
+values = {}
+each.ipl_proc_site_boxes = { immediate = false, access = "Crestal flap", sinus_add = true, gap_graft = [], gbr_add = false, healing = "Cover screw" }
