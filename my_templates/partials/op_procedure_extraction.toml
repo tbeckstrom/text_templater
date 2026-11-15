@@ -30,7 +30,8 @@ Timeout performed.{% if exo_proc_albuterol %} Two puffs of albuterol inhaler wer
 {% endif %}
 {%- if exo_surgical_mand_posterior or exo_proc_ian_not_encountered %}The inferior alveolar canal was not encountered and the lingual plate was intact.
 {% endif %}
-{%- if exo_proc_socket_preservation and exo_proc_socket_sites and exo_proc_graft_material and exo_proc_graft_cover and exo_proc_cover_fixation %}Socket preservation, {{ exo_proc_socket_sites_site_word }} {{ exo_proc_socket_sites_list }}: {{ exo_proc_graft_material_text }} was placed and covered with {{ exo_proc_graft_cover }}, secured with {{ exo_proc_cover_fixation }}.
+{%- if exo_proc_socket_preservation and exo_proc_socket_sites and exo_proc_graft_material == "Bone plug (OsteoGen)" and exo_proc_cover_fixation %}Socket preservation, {{ exo_proc_socket_sites_site_word }} {{ exo_proc_socket_sites_list }}: {{ exo_proc_graft_material_text }} was placed into the socket, secured with {{ exo_proc_cover_fixation }}.
+{% elif exo_proc_socket_preservation and exo_proc_socket_sites and exo_proc_graft_material and exo_proc_graft_cover and exo_proc_cover_fixation %}Socket preservation, {{ exo_proc_socket_sites_site_word }} {{ exo_proc_socket_sites_list }}: {{ exo_proc_graft_material_text }} was placed and covered with {{ exo_proc_graft_cover }}, secured with {{ exo_proc_cover_fixation }}.
 {% endif %}
 {%- if exo_proc_socket_preservation and exo_proc_graft_product_and_lot %}Graft: {{ exo_proc_graft_product_and_lot }}
 {% endif %}
@@ -160,6 +161,7 @@ options = [
   { label = "Cortico-cancellous", text = "Mineralized cortico-cancellous allograft" },
   { label = "FDBA", text = "Freeze-dried bone allograft" },
   { label = "Xenograft", text = "Bovine xenograft" },
+  { label = "Bone plug (OsteoGen)", text = "A resorbable calcium apatite/collagen bone augmentation plug" },
   { label = "***", text = "***" },
 ]
 
@@ -170,7 +172,7 @@ section = "Procedure - extraction"
 type = "dropdown"
 default = "a collagen plug"
 options = ["a collagen plug", "a resorbable collagen membrane", "a dPTFE membrane", "***"]
-visible_if = "exo_proc_socket_preservation"
+visible_if = "exo_proc_socket_preservation and exo_proc_graft_material != 'Bone plug (OsteoGen)'"
 
 [[fields]]
 key = "exo_proc_cover_fixation"
